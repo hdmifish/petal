@@ -24,7 +24,7 @@ If you would like to offer suggestions or have questions, feel free to make an i
 This prevents problems later on
 `sudo apt-get update && sudo apt-get upgrade -y`
 ##### Step 2: Install python3.5 and pip
-`sudo apt-get python3.5 python3.5-dev -y`
+`sudo apt-get install python3.5 python3.5-dev -y`
 **Note:** To ensure python3.5 is installed, run the following:
 `python3.5 --version`
 
