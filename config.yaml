@@ -1,0 +1,107 @@
+# Hello and Welcome to the Configurator
+# First up, you need to give petal a token
+#
+# Uncomment line 5 to use standard token Authentication
+token: 'your discord bot token'
+# if this is your own token and not a bot account, set selfbot to true
+selfbot: false
+# Uncomment lines 9 and 10 to use email/pass (This is not reccomended)
+# email: yeah@yeah.com
+# pass: test
+
+# Next up Petal is going to need to know your ID.
+owner: 'your discord ID'
+
+# Prefix for petal to listen to
+prefix: '>'
+
+acceptPMs: false
+
+# Give user role after typing a phrase. Requires a dedicated channel and a regex
+roleGrant:
+  role: 0
+  chan: 0
+  regex: '[iI\slove\syou]'
+# ie:
+# roleGrant:
+#   role: <role ID or role name>
+#   chan: <channel ID or name> (channel ID is better)
+#   regex: "[iI\s(agree|consent|do agree|)\sto\s?(obey|follow|uphold|)\sthe\s(rules)]"
+
+#Message to PM users when they join the Server
+#set to "null" to disable
+welcomeMessage: Hello and Welcome to Petal Development Server! Please type "I Love You to gain access" # this doesnt work quite yet
+logChannel: channel id of where you want the kick/ban/action logs to go in discord
+# logChannel must be defined in order to use administrative functions
+
+# Permission Levels
+# A big change from the old leaf setup is permission Levels
+# Owner is considered level 0. All restricted commands can be run
+# Level 1 - L2 restrictions as well as the configure command
+# Level 2 - L3 restrictions as well as BotMute and Restart
+# Level 3 - L4 + Override Role-specific commands. (Kick, Ban, User Mute)
+# Level 4 - Custom Commands and ability to delete images from gallery
+l1:
+- make a list of user IDs here
+- also here
+l2:
+- tadaa
+- same
+l3:
+- yup here too
+l4:
+- and here
+
+# The freehug command allows users to request hugs from people in this list
+# A randomly-selected user in the list will be PM'd with the name of the user
+# who ran the command
+hugDonors:
+  '0000000':
+    name: test
+    donations: 0
+
+
+# Finally, Petal needs any API keys for certain extensions to work
+# ---API stuff---
+#imgur: #client-id
+permitNSFW: false
+#twitter: 000
+#tumblr: 000
+#wolframAlpha: 000
+#osu: api-key
+#weather: application id
+#aliases allow you to change the names of commands.
+#do not change this list unless you know what you are doing
+stats:
+  pingScore: 0
+  pingCount: 0
+
+
+aliases:
+  sr: sub
+  subreddit: sub
+  imgur: sub
+  hug: freehug
+
+imageIndex:
+  bungif: bun.gif
+commands:
+  test:
+    com: test worked
+    perm: 4
+
+  weed:
+    perm: '0'
+    com: ^_^
+  poof:
+    com: '{tag} poofed'
+    perm: '0'
+  fuzzy:
+    perm: '0'
+    com: o,.,o
+
+
+  wood:
+    perm: '0'
+    com: tree
+#under here is gonna be stats and shit. Do not edit this
