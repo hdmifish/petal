@@ -5,6 +5,7 @@ written by hdmifish
 """
 
 import discord
+import re
 from .grasslands import Peacock
 from .config import Config
 from .commands import Commands
@@ -62,11 +63,13 @@ class Petal(discord.Client):
         log.info("Prefix: " + self.config.prefix)
         log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
         log.info("Server Info: ")
-        mainsvr = self.getMainServer()
-        log.info("-  Name: " + mainsvr.name)
-        log.info("-    ID: " + mainsvr.id)
-        log.info("- Owner: " + mainsvr.owner.name)
-        log.info("- Users: " + str(mainsvr.member_count))
+        self.mainsvr = self.getMainServer()
+        log.info("-  Name: " + self.mainsvr.name)
+        log.info("-    ID: " + self.mainsvr.id)
+        log.info("- Owner: " + self.mainsvr.owner.name)
+        log.info("- Users: " + str(self.mainsvr.member_count))
+        for s in self.mainsvr.roles:
+            print(s.name  + " - " + s.id)
         return
 
     async def send_message(self, channel, message, timeout=0):
@@ -91,7 +94,7 @@ class Petal(discord.Client):
             else:
                 response = " and was PM'd :) "
             finally:
-                svr = self.getMainServer()
+                svr = self.mainsvr
                 await self.send_message(discord.utils.get(svr.channels, id=str(self.config.get("logChannel"))), ":new: {0} (ID: {0.id}) joined the server ".format(member) + response)
                 return
 
@@ -101,15 +104,28 @@ class Petal(discord.Client):
         """
         if not self.config.useLog:
             return
-        svr = self.getMainServer()
+        svr = self.mainsvr
         await self.send_message(discord.utils.get(svr.channels, id=str(self.config.get("logChannel"))), ":put_litter_in_its_place: {0} (ID: {0.id}) left the server ".format(member) )
         return
 
 
     async def on_message(self, message):
         await self.wait_until_ready()
-        # Credit to jaydenkieran for this snippet below
         content = message.content.strip()
+        if message.author == self.user:
+            return
+        try:
+            if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
+                if re.match(self.config.get("roleGrant")["regex"], message.content):
+                    await self.send_message(message.channel, self.config.get("roleGrant")["response"])
+                    await self.add_roles(message.author, discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]))
+                    log.member(message.author.name + " (id: " + message.author.id + ") was given access")
+                    #Add logging later
+                    return 
+
+        except Exception as e:
+            await self.send_message(message.channel, "Something went wrong will granting your role. Pm a member of staff " + str(e))
+
 
         if not self.config.pm and message.channel.is_private:
             if not message.author == self.user:
