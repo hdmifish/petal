@@ -27,6 +27,7 @@ roleGrant:
 # roleGrant:
 #   role: <role ID or role name>
 #   chan: <channel ID or name> (channel ID is better)
+#   response: What petal responds on a successful message
 #   regex: "[iI\s(agree|consent|do agree|)\sto\s?(obey|follow|uphold|)\sthe\s(rules)]"
 
 #Message to PM users when they join the Server
