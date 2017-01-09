@@ -1,3 +1,5 @@
+<< UPDATE 12/09. Added the welcome/role gate command. If you don't understand regex, just type in a phrase. Just note your members will have to type the message exactly>>
+
 # Petal
 A simple, customizable, discord bot written in python.
 
