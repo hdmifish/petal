@@ -22,7 +22,7 @@ roleGrant:
   role: '000000000000000000'
   chan: '000000000000000000'
   response: I love you too! Welcome to Patch
-  regex: '[iI\slove\syou]'
+  regex: (I love you)
 # ie:
 # roleGrant:
 #   role: <role ID or role name>
@@ -34,7 +34,7 @@ roleGrant:
 #set to "null" to disable
 welcomeMessage: Hello and Welcome to Petal Development Server! Please type "I LoveYou"
   to gain access
-logChannel: 0000000000000
+logChannel: '0000000000000'
 # logChannel must be defined in order to use administrative functions
 
 # Permission Levels
@@ -44,16 +44,17 @@ logChannel: 0000000000000
 # Level 2 - L3 restrictions as well as BotMute and Restart
 # Level 3 - L4 + Override Role-specific commands. (Kick, Ban, User Mute)
 # Level 4 - Custom Commands and ability to delete images from gallery
-l1:
-- make a list here
-- also here
-l2:
-- tadaa
-- same
-l3:
-- yup here too
-l4:
-- and here
+level:
+  l1:
+  - make a list here
+  - also here
+  l2:
+  - tadaa
+  - same
+  l3:
+  - yup here too
+  l4:
+  - and here
 
 # The freehug command allows users to request hugs from people in this list
 # A randomly-selected user in the list will be PM'd with the name of the user
@@ -68,6 +69,13 @@ hugDonors:
 # ---API stuff---
 #imgur: 000
 permitNSFW: false
+#reddit
+#  clientID:
+#  clientSecret:
+#  userAgent:
+#  username:
+#  password:
+
 #twitter: 000
 #tumblr: 000
 #wolframAlpha: 000

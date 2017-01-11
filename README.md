@@ -16,6 +16,7 @@ If you would like to offer suggestions or have questions, feel free to make an i
 - [colorama](https://pypi.python.org/pypi/colorama)
 - [requests](https://pypi.python.org/pypi/requests/)
 - [cleverbot](https://pypi.python.org/pypi/cleverbot)
+- [PRAW(for reddit)](https://pypi.python.org/pypi/praw)
 - [ruamel.yaml](https://pypi.python.org/pypi/ruamel.yaml)
 - [python-magic(not to be confused with the apt-get version)](https://pypi.python.org/pypi/python-magic)
 - A discord application key (register [here](https://discordapp.com/developers/applications/me))
@@ -49,7 +50,7 @@ finally, verify the install:
 Petal needs to be able to communicate with discord. Therefore, we need the API wrapper from [Rapptz](https://github.com/Rapptz/discord.py).
 
 Copy and run this long command:
-`sudo -H pip3.5 install -U discord.py cleverbot colorama requests python-magic ruamel.yaml`
+`sudo -H pip3.5 install -U discord.py cleverbot colorama requests python-magic ruamel.yaml praw`
 
 **Note**: If for some reason you get a __command not found__ error, replace `pip3.5` with `python3.5 -m pip`
 
