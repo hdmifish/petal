@@ -120,17 +120,17 @@ class Petal(discord.Client):
 			return
 
 
-			if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
-				try:
-					if re.match(self.config.get("roleGrant")["regex"], message.content):
-						await self.send_message(message.channel, self.config.get("roleGrant")["response"])
-						await self.add_roles(message.author, discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]))
-						log.member(message.author.name + " (id: " + message.author.id + ") was given access")
-						#Add logging later
-						return
+		if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
+			try:
+				if re.match(self.config.get("roleGrant")["regex"], message.content):
+					await self.send_message(message.channel, self.config.get("roleGrant")["response"])
+					await self.add_roles(message.author, discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]))
+					log.member(message.author.name + " (id: " + message.author.id + ") was given access")
+					#Add logging later
+					return
 
-				except Exception as e:
-					await self.send_message(message.channel, "Something went wrong will granting your role. Pm a member of staff " + str(e))
+			except Exception as e:
+				await self.send_message(message.channel, "Something went wrong will granting your role. Pm a member of staff " + str(e))
 
 
 		if not self.config.pm and message.channel.is_private:
