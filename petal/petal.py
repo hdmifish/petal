@@ -122,7 +122,13 @@ class Petal(discord.Client):
 
 		if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
 			try:
-				if re.match(self.config.get("roleGrant")["regex"], message.content):
+				if self.config.get("roleGrant")["ignorecase"]:
+					check = re.compile(self.config.get("roleGrant")["regex"], re.IGNORECASE)
+				else:
+					check = re.compile(self.config.get("roleGrant")["regex"])
+
+
+				if check.match(message.content):
 					await self.send_message(message.channel, self.config.get("roleGrant")["response"])
 					await self.add_roles(message.author, discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]))
 					log.member(message.author.name + " (id: " + message.author.id + ") was given access")
