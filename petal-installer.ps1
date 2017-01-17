@@ -17,7 +17,10 @@ If (-Not (Test-Path "python3.5installer.exe")) {
 	wget "https://www.python.org/ftp/python/3.5.0/python-3.5.0-amd64.exe" -OutFile python3.5installer.exe
 	Start-Process -FilePath "python3.5installer.exe"
 	Write-Host "Assuming you installed python correctly, press enter. Otherwise press CTRL+C"
+	
 	Read-Host
+	$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") 
+	
 }
 Else {
 Write-Host "Python detected already...Moving on!"
@@ -26,7 +29,7 @@ Write-Host "Python detected already...Moving on!"
 If (-Not (Test-Path "gitinstaller.exe")) {
 	$title = "Install Git"
 	$message = "Do you want to install Git.  It is reccomended in order for update.bat to work (requires 64-bit windows)"
-
+	
 	$yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Install Git", `
 		"Install git"
 
@@ -49,6 +52,7 @@ If (-Not (Test-Path "gitinstaller.exe")) {
 		}
 	Write-Host "If git installed correctly, press enter. Otherwise press CTRL+C"
 	Read-Host
+	$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") 
 }
 Else {
 Write-Host "Git detected already...Moving on!"
@@ -98,9 +102,10 @@ switch ($result)
 		Write-Host "Alright, static download it is! "
 		wget "https://github.com/hdmifish/petal/archive/master.zip" -OutFile petal.zip
 		Expand-Archive -LiteralPath petal.zip -DestinationPath .
+		rm petal.zip 
 		}
 	}
-rm petal.zip 
+
 
 ii ./petal-master
 
