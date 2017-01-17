@@ -13,6 +13,8 @@ Just do CTRL+S and save it in your user directory i.e. `C:\Users\(your username)
 
 Now launch Powershell as Administrator
 
+Type: `cd ~`
+
 Note: By Default, windows locks down running powershell scripts. However, for one time use, run the following command:
 `Set-ExecutionPolicy RemoteSigned` 
 
