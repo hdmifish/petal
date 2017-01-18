@@ -7,20 +7,27 @@ A simple, customizable, discord bot written in python.
 Small note, I am working on an installer for both windows and ubuntu as well as raspbian.
 
 #### Windows Installer:
-Go ahead and download [petal installer](https://raw.githubusercontent.com/hdmifish/petal/master/petal-installer.ps1) 
+Go ahead and open [petal installer](https://raw.githubusercontent.com/hdmifish/petal/master/petal-installer.ps1) 
 
-Just do CTRL+S and save it in your user directory i.e. `C:\Users\(your username)`
+Press CTRL+A to select all, then copy (CTRL+C) the contents into your favorite text editor. 
+Then save to your user directory `C:\users\<you>` as `petal-installer.ps1` 
+
 
 Now launch Powershell as Administrator
 
 Type: `cd ~`
 
 Note: By Default, windows locks down running powershell scripts. However, for one time use, run the following command:
-`Set-ExecutionPolicy RemoteSigned` 
+`Set-ExecutionPolicy RemoteSigned`  
 
 Then press `Y`
 
 Finally, do ./petal-installer.ps1 in powershell and follow the instructions. 
+
+If you get a permissions error make sure you launched powershell as administrator. Also you can run `Set-ExecutionPolicy Unrestricted`
+Just make sure you set it back later or just close powershell when you are done. 
+
+
 
 For the Git install: 
 
