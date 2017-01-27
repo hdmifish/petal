@@ -1,0 +1,9 @@
+discord.py
+ruamel.yaml
+cleverbot
+colorama
+facebook-sdk
+praw
+pytumblr
+twitter
+requests
