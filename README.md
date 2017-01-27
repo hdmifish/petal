@@ -39,14 +39,7 @@ If you would like to offer suggestions or have questions, feel free to make an i
 ##### Scroll down if you are new to linux
 (read this section if you know what you're doing)
 ##### Requirements:
-- [discord.py (no voice support required)](https://github.com/Rapptz/discord.py)
-- git (sudo git clone https://github.com/hdmifish/petal.git)
-- [colorama](https://pypi.python.org/pypi/colorama)
-- [requests](https://pypi.python.org/pypi/requests/)
-- [cleverbot](https://pypi.python.org/pypi/cleverbot)
-- [PRAW(for reddit)](https://pypi.python.org/pypi/praw)
-- [ruamel.yaml](https://pypi.python.org/pypi/ruamel.yaml)
-- [python-magic(not to be confused with the apt-get version)](https://pypi.python.org/pypi/python-magic)
+`pip3.5 install --upgrade -r requirements.txt`
 - A discord application key (register [here](https://discordapp.com/developers/applications/me))
 
 ##### If you are new to linux, but have it ready to go:
@@ -96,6 +89,7 @@ If you want to customize where petal will go:
 2. `cd <your directory name(again without the <>)>`
 2. `git clone https://github.com/hdmifish/petal.git .` (the dot is important)
 
+`pip3.5 install --upgrade -r requirements.txt`
 ##### Step 6 (optional): Install GNU Screen:
 If you dont want to have to deal with terminal windows to keep your bot open, you can run a "Screen session" to run it in the background.
 
