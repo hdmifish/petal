@@ -6,9 +6,11 @@ written by hdmifish
 
 import discord
 import re
+import asyncio
+from datetime import datetime 
 from .grasslands import Peacock
 from .config import Config
-from .commands import Commands
+from .commands import Commands   
 log = Peacock()
 
 
@@ -48,11 +50,7 @@ class Petal(discord.Client):
 		if len(self.servers) == 0:
 			log.err("This client is not a member of any servers")
 			exit(404)
-		if len(self.servers) > 1:
-			log.err("Petal only works as a member of one server per instance")
-			exit(500)
-		for server in self.servers:
-			return server
+
 
 	async def on_ready(self):
 		"""
@@ -64,14 +62,14 @@ class Petal(discord.Client):
 		log.info("Prefix: " + self.config.prefix)
 		log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
 		log.info("Server Info: ")
-		self.mainsvr = self.getMainServer()
-		log.info("-  Name: " + self.mainsvr.name)
-		log.info("-    ID: " + self.mainsvr.id)
-		log.info("- Owner: " + self.mainsvr.owner.name)
-		log.info("- Users: " + str(self.mainsvr.member_count))
-		log.warn("Displaying Roles and ID's for your enjoyment")
-		for s in self.mainsvr.roles:
-			log.info("----" + s.name  + " - " + s.id)
+		#self.mainsvr = self.getMainServer()
+		#log.info("-  Name: " + self.mainsvr.name)
+		#log.info("-    ID: " + self.mainsvr.id)
+		#log.info("- Owner: " + self.mainsvr.owner.name)
+		#log.info("- Users: " + str(self.mainsvr.member_count))
+		#log.warn("Displaying Roles and ID's for your enjoyment")
+		#for s in self.mainsvr.roles:
+		#	log.info("----" + s.name  + " - " + s.id)
 		return
 
 	async def send_message(self, channel, message, timeout=0):
@@ -95,22 +93,117 @@ class Petal(discord.Client):
 				response = " and was not PM'd :( "
 			else:
 				response = " and was PM'd :) "
-			finally:
-				svr = self.mainsvr
-				await self.send_message(discord.utils.get(svr.channels, id=str(self.config.get("logChannel"))), ":new: {0} (ID: {0.id}) joined the server ".format(member) + response)
-				return
+		
+		if self.config.lockLog:
+			return	
+			
+		userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x0acdff)
+		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
+		userEmbed.set_thumbnail(url=member.avatar_url)
+		userEmbed.add_field(name="Name", value=member.name)
+		userEmbed.add_field(name="ID", value=member.id)
+		userEmbed.add_field(name="Discriminator", value=member.discriminator)
+		if member.game is None:	
+			game = "(nothing)"
+		else:
+			game = member.game.name
+		userEmbed.add_field(name="Currently Playing", value=game)
+		userEmbed.add_field(name="Joined: ", value=str(member.joined_at)[:-7]) 
+		
+		await self.embed(self.get_channel(self.config.logChannel), userEmbed)
+		return
 
 	async def on_member_remove(self, member):
 		"""
 		To be called when a member leaves
 		"""
-		if not self.config.useLog:
+		if self.config.lockLog:
 			return
-		svr = self.mainsvr
-		await self.send_message(discord.utils.get(svr.channels, id=str(self.config.get("logChannel"))), ":put_litter_in_its_place: {0} (ID: {0.id}) left the server ".format(member) )
+		userEmbed = discord.Embed(title="User Leave" , description="A user has left: " + member.server.name, colour=0x0acdff)
+		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
+		userEmbed.set_thumbnail(url=member.avatar_url)
+		userEmbed.add_field(name="Name", value=member.name)
+		userEmbed.add_field(name="ID", value=member.id)
+		userEmbed.add_field(name="Discriminator", value=member.discriminator)
+		userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7] )
+
+		await self.embed(self.get_channel(self.config.logChannel), userEmbed)
 		return
 
+	
+	async def on_message_delete(self, message):
+		if  self.config.lockLog:	
+			return
+		
 
+		userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0x0acdff)
+		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
+		userEmbed.add_field(name="Server", value= message.server.name)
+		userEmbed.add_field(name="Channel", value = message.channel.name)
+		userEmbed.add_field(name="Message content", value=message.content, inline=False)
+		userEmbed.add_field(name="Message creation", value=str(message.timestamp)[:-7])
+		userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
+		
+	
+		await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+		await asyncio.sleep(2)
+
+		return 
+
+	async def on_message_edit(self, before, after):
+		if self.config.lockLog:
+			return 	
+		if before.content == "":
+			return 
+		if before.content == after.content:
+			return 
+
+		userEmbed = discord.Embed(title="Message Edit" , description=before.author.name + "#" + before.author.discriminator + " edited their message", colour=0x0acdff)
+		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
+		userEmbed.add_field(name="Server", value= before.server.name)
+		userEmbed.add_field(name="Channel", value = before.channel.name)
+		userEmbed.add_field(name="Previous message: ", value=before.content, inline=False)	
+		userEmbed.add_field(name="Edited message: ", value=after.content)
+		userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7], inline=False)
+
+		try:
+			await self.embed(self.get_channel(self.config.modChannel), userEmbed)	
+		except discord.errors.HTTPException:
+			print("HTTP 400 error from the edit statement. Usually it's safe to ignore it")
+			pass #this is awful but it silences a silly error that I can not find a solution to
+#		self.config.flip()
+		return 
+	
+	
+	async def on_member_update(self, before, after):
+		if self.config.lockLog:
+			return
+		gained = None
+
+		for r in before.roles:
+			if r not in after.roles:
+				gained = "Lost"	
+				role = r
+		for r in after.roles:
+			if r not in before.roles:
+				gained = "Gained"
+				role = r
+		
+		if gained is not None:
+			userEmbed = discord.Embed(title="({}) User Role ".format(role.server.name) + gained , description="{}#{} {} role".format(after.name, after.discriminator, gained), colour=0x0acdff)
+			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
+			userEmbed.add_field(name="Role", value=role.name) 
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
+			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+
+		if before.name != after.name:
+			userEmbed = discord.Embed(title="User Name Change", description=before.name + " changed their name to " + after.name, colour=0x0acdff)
+			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
+	
+			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+		return 
+	
 	async def on_message(self, message):
 		await self.wait_until_ready()
 		content = message.content.strip()
@@ -175,9 +268,7 @@ class Petal(discord.Client):
 				await self.send_message(message.channel, response)
 
 			else:
-				response = await self.commands.load(message)
-				if response:
-					log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]".format(message.channel, message.author, message.content.lstrip(self.config.prefix) ))
-					response = await self.commands.cleverbot(message)
-					await self.send_message(message.channel, response)
+				log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]".format(message.channel, message.author, message.content.lstrip(self.config.prefix) ))
+				response = await self.commands.cleverbot(message)
+				await self.send_message(message.channel, response)
 			return

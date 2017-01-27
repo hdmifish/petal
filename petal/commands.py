@@ -4,7 +4,6 @@ import random
 
 import imghdr
 import urllib.request as urllib2
-import magic
 import re
 import os
 import praw
@@ -22,7 +21,7 @@ class Commands:
 	def __init__(self, client):
 		self.client = client
 		self.config = client.config
-		self.cb = Cleverbot()
+		self.cb = Cleverbot('discordBot-petal')
 		self.log = Peacock()
 		self.osuKey = self.config.get("osu")
 		if self.osuKey is not None:
@@ -41,7 +40,6 @@ class Commands:
 			if self.r.read_only:
 				self.log.warn("This account is in read only mode. You may have done something wrong. This will disable reddit functionality.")
 				return
-
 
 	def level0(self, author):
 		#this supercedes all other levels so, use it carefully
@@ -74,7 +72,6 @@ class Commands:
 				return count
 		return 5
 
-
 	def check(self, message):
 
 		return message.content.lower() == 'yes'
@@ -93,31 +90,10 @@ class Commands:
 		return input[len(input.split()[0]):]
 
 	def getMember(self, message, member):
+	
 		return discord.utils.get(message.server.members, id=member.lstrip("<@!").rstrip('>'))
 
-	def saveImage(self, command):
-		if not re.match('^[a-zA-Z0-9_]+$', command[0]):
-			 return "File name must be letters and numbers only"
-		try:
-			response = urllib2.urlopen(command[1].strip())
-			with open('{}/img/temp'.format(os.getcwd()), 'wb') as outfile:
-				outfile.write(response.read())
-			mimetype = magic.from_file("./img/temp", mime=True)
-
-			if mimetype.lower() not in ['image/png', 'image/jpg', 'image/jpeg', 'image/gif', 'video/mp4', 'video/webm']:
-				return "Invalid File Type: " + mimetype ("note: gifv is not supported by petal right now")
-			extension = mimetype.lower()[6:]
-			filename = "{}/img/{}.{}".format(os.getcwd(), command[0].strip(), extension.strip())
-			tempfile = os.getcwd() + "/img/temp"
-			print(filename )
-			print(tempfile)
-			os.rename(tempfile, filename)
-			self.config.imageIndex[command[0]] = filename
-		except Exception as e:
-			return "Something went wrong :( " + str(type(e).__name__) + str(e.args)
-		else:
-			self.config.save()
-			return "Image: " + command[0] + "saved successfully!"
+	
 
 	async def parseCustom(self, command, message):
 		invoker = command.split()[0]
@@ -135,6 +111,9 @@ class Commands:
 			return "Error translating custom command"
 		else:
 			return output
+
+	
+
 
 
 	# ------------------------------------------
@@ -230,37 +209,6 @@ class Commands:
 			self.config.save()
 			return "New Command `{}` Created!".format(invoker)
 
-	async def save(self, message):
-		"""
-		Saves an image to database.
-		Syntax: `>save (foo)`
-		Filetypes: gif, png, jpg, tiff, mp4 (< 8MB)
-		"""
-		command = self.cleanInput(message.content)
-		if command[0] in self.config.imageIndex:
-			await self.client.send_message(message.channel, "This image already exists, type 'yes' to overwrite")
-			response = await self.client.wait_for_message(timeout=15, author= message.author, channel= message.channel)
-			if response is None or not self.check(response):
-				return "Image `{}` was not changed".format(self.config.imageIndex[command[0]].split('/')[-1])
-
-		return self.saveImage(command)
-
-	async def load(self, message):
-		"""
-		Loads an image from database.
-		Syntax: `>load (foo)`
-		Can also load via `foo` if foo is not a function or custom command
-		"""
-		imageToLoad = self.cleanInput(message.content)[0].strip()
-		if imageToLoad not in self.config.imageIndex:
-			return "Image does not exist"
-		else:
-			try:
-				await self.client.send_file(message.channel, self.config.imageIndex[imageToLoad])
-			except Exception as e:
-				return "Exception occured: " + type(e).__name__ + str(e.args)
-			else:
-				return None
 
 	async def help(self, message):
 		"""
@@ -560,6 +508,236 @@ class Commands:
 
 		response= sub1.submit(title, selftext=postdata, send_replies=False)
 		return "Submitted post to " + subreddit
+
+	async def kick(self, message):
+		"""
+		Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
+		>kick <user tag/id>
+		"""
+
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the kick command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToBan = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToBan is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				self.client.config.flip() 
+				await self.client.kick(userToBan)
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to kick this user"
+			else:
+				logEmbed = discord.Embed(title="User Kick", description=msg.content, colour=0x0acdff)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tAAjx/2d29a3a79c.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+				logEmbed.add_field(name="Server", value=userToBan.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToBan.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+				await self.client.send_message(message.channel, "Cleaning up...")
+				await self.client.send_typing(message.channel) 
+				await asyncio.sleep(4)
+				self.client.config.flip()						
+				return userToBan.name + " (ID: " + userToBan.id + ") was successfully kicked"
+
+	async def ban(self, message):
+		"""
+		Bans a user permenantly. Temp ban coming when member module works.
+		>ban <user tag/id>
+		"""	
+		
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the ban command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToBan = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToBan is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				await self.client.config.flip()
+				await self.client.ban(userToBan)
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to ban this user"
+			else:
+				logEmbed = discord.Embed(title="User Ban", description=msg.content, colour=0x0acdff)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tACjX/fc14b56458.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+				logEmbed.add_field(name="Server", value=userToBan.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToBan.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+				await self.client.send_message(message.channel, "Clearing out messages... ")
+				await asyncio.sleep(4)
+				self.client.config.flip()							
+				return userToBan.name + " (ID: " + userToBan.id + ") was successfully banned"
+
+	async def warn(self, message):
+		"""
+		Sends an official, logged, warning to a user. (and in the future, serializes it)
+		>warn <user tag/id>
+		"""
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the warn command" 
+		
+		await self.client.send_message(message.channel, "Please give a message to send (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToWarn = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToWarn is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				warnEmbed = discord.Embed(title="Official Warning", description="The server has sent you an official warning", colour=0x0acdff)
+				warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tADFM/dc80dc3a5d.png")
+				warnEmbed.add_field(name="Reason", value=msg.content)
+				warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+				await self.client.embed(userToWarn, warnEmbed)
+
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to warn this user"
+			else:
+				logEmbed = discord.Embed(title="User Warn", description=msg.content, colour=0x0acdff)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tADFM/dc80dc3a5d.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToWarn.name + "\n" + userToWarn.id)
+				logEmbed.add_field(name="Server", value=userToWarn.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)						
+				return userToWarn.name + " (ID: " + userToWarn.id + ") was successfully warned"
+
+	async def mute(self, message):
+		"""
+		Toggles the mute tag on a user if your server supports that role. 
+		>mute <user tag/ id>
+		"""
+		muteRole = discord.utils.get(message.server.roles, name="mute")
+		if muteRole is None:
+			return "This server does not have a `mute` role. To enable the mute function, set up the roles and name one `mute`."
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+					
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the mute command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason for the mute (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToWarn = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToWarn is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+					
+				if muteRole in userToWarn.roles:
+					await self.client.remove_roles(userToWarn, muteRole)
+					warnEmbed = discord.Embed(title="User Unmute", description="You have been unmuted by" + message.author.name, colour=0x0acdff)
+					warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+					warnEmbed.add_field(name="Reason", value=msg.content)
+					warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+					muteswitch = "Unmute"
+				else:
+					await self.client.add_roles(userToWarn, muteRole)
+					warnEmbed = discord.Embed(title="User Mute", description="You have been muted by" + message.author.name, colour=0x0acdff)
+					warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+					warnEmbed.add_field(name="Reason", value=msg.content)
+					warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+					muteswitch = "Mute"
+				await self.client.embed(userToWarn, warnEmbed)
+					
+
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to mute this user"
+			else:
+				logEmbed = discord.Embed(title="User {}".format(muteswitch), description=msg.content, colour=0x0acdff)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToWarn.name + "\n" + userToWarn.id)
+				logEmbed.add_field(name="Server", value=userToWarn.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)						
+				return userToWarn.name + " (ID: " + userToWarn.id + ") was successfully {}d".format(muteswitch)
+
+	async def purge(self, message):
+		"""
+		purges up to 200 messages in the current channel
+		>purge <number of messages to delete>
+		"""
+		if message.author == self.client.user:
+			return 
+		if not self.level2(message.author):
+			return "You do not have sufficient permissions to use the purge function"
+		args = self.cleanInput(message.content)
+		if len(args) < 1:
+			return "Please provide a number between 1 and 200"
+		try:
+			numDelete = int(args[0].strip())
+		except ValueError:
+			return "Please make sure your input is a number"
+		else:
+			if numDelete > 200 or numDelete < 0 :
+				return "That is an invalid number of messages to delete"
+		await self.client.send_message(message.channel, "You are about to delete {} messages  (including these confirmations) in this channel. Type: confirm if this is correct.".format(str(numDelete + 3)))
+		msg = await self.client.wait_for_message(channel = message.channel, content="confirm", author=message.author, timeout=10)
+		if msg is None:
+			return "Purge event cancelled"
+		try:
+			self.client.config.flip()
+			await self.client.purge_from(channel=message.channel, limit=numDelete + 3, check=None)
+		except discord.errors.Forbidden:
+			return "I don't have enough perms to purge messages"
+		else:
+			await asyncio.sleep(2)
+			
+			logEmbed = discord.Embed(title="Purge Event", description="{} messages were purged from {} in {} by {}#{}".format(str(numDelete), message.channel.name, message.server.name, message.author.name, message.author.discriminator),color=0x0acdff)
+			await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+			await asyncio.sleep(4)
+			self.client.config.flip()
+			return
+			
 
 	# twitter (grasslands.bird)
 	# tumblr(grasslands.ferret)

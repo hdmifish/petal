@@ -34,8 +34,27 @@ roleGrant:
 #set to "null" to disable
 welcomeMessage: Hello and Welcome to Petal Development Server! Please type "I LoveYou"
   to gain access
-logChannel: '0000000000000'
+logChannel: '00000000'
+modChannel: '00000000'
 # logChannel must be defined in order to use administrative functions
+
+# X-Post support
+xPostEnabled: false 
+#	Uncomment above to allow petal to crosspost to other servers using applicable commands (i.e. >announce )
+xPostList: 
+	- Server1:
+		- server_id: "00"
+		- channel_id: "00"
+		- tag_type: 0 
+	- Server2:
+		- server_id: "00"
+		- channel_id: "00"
+		- tag_type: 0
+
+# Server1 : rename this to whatever you want petal to identify the server. Usually its the server name but abbreviations are easier 
+# server_id: the ID of the Server
+# channel_id: the channel in which you want petal to post 
+# tag type: 0- No tag, 1- @here, 2- @everyone
 
 # Permission Levels
 # A big change from the old leaf setup is permission Levels

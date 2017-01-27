@@ -38,6 +38,11 @@ class Config(object):
 			self.permitNSFW = self.doc["permitNSFW"]
 			self.commands = self.doc["commands"]
 			self.useLog = "logChannel" in self.doc
+			if self.useLog:
+				self.logChannel = self.get("logChannel")
+				self.modChannel = self.get("modChannel")
+
+			self.lockLog = False
 			self.imageIndex = self.doc["imageIndex"]
 			self.hugDonors = self.doc["hugDonors"]
 			self.stats = self.doc["stats"]
@@ -45,6 +50,9 @@ class Config(object):
 			log.err("Missing config item: " + str(e))
 			exit(404)
 		return
+	
+	def flip(self):
+		self.lockLog = not self.lockLog
 
 	def get(self, field):
 		if field is None:
