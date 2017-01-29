@@ -182,6 +182,10 @@ class Commands:
 		return None
 
 	async def new(self, message):
+		"""
+		That awesome custom command command.
+		>new <name of command> | <output of command>
+		"""
 		if not self.level4(message.author):
 			return
 		if len(self.removePrefix(message.content).split('|')) < 2:
@@ -487,7 +491,7 @@ class Commands:
 
 			if not key:
 				return "Weather support has not been set up by adminstrator"
-			url = "http://api.openweathermap.org/data/2.5/weather/?APPID={}&q={}&units={}".format(key, )
+			url = "http://api.openweathermap.org/data/2.5/weather/?APPID={}&q={}&units={}".format(key, args[1], "c")
 
 	async def reddit(self, message):
 		"""

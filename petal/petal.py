@@ -56,7 +56,7 @@ class Petal(discord.Client):
 		"""
 		Called once a connection has been established
 		"""
-		print(discord.__version__)
+		log.ready("Running discord.py version: " + discord.__version__)
 		log.ready("Connected to Discord!")
 		log.info("Logged in as {0.name}.{0.discriminator} ({0.id})".format(self.user))
 		log.info("Prefix: " + self.config.prefix)
@@ -212,7 +212,22 @@ class Petal(discord.Client):
 		if message.content == self.config.prefix:
 			return
 
+		
+		for word in message.content.split():
+			if word in self.config.wordFilter:
+				embed = discord.Embed(title="Word Filter Hit", description="At least one filtered word was detected", colour=0x0acdff)
+				embed.set_author(name=self.user.name, icon_url=	"https://puu.sh/tFFD2/ff202bfc00.png")
+				embed.add_field(name="Author", value=message.author.name + "#" + message.author.discriminator)
+				embed.add_field(name="Channel", value=message.channel.name)
+				embed.add_field(name="Server", value=message.server.name)
+				embed.add_field(name="Content", value=message.content)
+				embed.add_field(name="Detected word", value=word, inline=False)		
+				embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				embed.set_thumbnail(url=message.author.avatar_url)
+				await self.embed(self.get_channel(self.config.modChannel), embed) 
+				break
 
+				
 		if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
 			try:
 				if self.config.get("roleGrant")["ignorecase"]:
@@ -238,9 +253,13 @@ class Petal(discord.Client):
 										"Petal has been configured by staff" +
 										" to not respond to PMs right now")
 			return
+		
 		if not content.startswith(self.config.prefix):
 			return
 		com = content[len(self.config.prefix):].lower().strip()
+
+
+		
 
 		if com.split()[0] in dir(self.commands):
 			methodToCall = getattr(self.commands, com.split()[0])
