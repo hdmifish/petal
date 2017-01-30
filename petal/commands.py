@@ -92,6 +92,17 @@ class Commands:
 			except:
 				return False
 		return True
+	def hasRole(self, user, role):
+		target = discord.utils.get(user.server.roles, name=role)
+		if target is None:
+			self.log.err(role + " does not exist")
+			return False
+		else:
+			if target in user.roles:
+				return True
+			else:
+				return False
+
 
 				
 	def removePrefix(self, input):
@@ -419,8 +430,9 @@ class Commands:
 		Dialog-styled event poster
 		>event
 		"""
-		if not self.level3(message.author):
-			return "You do not have sufficient perms"
+		if not self.hasRole(message.author, self.config.get("xPostRole")):
+			return "You need the: " + self.config.get("xPostRole") + " role to use this command"
+		
 		chanList = []
 		msg = ""
 		for chan in self.config.get("xPostList"):

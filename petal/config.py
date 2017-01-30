@@ -54,7 +54,7 @@ class Config(object):
 	
 	def flip(self):
 		self.lockLog = not self.lockLog
-
+		
 	def get(self, field):
 		if field is None:
 			return "<poof>"
