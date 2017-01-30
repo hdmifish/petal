@@ -61,7 +61,8 @@ class Petal(discord.Client):
 		log.info("Logged in as {0.name}.{0.discriminator} ({0.id})".format(self.user))
 		log.info("Prefix: " + self.config.prefix)
 		log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
-		log.info("Server Info: ")
+
+		#log.info("Server Info: ")
 		#self.mainsvr = self.getMainServer()
 		#log.info("-  Name: " + self.mainsvr.name)
 		#log.info("-    ID: " + self.mainsvr.id)
@@ -97,7 +98,7 @@ class Petal(discord.Client):
 		if self.config.lockLog:
 			return	
 			
-		userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x0acdff)
+		userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
 		userEmbed.set_thumbnail(url=member.avatar_url)
 		userEmbed.add_field(name="Name", value=member.name)
@@ -119,7 +120,7 @@ class Petal(discord.Client):
 		"""
 		if self.config.lockLog:
 			return
-		userEmbed = discord.Embed(title="User Leave" , description="A user has left: " + member.server.name, colour=0x0acdff)
+		userEmbed = discord.Embed(title="User Leave" , description="A user has left: " + member.server.name, colour=0xff0000)
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
 		userEmbed.set_thumbnail(url=member.avatar_url)
 		userEmbed.add_field(name="Name", value=member.name)
@@ -136,7 +137,7 @@ class Petal(discord.Client):
 			return
 		
 
-		userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0x0acdff)
+		userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0xFC00a2)
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
 		userEmbed.add_field(name="Server", value= message.server.name)
 		userEmbed.add_field(name="Channel", value = message.channel.name)
@@ -158,7 +159,7 @@ class Petal(discord.Client):
 		if before.content == after.content:
 			return 
 
-		userEmbed = discord.Embed(title="Message Edit" , description=before.author.name + "#" + before.author.discriminator + " edited their message", colour=0x0acdff)
+		userEmbed = discord.Embed(title="Message Edit" , description=before.author.name + "#" + before.author.discriminator + " edited their message", colour=0xae00fe)
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
 		userEmbed.add_field(name="Server", value= before.server.name)
 		userEmbed.add_field(name="Channel", value = before.channel.name)
@@ -190,14 +191,14 @@ class Petal(discord.Client):
 				role = r
 		
 		if gained is not None:
-			userEmbed = discord.Embed(title="({}) User Role ".format(role.server.name) + gained , description="{}#{} {} role".format(after.name, after.discriminator, gained), colour=0x0acdff)
+			userEmbed = discord.Embed(title="({}) User Role ".format(role.server.name) + gained , description="{}#{} {} role".format(after.name, after.discriminator, gained), colour=0x0093c3)
 			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
 			userEmbed.add_field(name="Role", value=role.name) 
 			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
 			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
 
 		if before.name != after.name:
-			userEmbed = discord.Embed(title="User Name Change", description=before.name + " changed their name to " + after.name, colour=0x0acdff)
+			userEmbed = discord.Embed(title="User Name Change", description=before.name + " changed their name to " + after.name, colour=0x34f3ad)
 			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
 			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
 	
@@ -215,7 +216,7 @@ class Petal(discord.Client):
 		
 		for word in message.content.split():
 			if word in self.config.wordFilter:
-				embed = discord.Embed(title="Word Filter Hit", description="At least one filtered word was detected", colour=0x0acdff)
+				embed = discord.Embed(title="Word Filter Hit", description="At least one filtered word was detected", colour=0x9f00ff)
 				embed.set_author(name=self.user.name, icon_url=	"https://puu.sh/tFFD2/ff202bfc00.png")
 				embed.add_field(name="Author", value=message.author.name + "#" + message.author.discriminator)
 				embed.add_field(name="Channel", value=message.channel.name)

@@ -41,6 +41,7 @@ class Config(object):
 			if self.useLog:
 				self.logChannel = self.get("logChannel")
 				self.modChannel = self.get("modChannel")
+			self.wordFilter = self.get("wordFilter") 
 
 			self.lockLog = False
 			self.imageIndex = self.doc["imageIndex"]
