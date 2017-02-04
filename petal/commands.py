@@ -4,10 +4,13 @@ import random
 
 import imghdr
 import urllib.request as urllib2
-import magic
 import re
 import os
 import praw
+import twitter
+import facebook
+import pytumblr
+
 
 from cleverbot import Cleverbot
 from datetime import datetime
@@ -22,7 +25,7 @@ class Commands:
 	def __init__(self, client):
 		self.client = client
 		self.config = client.config
-		self.cb = Cleverbot()
+		self.cb = Cleverbot('discordBot-petal')
 		self.log = Peacock()
 		self.osuKey = self.config.get("osu")
 		if self.osuKey is not None:
@@ -40,30 +43,44 @@ class Commands:
 								)
 			if self.r.read_only:
 				self.log.warn("This account is in read only mode. You may have done something wrong. This will disable reddit functionality.")
+				self.r = None
 				return
 
-
+		if self.config.get("twitter") is not None:
+			tweet = self.config.get("twitter") 
+			self.t = twitter.Api(consumer_key=tweet["consumerKey"], 
+								consumer_secret=tweet["consumerSecret"],
+								access_token_key=tweet["accessToken"],
+								access_token_secret=tweet["accessTokenSecret"])
+			#tweet test
+			if "id" not in str(self.t.VerifyCredentials()):
+				self.log.warn("Your twitter authentication is invalid, twitter posting will not work")
+				self.t = None
+				return 
+		if self.config.get("facebook") is not None:
+			fb = self.config.get("facebook")
+			self.fb = facebook.GraphAPI(access_token=fb["graphAPIAccessToken"], version= fb["version"])
+				
+		if self.config.get("tumblr") is not None:
+			transfat = self.config.get("tumblr")
+			self.tb = pytumblr.TumblrRestClient(transfat["consumerKey"], transfat["consumerSecret"], transfat["oauthToken"], transfat["oauthTokenSecret"])
+			
 	def level0(self, author):
 		#this supercedes all other levels so, use it carefully
 
 		return author.id == str(self.config.owner)
-
 	def level1(self, author):
 
 		return author.id in self.config.l1 or self.level0(author)
-
 	def level2(self, author):
 
 		return author.id in self.config.l2 or self.level1(author)
-
 	def level3(self, author):
 
 		return author.id in self.config.l3 or self.level2(author)
-
 	def level4(self, author):
 
 		return author.id in self.config.l4 or self.level3(author)
-
 	def getlevel(self, author):
 		count = 0
 		if self.level0(author):
@@ -73,12 +90,9 @@ class Commands:
 			if author.id in self.config.get("level")[l]:
 				return count
 		return 5
-
-
 	def check(self, message):
 
 		return message.content.lower() == 'yes'
-
 	def cleanInput(self, input):
 
 		args = input[len(input.split()[0]):].split('|')
@@ -87,38 +101,41 @@ class Commands:
 			newargs.append(i.strip())
 
 		return newargs
+	def isNumeric(self, message):
+		try:
+			int(message.content)
+		except ValueError:
+			return False
+		else:
+			return True
 
+	def validateChan(self, chanlist, msg):
+		for i in range(len(msg.content)):
+			try:
+				print(msg.content[i])
+				chanlist[int(msg.content[int(i)])] 
+			except:
+				return False
+		return True
+	def hasRole(self, user, role):
+		target = discord.utils.get(user.server.roles, name=role)
+		if target is None:
+			self.log.err(role + " does not exist")
+			return False
+		else:
+			if target in user.roles:
+				return True
+			else:
+				return False
+
+
+				
 	def removePrefix(self, input):
 
 		return input[len(input.split()[0]):]
-
 	def getMember(self, message, member):
+	
 		return discord.utils.get(message.server.members, id=member.lstrip("<@!").rstrip('>'))
-
-	def saveImage(self, command):
-		if not re.match('^[a-zA-Z0-9_]+$', command[0]):
-			 return "File name must be letters and numbers only"
-		try:
-			response = urllib2.urlopen(command[1].strip())
-			with open('{}/img/temp'.format(os.getcwd()), 'wb') as outfile:
-				outfile.write(response.read())
-			mimetype = magic.from_file("./img/temp", mime=True)
-
-			if mimetype.lower() not in ['image/png', 'image/jpg', 'image/jpeg', 'image/gif', 'video/mp4', 'video/webm']:
-				return "Invalid File Type: " + mimetype ("note: gifv is not supported by petal right now")
-			extension = mimetype.lower()[6:]
-			filename = "{}/img/{}.{}".format(os.getcwd(), command[0].strip(), extension.strip())
-			tempfile = os.getcwd() + "/img/temp"
-			print(filename )
-			print(tempfile)
-			os.rename(tempfile, filename)
-			self.config.imageIndex[command[0]] = filename
-		except Exception as e:
-			return "Something went wrong :( " + str(type(e).__name__) + str(e.args)
-		else:
-			self.config.save()
-			return "Image: " + command[0] + "saved successfully!"
-
 	async def parseCustom(self, command, message):
 		invoker = command.split()[0]
 		if len(command.split()) > 1:
@@ -149,7 +166,6 @@ class Commands:
 			return "Hello boss! How's it going?"
 		else:
 			return "Hey there!"
-
 	async def choose(self, message):
 		"""
 		Chooses a random option from a list, separated by |
@@ -158,19 +174,12 @@ class Commands:
 		args = self.cleanInput(message.content)
 		response = "From what you gave me, I believe `{}` is the best choice".format(args[random.randint(0, len(args) - 1)])
 		return response
-
-
 	async def cleverbot(self, message):
 		"""
 		Sends your message to cleverbot
 		Syntax: `>(your message)`
 		"""
 		return self.cb.ask(self.removePrefix(message.content))
-
-
-
-
-	# osu (grasslands.octopus)
 	async def osu(self, message):
 		"""
 		Gets information for an osu player
@@ -201,8 +210,11 @@ class Commands:
 		em.add_field(name="Local Rank ({})".format(user.country), value="{:,}".format(int(user.country_rank)))
 		await self.client.embed(message.channel, embedded=em)
 		return None
-
 	async def new(self, message):
+		"""
+		That awesome custom command command.
+		>new <name of command> | <output of command>
+		"""
 		if not self.level4(message.author):
 			return
 		if len(self.removePrefix(message.content).split('|')) < 2:
@@ -229,39 +241,6 @@ class Commands:
 			self.config.commands[invoker] = {"com":command, "perm": perms}
 			self.config.save()
 			return "New Command `{}` Created!".format(invoker)
-
-	async def save(self, message):
-		"""
-		Saves an image to database.
-		Syntax: `>save (foo)`
-		Filetypes: gif, png, jpg, tiff, mp4 (< 8MB)
-		"""
-		command = self.cleanInput(message.content)
-		if command[0] in self.config.imageIndex:
-			await self.client.send_message(message.channel, "This image already exists, type 'yes' to overwrite")
-			response = await self.client.wait_for_message(timeout=15, author= message.author, channel= message.channel)
-			if response is None or not self.check(response):
-				return "Image `{}` was not changed".format(self.config.imageIndex[command[0]].split('/')[-1])
-
-		return self.saveImage(command)
-
-	async def load(self, message):
-		"""
-		Loads an image from database.
-		Syntax: `>load (foo)`
-		Can also load via `foo` if foo is not a function or custom command
-		"""
-		imageToLoad = self.cleanInput(message.content)[0].strip()
-		if imageToLoad not in self.config.imageIndex:
-			return "Image does not exist"
-		else:
-			try:
-				await self.client.send_file(message.channel, self.config.imageIndex[imageToLoad])
-			except Exception as e:
-				return "Exception occured: " + type(e).__name__ + str(e.args)
-			else:
-				return None
-
 	async def help(self, message):
 		"""
 		Congrats, You did it!
@@ -273,7 +252,6 @@ class Commands:
 			em.set_thumbnail(url=message.author.avatar_url)
 			em.add_field(name="Title", value="Magic Help Text Line 1")
 			em.add_field(name="Syntax", value="`>help`")
-
 
 			await self.client.embed(message.channel, em)
 			return
@@ -288,20 +266,23 @@ class Commands:
 				em.add_field(name="Syntax", value=helptext[2])
 				await self.client.embed(message.channel, em)
 		else:
-			if self.config.aliases[func] in dir(self):
-				if getattr(self, self.config.aliases[func]).__doc__ is None:
-					return "No help for function: " + func
-				else:
-					helptext = getattr(self, self.config.aliases[func]).__doc__.split("\n")
-					em = discord.Embed(title=func, description=helptext[1], colour=0x0acdff)
-					em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
-					em.set_thumbnail(url=self.client.user.avatar_url)
-					em.add_field(name="Syntax", value=helptext[2])
-					await self.client.embed(message.channel, em)
-					return "__**Help Information For {}**__:\n{}".format(func, getattr(self, self.config.aliases[func]).__doc__)
+			try:
+				dir(self.config.aliases[func])
+			except KeyError:
+				return func + " is not a valid command"
 			else:
-				return "Function does not exists"
+				pass
 
+			if getattr(self, self.config.aliases[func]).__doc__ is None:
+				return "No help for function: " + func
+			else:
+				helptext = getattr(self, self.config.aliases[func]).__doc__.split("\n")
+				em = discord.Embed(title=func, description=helptext[1], colour=0x0acdff)
+				em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
+				em.set_thumbnail(url=self.client.user.avatar_url)
+				em.add_field(name="Syntax", value=helptext[2])
+				await self.client.embed(message.channel, em)
+				return "__**Help Information For {}**__:\n{}".format(func, getattr(self, self.config.aliases[func]).__doc__)
 	async def freehug(self, message):
 		"""
 		Requests a freehug from a hug donor
@@ -377,7 +358,6 @@ class Commands:
 				del self.config.hugDonors[message.author.id]
 				self.config.save()
 				return "You have been removed from the donor list."
-
 	async def promote(self, message):
 		"""
 		Promotes a member up one level. You must be at least one level higher to give them a promotion
@@ -406,7 +386,6 @@ class Commands:
 			return mem.name + " was promoted to level: " + str(mlv -1)
 		else:
 			return "You cannot promote this person"
-
 	async def demote(self, message):
 		"""
 		Demotes a member down one level. You must be at least one level higher to demote someone
@@ -439,7 +418,6 @@ class Commands:
 			return mem.name + " was promoted to level: " + str(mlv + 1)
 		else:
 			return "You cannot promote this person"
-
 	async def sub(self, message, force=None):
 		"""
 		Returns a random image from a given subreddit.
@@ -471,7 +449,75 @@ class Commands:
 			return "Unknown Error " + type(e).__name__
 		else:
 			return ob.link
+	
+	async def event(self, message):
+		"""
+		Dialog-styled event poster
+		>event
+		"""
+		if not self.hasRole(message.author, self.config.get("xPostRole")):
+			return "You need the: " + self.config.get("xPostRole") + " role to use this command"
+		
+		chanList = []
+		msg = ""
+		for chan in self.config.get("xPostList"):
+			channel = self.client.get_channel(chan)
+			if channel is not None:
+				msg +=  str(len(chanList)) + ". " + channel.name + " [{}]".format(channel.server.name) + "\n"
+				chanList.append(channel)
+			else:
+				self.log.warn(chan + " is not a valid channel. I'd remove it if I were you.")
+		while True:
+			await self.client.send_message(message.channel, "Hi there, " + message.author.name + "! Please select the number of each server you want to post to. (dont separate the numbers) ")
+			
+			await self.client.send_message(message.channel, msg) 
+		
+			chans = await self.client.wait_for_message(channel=message.channel, author=message.author, check=self.isNumeric, timeout=20)
+				
+			if chans is None:
+				return "Sorry, the request timed out. Please make sure you type a valid sequence of numbers"
+			if self.validateChan(chanList, chans):
+				break
+			else:
+				await self.client.send_message(message.channel, "Invalid channel choices")
+		await self.client.send_message(message.channel, "What do you want to send? (remember: {e} = @ev and {h} = @her)")	
+		msg = await self.client.wait_for_message(channel = message.channel, author=message.author, timeout=30)
+		msgstr = msg.content.format(e="@everyone",h="@here")
+		
+	
+		toPost = [] 
+		for i in range(len(chans.content)):
+			 toPost.append(chanList[int(i) - 1])
+		channames = []
+		for i in toPost:
+			channames.append(i.name + " [" + i.server.name + "]" )
+		
+		embed = discord.Embed(title="Message to post", description=msgstr, colour=0x0acdff)
+		embed.add_field(name="Channels", value="\n".join(channames)) 
+		
+		await self.client.embed(message.channel, embed)
+		await self.client.send_message(message.channel, "If this is ok, type confirm. Otherwise, wait for it to timeout and try again") 
+		msg2 = await self.client.wait_for_message(channel = message.channel, author=message.author, content="confirm", timeout=10)
+		if msg2 is None:
+			return "Event post timed out"
+		
+		for i in toPost:
+			await self.client.send_message(i, msgstr)
+			await asyncio.sleep(2)
+		
+		await self.client.send_message(message.channel, "Messages have been posted")
+		
+	
+			
+			
+		
+
+			
+		
+		
 	#=========REDEFINITIONS============#
+
+
 	async def cat(self, message):
 		"""
 		what...
@@ -507,7 +553,6 @@ class Commands:
 		what...
 		"""
 		return await self.sub(message, "panda")
-
 	async def ping(self, message):
 		"""
 		Shows the round trip time from this bot to you and back
@@ -523,7 +568,6 @@ class Commands:
 
 
 		return "Current Ping: {}ms\nPing till now: {}ms of {} pings".format(str(delta), str(truedelta), str(self.config.stats['pingCount']))
-
 	async def weather(self, message):
 		"""
 		Displays the weather for a location.
@@ -539,14 +583,13 @@ class Commands:
 
 			if not key:
 				return "Weather support has not been set up by adminstrator"
-			url = "http://api.openweathermap.org/data/2.5/weather/?APPID={}&q={}&units={}".format(key, )
-
+			url = "http://api.openweathermap.org/data/2.5/weather/?APPID={}&q={}&units={}".format(key, args[1], "c")
 	async def reddit(self, message):
 		"""
 		Allows posting to a subreddit. Requires level 2 authorization as well as a reddit api key and an account.
 		Syntax: `>reddit (post title) | (Your message) | (subreddit)`
 		"""
-		if not self.level4(message.author):
+		if not self.level3(message.author):
 			return "You must have level4 access to perform this command"
 
 		args = self.cleanInput(message.content)
@@ -555,13 +598,345 @@ class Commands:
 		title = args[0]
 		postdata = args[1]
 		subredditstr = args[2]
-		sub1=self.r.subreddit(subredditstr)
+		sub1 =self.r.subreddit(subredditstr)
+		try:
+			response= sub1.submit(title, selftext=postdata, send_replies=False)
+		except praw.exceptions.APIException as e:
+			return "The post did not send, this key has been ratelimited. Please wait for about 8-10 minutes before posting again" 
+		else:
+			return "Submitted post to " + subredditstr
+	async def kick(self, message):
+		"""
+		Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
+		>kick <user tag/id>
+		"""
+
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the kick command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToBan = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToBan is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				self.client.config.flip() 
+				await self.client.kick(userToBan)
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to kick this user"
+			else:
+				logEmbed = discord.Embed(title="User Kick", description=msg.content, colour=0xff7900)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tAAjx/2d29a3a79c.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+				logEmbed.add_field(name="Server", value=userToBan.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToBan.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+				await self.client.send_message(message.channel, "Cleaning up...")
+				await self.client.send_typing(message.channel) 
+				await asyncio.sleep(4)
+				self.client.config.flip()						
+				return userToBan.name + " (ID: " + userToBan.id + ") was successfully kicked"
+	async def ban(self, message):
+		"""
+		Bans a user permenantly. Temp ban coming when member module works.
+		>ban <user tag/id>
+		"""	
+		
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the ban command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToBan = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToBan is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				await self.client.config.flip()
+				await self.client.ban(userToBan)
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to ban this user"
+			else:
+				logEmbed = discord.Embed(title="User Ban", description=msg.content, colour=0xff0000)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tACjX/fc14b56458.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+				logEmbed.add_field(name="Server", value=userToBan.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToBan.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+				await self.client.send_message(message.channel, "Clearing out messages... ")
+				await asyncio.sleep(4)
+				self.client.config.flip()							
+				return userToBan.name + " (ID: " + userToBan.id + ") was successfully banned"
+	async def warn(self, message):
+		"""
+		Sends an official, logged, warning to a user. (and in the future, serializes it)
+		>warn <user tag/id>
+		"""
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+			
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the warn command" 
+		
+		await self.client.send_message(message.channel, "Please give a message to send (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToWarn = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToWarn is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				warnEmbed = discord.Embed(title="Official Warning", description="The server has sent you an official warning", colour=0xfff600)
+				warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tADFM/dc80dc3a5d.png")
+				warnEmbed.add_field(name="Reason", value=msg.content)
+				warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+				await self.client.embed(userToWarn, warnEmbed)
+
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to warn this user"
+			else:
+				logEmbed = discord.Embed(title="User Warn", description=msg.content, colour=0xff600)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tADFM/dc80dc3a5d.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToWarn.name + "\n" + userToWarn.id)
+				logEmbed.add_field(name="Server", value=userToWarn.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)						
+				return userToWarn.name + " (ID: " + userToWarn.id + ") was successfully warned"
+	async def mute(self, message):
+		"""
+		Toggles the mute tag on a user if your server supports that role. 
+		>mute <user tag/ id>
+		"""
+		muteRole = discord.utils.get(message.server.roles, name="mute")
+		if muteRole is None:
+			return "This server does not have a `mute` role. To enable the mute function, set up the roles and name one `mute`."
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+					
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+
+		if not self.level2(message.author):
+			return "You must have lv2 perms to use the mute command" 
+		
+		await self.client.send_message(message.channel, "Please give a reason for the mute (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		userToWarn = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToWarn is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+					
+				if muteRole in userToWarn.roles:
+					await self.client.remove_roles(userToWarn, muteRole)
+					warnEmbed = discord.Embed(title="User Unmute", description="You have been unmuted by" + message.author.name, colour=0x00ff11)
+					warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+					warnEmbed.add_field(name="Reason", value=msg.content)
+					warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+					muteswitch = "Unmute"
+				else:
+					await self.client.add_roles(userToWarn, muteRole)
+					warnEmbed = discord.Embed(title="User Mute", description="You have been muted by" + message.author.name, colour=0xff0000)
+					warnEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+					warnEmbed.add_field(name="Reason", value=msg.content)
+					warnEmbed.add_field(name="Issuing Server", value=message.server.name, inline=False)
+					muteswitch = "Mute"
+				await self.client.embed(userToWarn, warnEmbed)
+					
+
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to mute this user"
+			else:
+				logEmbed = discord.Embed(title="User {}".format(muteswitch), description=msg.content, colour=0x1200ff)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tB2KH/cea152d8f5.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToWarn.name + "\n" + userToWarn.id)
+				logEmbed.add_field(name="Server", value=userToWarn.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)						
+				return userToWarn.name + " (ID: " + userToWarn.id + ") was successfully {}d".format(muteswitch)
+	async def purge(self, message):
+		"""
+		purges up to 200 messages in the current channel
+		>purge <number of messages to delete>
+		"""
+		if message.author == self.client.user:
+			return 
+		if not self.level2(message.author):
+			return "You do not have sufficient permissions to use the purge function"
+		args = self.cleanInput(message.content)
+		if len(args) < 1:
+			return "Please provide a number between 1 and 200"
+		try:
+			numDelete = int(args[0].strip())
+		except ValueError:
+			return "Please make sure your input is a number"
+		else:
+			if numDelete > 200 or numDelete < 0 :
+				return "That is an invalid number of messages to delete"
+		await self.client.send_message(message.channel, "You are about to delete {} messages  (including these confirmations) in this channel. Type: confirm if this is correct.".format(str(numDelete + 3)))
+		msg = await self.client.wait_for_message(channel = message.channel, content="confirm", author=message.author, timeout=10)
+		if msg is None:
+			return "Purge event cancelled"
+		try:
+			self.client.config.flip()
+			await self.client.purge_from(channel=message.channel, limit=numDelete + 3, check=None)
+		except discord.errors.Forbidden:
+			return "I don't have enough perms to purge messages"
+		else:
+			await asyncio.sleep(2)
+			
+			logEmbed = discord.Embed(title="Purge Event", description="{} messages were purged from {} in {} by {}#{}".format(str(numDelete), message.channel.name, message.server.name, message.author.name, message.author.discriminator),color=0x0acdff)
+			await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+			await asyncio.sleep(4)
+			self.client.config.flip()
+			return
+			
+	async def update(self, message):
+		"""
+		>update
+		Post updates to social media
+		"""
+
+		if not self.hasRole(message.author, self.config.get("socialMediaRole")):
+			return "You must have `{}` to post social media updates"
+		modes = []
+		names = []
+		using = []
+		if self.config.get("reddit") is not None:
+		
+			names.append(str(len(modes)) + " reddit" )
+			modes.append(self.r)
+			using.append("reddit")
+		if self.config.get("twitter") is not None:
+			
+			names.append(str(len(modes)) + " twitter" )
+			modes.append(self.t) 
+			using.append("twitter")
+		if self.config.get("facebook") is not None:
+			
+			names.append(str(len(modes)) + " facebook")
+			modes.append(self.fb)
+			using.append("facebook")
+		if self.config.get("tumblr" ) is not None:
+			
+			names.append(str(len(modes)) + " tumblr")
+			modes.append(self.tb)
+			using.append("tumblr")
+			
+		if len(modes) == 0:
+			return "No modules enabled for social media posting"
+
+		await self.client.send_message(message.channel, "Hello, " + message.author.name  + " here are the enabled social media services \n" + "\n".join(names)  + "\n\n Please select which ones you want to use (e.g. 023) ")
+		
+		sendto = await self.client.wait_for_message(channel = message.channel, author = message.author, check=self.isNumeric, timeout=20)
+		if sendto is None:
+			return "The process timed out, please enter a valid string of numbers"
+		if not self.validateChan(modes, sendto):
+			return "Invalid selection, please try again"
+		
+		await self.client.send_message(message.channel, "Please type a title for your post")
+		mtitle = await self.client.wait_for_message(channel = message.channel, author = message.author, timeout = 10)
+		if mtitle is None:
+			return "The process timed out, you need a valid title"
+		await self.client.send_message(message.channel, "Please type the content of the post below. Limit to 140 characters for twitter posts")
+		mcontent = await self.client.wait_for_message(channel = message.channel, author = message.author, timeout = 20)
+		
+		if mcontent is None:
+			return "The process timed out, you need content to post"
+		
+		if "twitter" in using:
+			if len(mcontent.content) > 140:
+				return "This post is too long for twitter"
+		
+		await self.client.send_message(message.channel, "Your post is ready. Please type: `send` to post to the following: " + ", ".join(using))
+		
+		if "reddit" in using:
+			sub1 =self.r.subreddit(self.config.get("reddit")["targetSR"])
+			try:
+				response= sub1.submit(mtitle.content, selftext=mcontent.clean_content, send_replies=False)
+			except praw.exceptions.APIException as e:
+				await self.client.send_message(message.channel,  "The post did not send, this key has been ratelimited. Please wait for about 8-10 minutes before posting again" )
+			else:
+				await self.client.send_message(message.channel, "Submitted post to " + self.config.get("reddit")["targetSR"])
+		await asyncio.sleep(2)
+
+		if "twitter" in using:
+			status = self.t.PostUpdate(mcontent.clean_content) 
+			await self.client.send_message(message.channel, "Submitted tweet") 
+		await asyncio.sleep(2)
+		
+		if "facebook" in using:
+		
+			resp = self.fb.get_object('me/accounts')
+			page_access_token = None
+			for page in resp['data']:
+				if page['id'] == self.config.get("facebook")["pageID"]:
+					page_access_token = page['access_token']
+			postpage = facebook.GraphAPI(page_access_token)	
+			
+			if postpage is None:
+				await self.client.send_message(message.channel, "Invalid page id for facebook, will not post") 
+			else:
+				status = postpage.put_wall_post(mcontent.clean_content) 
+				await self.client.send_message(message.channel, "Posted to facebook under page: " + page["name"] )
+		
+		await asyncio.sleep(2)
+		
+		if "tumblr" in using:
+			self.tb.create_text(self.config.get("tumblr")["targetBlog"], state="published", slug="post from petalbot", title= mtitle.content, body=mcontent.clean_content) 
+			await self.client.send_message(message.channel, "Posted to tumblr: " + self.config.get("tumblr")["targetBlog"])
+		
+		return "Done posting"
+				
 
 
-		response= sub1.submit(title, selftext=postdata, send_replies=False)
-		return "Submitted post to " + subreddit 
 
-	# twitter (grasslands.bird)
+		
+
+		
+		
+		
+
+	 # twitter (grasslands.bird)
 	# tumblr(grasslands.ferret)
 	# wolframAlpha(wa module)
 	# configurator
