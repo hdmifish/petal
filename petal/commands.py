@@ -559,7 +559,7 @@ class Commands:
 
 
 		response= sub1.submit(title, selftext=postdata, send_replies=False)
-		return "Submitted post to " + subreddit
+		return "Submitted post to " + subreddit 
 
 	# twitter (grasslands.bird)
 	# tumblr(grasslands.ferret)
