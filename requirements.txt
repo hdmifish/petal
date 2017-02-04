@@ -4,6 +4,6 @@ cleverbot
 colorama
 facebook-sdk
 praw
-pytumblr
-twitter
+https://github.com/dianakhuang/pytumblr/archive/diana/python-3-support.zip
+python-twitter
 requests

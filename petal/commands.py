@@ -7,6 +7,10 @@ import urllib.request as urllib2
 import re
 import os
 import praw
+import twitter
+import facebook
+import pytumblr
+
 
 from cleverbot import Cleverbot
 from datetime import datetime
@@ -39,8 +43,28 @@ class Commands:
 								)
 			if self.r.read_only:
 				self.log.warn("This account is in read only mode. You may have done something wrong. This will disable reddit functionality.")
+				self.r = None
 				return
 
+		if self.config.get("twitter") is not None:
+			tweet = self.config.get("twitter") 
+			self.t = twitter.Api(consumer_key=tweet["consumerKey"], 
+								consumer_secret=tweet["consumerSecret"],
+								access_token_key=tweet["accessToken"],
+								access_token_secret=tweet["accessTokenSecret"])
+			#tweet test
+			if "id" not in str(self.t.VerifyCredentials()):
+				self.log.warn("Your twitter authentication is invalid, twitter posting will not work")
+				self.t = None
+				return 
+		if self.config.get("facebook") is not None:
+			fb = self.config.get("facebook")
+			self.fb = facebook.GraphAPI(access_token=fb["graphAPIAccessToken"], version= fb["version"])
+				
+		if self.config.get("tumblr") is not None:
+			transfat = self.config.get("tumblr")
+			self.tb = pytumblr.TumblrRestClient(transfat["consumerKey"], transfat["consumerSecret"], transfat["oauthToken"], transfat["oauthTokenSecret"])
+			
 	def level0(self, author):
 		#this supercedes all other levels so, use it carefully
 
@@ -84,6 +108,7 @@ class Commands:
 			return False
 		else:
 			return True
+
 	def validateChan(self, chanlist, msg):
 		for i in range(len(msg.content)):
 			try:
@@ -564,7 +589,7 @@ class Commands:
 		Allows posting to a subreddit. Requires level 2 authorization as well as a reddit api key and an account.
 		Syntax: `>reddit (post title) | (Your message) | (subreddit)`
 		"""
-		if not self.level4(message.author):
+		if not self.level3(message.author):
 			return "You must have level4 access to perform this command"
 
 		args = self.cleanInput(message.content)
@@ -573,11 +598,13 @@ class Commands:
 		title = args[0]
 		postdata = args[1]
 		subredditstr = args[2]
-		sub1=self.r.subreddit(subredditstr)
-
-
-		response= sub1.submit(title, selftext=postdata, send_replies=False)
-		return "Submitted post to " + subreddit
+		sub1 =self.r.subreddit(subredditstr)
+		try:
+			response= sub1.submit(title, selftext=postdata, send_replies=False)
+		except praw.exceptions.APIException as e:
+			return "The post did not send, this key has been ratelimited. Please wait for about 8-10 minutes before posting again" 
+		else:
+			return "Submitted post to " + subredditstr
 	async def kick(self, message):
 		"""
 		Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
@@ -803,8 +830,113 @@ class Commands:
 			self.client.config.flip()
 			return
 			
+	async def update(self, message):
+		"""
+		>update
+		Post updates to social media
+		"""
 
-	# twitter (grasslands.bird)
+		if not self.hasRole(message.author, self.config.get("socialMediaRole")):
+			return "You must have `{}` to post social media updates"
+		modes = []
+		names = []
+		using = []
+		if self.config.get("reddit") is not None:
+		
+			names.append(str(len(modes)) + " reddit" )
+			modes.append(self.r)
+			using.append("reddit")
+		if self.config.get("twitter") is not None:
+			
+			names.append(str(len(modes)) + " twitter" )
+			modes.append(self.t) 
+			using.append("twitter")
+		if self.config.get("facebook") is not None:
+			
+			names.append(str(len(modes)) + " facebook")
+			modes.append(self.fb)
+			using.append("facebook")
+		if self.config.get("tumblr" ) is not None:
+			
+			names.append(str(len(modes)) + " tumblr")
+			modes.append(self.tb)
+			using.append("tumblr")
+			
+		if len(modes) == 0:
+			return "No modules enabled for social media posting"
+
+		await self.client.send_message(message.channel, "Hello, " + message.author.name  + " here are the enabled social media services \n" + "\n".join(names)  + "\n\n Please select which ones you want to use (e.g. 023) ")
+		
+		sendto = await self.client.wait_for_message(channel = message.channel, author = message.author, check=self.isNumeric, timeout=20)
+		if sendto is None:
+			return "The process timed out, please enter a valid string of numbers"
+		if not self.validateChan(modes, sendto):
+			return "Invalid selection, please try again"
+		
+		await self.client.send_message(message.channel, "Please type a title for your post")
+		mtitle = await self.client.wait_for_message(channel = message.channel, author = message.author, timeout = 10)
+		if mtitle is None:
+			return "The process timed out, you need a valid title"
+		await self.client.send_message(message.channel, "Please type the content of the post below. Limit to 140 characters for twitter posts")
+		mcontent = await self.client.wait_for_message(channel = message.channel, author = message.author, timeout = 20)
+		
+		if mcontent is None:
+			return "The process timed out, you need content to post"
+		
+		if "twitter" in using:
+			if len(mcontent.content) > 140:
+				return "This post is too long for twitter"
+		
+		await self.client.send_message(message.channel, "Your post is ready. Please type: `send` to post to the following: " + ", ".join(using))
+		
+		if "reddit" in using:
+			sub1 =self.r.subreddit(self.config.get("reddit")["targetSR"])
+			try:
+				response= sub1.submit(mtitle.content, selftext=mcontent.clean_content, send_replies=False)
+			except praw.exceptions.APIException as e:
+				await self.client.send_message(message.channel,  "The post did not send, this key has been ratelimited. Please wait for about 8-10 minutes before posting again" )
+			else:
+				await self.client.send_message(message.channel, "Submitted post to " + self.config.get("reddit")["targetSR"])
+		await asyncio.sleep(2)
+
+		if "twitter" in using:
+			status = self.t.PostUpdate(mcontent.clean_content) 
+			await self.client.send_message(message.channel, "Submitted tweet") 
+		await asyncio.sleep(2)
+		
+		if "facebook" in using:
+		
+			resp = self.fb.get_object('me/accounts')
+			page_access_token = None
+			for page in resp['data']:
+				if page['id'] == self.config.get("facebook")["pageID"]:
+					page_access_token = page['access_token']
+			postpage = facebook.GraphAPI(page_access_token)	
+			
+			if postpage is None:
+				await self.client.send_message(message.channel, "Invalid page id for facebook, will not post") 
+			else:
+				status = postpage.put_wall_post(mcontent.clean_content) 
+				await self.client.send_message(message.channel, "Posted to facebook under page: " + page["name"] )
+		
+		await asyncio.sleep(2)
+		
+		if "tumblr" in using:
+			self.tb.create_text(self.config.get("tumblr")["targetBlog"], state="published", slug="post from petalbot", title= mtitle.content, body=mcontent.clean_content) 
+			await self.client.send_message(message.channel, "Posted to tumblr: " + self.config.get("tumblr")["targetBlog"])
+		
+		return "Done posting"
+				
+
+
+
+		
+
+		
+		
+		
+
+	 # twitter (grasslands.bird)
 	# tumblr(grasslands.ferret)
 	# wolframAlpha(wa module)
 	# configurator
