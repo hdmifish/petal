@@ -31,7 +31,7 @@ class Petal(discord.Client):
 
 	def run(self):
 		try:
-			super().run(self.config.token, bot=self.config.useToken)
+			super().run(self.config.token, bot=not self.config.get("selfBot"))
 		except AttributeError as e:
 			log.err("Could not connect using the token provided: " + str(e))
 			exit(1)
@@ -180,7 +180,7 @@ class Petal(discord.Client):
 		if self.config.lockLog:
 			return
 		gained = None
-
+	
 		for r in before.roles:
 			if r not in after.roles:
 				gained = "Lost"	
@@ -205,6 +205,38 @@ class Petal(discord.Client):
 			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
 		return 
 	
+	async def on_voice_state_update(self, before, after):
+		if self.config.tc is None:
+			return
+		tc = self.config.tc
+		trackedChan = self.get_channel(tc["monitoredChannel"])
+		postChan = self.get_channel(tc["destinationChannel"])
+		if trackedChan is None:
+			log.err("Invalid tracking channel. Function disabled")
+			self.config.tc = None
+			return 
+		if postChan is None:
+			log.err("Invalid posting channel. Function disabled")
+			self.config.tc = None
+			return 
+		if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
+			try:
+				await self.send_message(after, tc["messageToUser"])
+			except discord.errors.HTTPException: 
+				log.warn("Unable to PM {user.name}".format(before))
+			else:
+				msg = self.wait_for_message(author=after, channel=after, timeout=20)
+				if msg is None:
+					return 
+				else:
+					if ["yes", "confirm", "please", "yeah", "yep", "mhm" ] in msg.content.lower(): 
+						await self.send_message(postChan, tc["messageFormat"].format(user=after, channel=after.voice_channel))
+					else:
+						await self.send_message(after, "Alright, just to let you know. If you have a spotty connection, you may get PM'd more than once upon joining this channel") 
+					return 
+
+				
+		
 	async def on_message(self, message):
 		await self.wait_until_ready()
 		content = message.content.strip()

@@ -42,9 +42,12 @@ class Config(object):
 				self.logChannel = self.get("logChannel")
 				self.modChannel = self.get("modChannel")
 			self.wordFilter = self.get("wordFilter") 
-
+			self.tc = self.get("trackChannel")
+			if self.tc is None:
+				log.warn("trackChannel object not found in config.yaml. That functionality is disabled")
+			
 			self.lockLog = False
-			self.imageIndex = self.doc["imageIndex"]
+			#self.imageIndex = self.doc["imageIndex"]
 			self.hugDonors = self.doc["hugDonors"]
 			self.stats = self.doc["stats"]
 		except KeyError as e:

@@ -50,7 +50,19 @@ xPostRole: "" #name of role that can use >event
 xPostList: 
  - "channelIDone"
 
+trackChannel: 
+# allows you to monitor users entering/leaving a voice chat. Petal sends a message to users when they join the channel.
+# It then asks for a yes/no style response. If the user responds with: yes, a message is sent to a channel. 
+  messageToUser: "Hey there, noticed you joined our support channel. Do you need help?"
+  monitoredChanel: "00000000"
+  destinationChannel: "0000000"
+  messageFormat: "Hello, @here. {user.name} is in {channel.name} ({channel.server.name}) and said they need help"
+  #you can format this with user {user.name/id/discriminator} and {channel.name/id}
 
+karaokeChannel: "0000000"
+#you can generally ignore this line, basically it is a fix for a specific problem and not really applicable to most servers. 
+#when people join our karaoke channel, it server mutes them. But if they leave before the event is over, they are still muted. So this tracks both entering and exiting.
+		
 
 # Permission Levels
 # A big change from the old leaf setup is permission Levels
