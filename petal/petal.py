@@ -57,9 +57,28 @@ class Petal(discord.Client):
 
 	async def saveloop(self):
 		while True:
-			self.members.save(vb=True)
-			self.config.save(vb=True)
-			await asyncio.sleep(3000)
+			self.members.save()
+			self.config.save()
+			await asyncio.sleep(600)
+
+	async def banloop(self):
+		while True:
+			for mem in self.members.doc:
+				if len(self.members.doc[mem]["tempBan"]) > 0:
+					for case in self.members.doc[mem]["tempBan"]:
+						if self.members.doc[mem]["tempBan"][case]["active"]: 
+							if datetime.utcnow() < datetime.strptime(self.members.doc[mem]["tempBan"][case]["expires"], "%y-%m-%d %H:%M:%S.%f"):
+								self.members.doc[mem]["isBanned"] = False
+								self.members.doc[mem]["tempBan"][case]["active"] = False
+								svr = self.get_server(self.members.doc[mem]["tempBan"][case]["server"])
+								bans = svr.get_bans()
+								for banned in bans:
+									if banned.id == mem:
+										await self.unban(svr, banned)
+										log.member(banned.name + " " + banned.id + " was unbanned")
+								self.members.save() 
+
+			await asyncio.sleep(700)
 
 		
 	async def on_ready(self):
@@ -71,7 +90,9 @@ class Petal(discord.Client):
 		log.info("Logged in as {0.name}.{0.discriminator} ({0.id})".format(self.user))
 		log.info("Prefix: " + self.config.prefix)
 		log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
+		
 		await self.saveloop()
+		await self.banloop()
 		#log.info("Server Info: ")
 		#self.mainsvr = self.getMainServer()
 		#log.info("-  Name: " + self.mainsvr.name)

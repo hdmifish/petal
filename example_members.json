@@ -24,6 +24,7 @@
         "date": "2017-02-10 14:00:00",
         "expires": "2017-2-11 14:00:00",
         "issuer": "mod45 (0000000420)",
+        "server":  "000000"
         "reason": "Was doing stupid stuff...again"
       }
     },

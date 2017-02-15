@@ -100,6 +100,9 @@ class Commands:
 			newargs.append(i.strip())
 
 		return newargs
+
+	
+	
 	def isNumeric(self, message):
 		try:
 			int(message.content)
@@ -618,8 +621,8 @@ class Commands:
 		if logChannel is None:
 			return "I'm sorry, you must have logging enabled to use administrative functions"
 
-		if not self.level2(message.author):
-			return "You must have lv2 perms to use the kick command" 
+		if not self.hasRole(message.author, "mod"):
+			return "You must have the `mod` role"
 		
 		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
 		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
@@ -662,9 +665,9 @@ class Commands:
 		if logChannel is None:
 			return "I'm sorry, you must have logging enabled to use administrative functions"
 
-		if not self.level2(message.author):
-			return "You must have lv2 perms to use the ban command" 
-		
+		if not self.hasRole(message.author, "mod"):
+			return "You must have the `mod` role"
+
 		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
 		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
 		if msg is None:
@@ -694,6 +697,59 @@ class Commands:
 				await asyncio.sleep(4)
 				self.client.config.flip()							
 				return userToBan.name + " (ID: " + userToBan.id + ") was successfully banned"
+
+	async def tempban(self, message):
+		"""
+		Temporarily bans a user
+		>tempban <user tag/id>
+		"""
+		logChannel = message.server.get_channel(self.config.get("logChannel"))
+		if logChannel is None:
+			return "I'm sorry, you must have logging enabled to use administrative functions"
+		
+		await self.client.send_message(message.channel, "Please give a reason (just reply below): ")
+		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
+		if msg is None:
+			return "Timed out while waiting for input"
+		
+		await self.client.send_message(message.channel, "How long? (days) ")
+		msg2  = await self.client.wait_for_message(channel=message.channel, author=message.author, check= self.isNumeric, timeout=30)
+		if msg2 is None:
+			return "Timed out while waiting for input"
+		
+		userToBan = self.getMember(message, self.cleanInput(message.content)[0])
+		if userToBan is None:
+			return "Could not get user with that id"
+	
+		else:
+			try:
+				await self.client.config.flip()
+				self.client.members.addMember(userToBan)
+				if await self.client.members.tempBan(userToBan, message.author, msg.content, int(msg2.content)):
+					return "Successfully temp banned user" 
+				else:
+					return "Unable to tempban user, are they already banned?"
+			
+			except discord.errors.Forbidden as ex:
+				return "It seems I don't have perms to ban this user"
+			else:
+				logEmbed = discord.Embed(title="User Ban", description=msg.content, colour=0xff0000)
+				logEmbed.set_author(name=self.client.user.name, icon_url="https://puu.sh/tACjX/fc14b56458.png")
+				logEmbed.add_field(name="Issuer", value=message.author.name + "\n" + message.author.id)
+				logEmbed.add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+				logEmbed.add_field(name="Server", value=userToBan.server.name)
+				logEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+				logEmbed.set_thumbnail(url=userToBan.avatar_url)
+				
+				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
+				await self.client.send_message(message.channel, "Clearing out messages... ")
+				await asyncio.sleep(4)
+				self.client.config.flip()							
+				return userToBan.name + " (ID: " + userToBan.id + ") was successfully banned"
+
+		
+		
+		
 	async def warn(self, message):
 		"""
 		Sends an official, logged, warning to a user. (and in the future, serializes it)
@@ -750,8 +806,8 @@ class Commands:
 		if logChannel is None:
 			return "I'm sorry, you must have logging enabled to use administrative functions"
 
-		if not self.level2(message.author):
-			return "You must have lv2 perms to use the mute command" 
+		if not self.level3(message.author) and not self.hasRole(message.author, "mod"):
+			return "You must have lv3 perms or the `mod` role to use the mute command" 
 		
 		await self.client.send_message(message.channel, "Please give a reason for the mute (just reply below): ")
 		msg = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=30)
@@ -823,7 +879,6 @@ class Commands:
 			await self.client.purge_from(channel=message.channel, limit=numDelete + 3, check=None)
 		except discord.errors.Forbidden:
 			return "I don't have enough perms to purge messages"
-		else:
 			await asyncio.sleep(2)
 			
 			logEmbed = discord.Embed(title="Purge Event", description="{} messages were purged from {} in {} by {}#{}".format(str(numDelete), message.channel.name, message.server.name, message.author.name, message.author.discriminator),color=0x0acdff)

@@ -45,7 +45,7 @@ class Peacock(object):
 			  + Fore.RESET)
 
 	def ready(self, message):
-		print(Fore.GREEN + "[READY] " + self.timestamp() + " " + message.decode("utf-8", "replace").decode('ascii')
+		print(Fore.GREEN + "[READY] " + self.timestamp() + " " + message.encode("ascii", "ignore").decode('ascii')
 			  + Fore.RESET)
 
 

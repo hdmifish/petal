@@ -1,8 +1,10 @@
-from ruamel import yaml
+import json
 from .grasslands import Peacock
 import urllib.request as urllib2
 from datetime import datetime
+from datetime import timedelta
 import discord
+import asyncio
 
 log = Peacock() 
 
@@ -10,13 +12,22 @@ class Members(object):
 	def __init__(self, client):
 		log.info("Starting member module...")
 		try:
-			with open('members.yaml', 'r') as fp:
-				self.doc = yaml.load(fp, Loader=yaml.RoundTripLoader)
-					
+			with open('members.json', 'r') as fp:
+				self.doc = json.load(fp)
+				self.client = client
+				log.info("Using local member database file")
+
 		except IOError as e:
-			log.err("Could not open members.yaml: " + str(e))
-			exit()
+		
+			log.err("Could not open members.json: " + str(e))
+			response = urllib2.urlopen( "https://raw.githubusercontent.com/hdmifish/petal/master/example_members.json" ).read()
+			self.doc = json.loads(response.decode('utf-8'))
+			log.warn("members.json was missing, so I created one using the default on github")
+			fp = open('members.json', 'w+') 
+			json.dump(self.doc, fp, indent=4)
+			fp.close()
 		except Exception as e:
+
 			log.err("An unexcpected exception of type: "
 				+ type(e).__name__
 				+ "has occurred: " + str(e))
@@ -24,12 +35,11 @@ class Members(object):
 		else:
 			if self.doc is None:
 				log.warn("member database is empty. Attempting to fix...")
-				response = urllib2.urlopen( "https://raw.githubusercontent.com/hdmifish/petal/master/example_members.yaml" )
-				self.doc = yaml.load(response.read())
-				log.warn("members.yaml was missing, so I created one using the default on my github")
-			else:
-				log.ready("members module is ready!")
-		return 
+				response = urllib2.urlopen( "https://raw.githubusercontent.com/hdmifish/petal/master/example_members.json" ).read()
+				self.doc = json.loads(response.decode('utf-8'))
+				log.warn("members.json was missing, so I created one using the default on my github")
+			log.ready("members module is ready!")
+			return 
 	
 	def addMember(self, mem):
 		if mem.id in self.doc:
@@ -42,7 +52,7 @@ class Members(object):
 			self.doc[mem.id]["joinedAt"].append(str(mem.joinedAt))
 
 		else:
-			self.doc[mem.id] = {"name": mem.name, "aliases":[], "joinedAt": [str(mem.joined_at)], "memberAt": "null", "leftAt": "null", "messageCount": 0, "lastOnline": datetime.utcnow(), "osu":"null", "weather": "null", "imgur": "aww", "warnings": {}, "isBanned": False, "tempBan": {}, "blockedChannels":[], "trackedEvents": {}, "notes": {}  }
+			self.doc[mem.id] = {"name": mem.name, "aliases":[], "joinedAt": [str(mem.joined_at)], "memberAt": "null", "leftAt": "null", "messageCount": 0, "lastOnline": str(datetime.utcnow()), "osu":"null", "weather": "null", "imgur": "aww", "warnings": {}, "isBanned": False, "tempBan": {}, "blockedChannels":[], "trackedEvents": {}, "notes": {}  }
 			log.info( mem.name + " ID: " + mem.id + " was added to the member list")
 			return True
 
@@ -53,7 +63,19 @@ class Members(object):
 			return self.doc[id]
 		else:
 			return None
-
+	
+	async def tempBan(self, member, author, reason, Days):
+		if member.id not in self.doc:
+			log.err("Invalid member to ban")
+			return False
+		elif self.doc[member.id]["isBanned"]:
+			return False
+		else:
+			self.doc[member.id]["isBanned"] = True
+			self.doc[member.id]["tempBan"][str(len(self.doc[member.id]["tempBan"]))] = {"server": member.server.id, "active": True, "date": str(datetime.utcnow()), "expires": str(datetime.uctnow() + timedelta(days=Days)), "issuer": author.name + " ({})".format(author.id), "reason": reason }
+			await self.client.ban(member)
+			return True
+		
 	def searchMembers(self, name):
 		results = []
 		for mem in self.doc:
@@ -66,16 +88,16 @@ class Members(object):
 	
 	def save(self, vb=False):
 		try:
-			with open('members.yaml', 'w') as fp:
-				yaml.dump(self.doc, fp, Dumper=yaml.RoundTripDumper)
+			with open('members.json', 'w') as fp:
+				json.dump(self.doc, fp, indent=4)
 		except PermissionError:
-			log.err("No write access to members.yaml")
+			log.err("No write access to members.json")
 		except IOError as e:
-			log.err("Could not open members.yaml: " + str(e))
+			log.err("Could not open members.json: " + str(e))
 		except Exception as e:
 			log.err("An unexcpected exception of type: "
 				+ type(e).__name__
-				+ "has occurred: " + str(e) + " in members.yaml")
+				+ "has occurred: " + str(e) + " in members.json")
 		else:
 			if vb:
 				log.info("Save complete")
