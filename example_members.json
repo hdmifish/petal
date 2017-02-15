@@ -1,44 +1,43 @@
 {
-"0000000": { 
-   "name": "leroy",
-   "aliases":  "iso", 
-   "joinedAt": [ "2015-10-09 18:28:54" ],
-   "memberAt": [ "2017-2-14 12:30:31" ],
-   "leftAt": [ "null" ],
-   "messageCount": 4000,
-   "lastOnline": "2017-02-15 19:10:30" ,
-   "osu": "isometricramen",
-   "weather": "Joplin MO",
-   "imgur": "chemicalreactiongifs",
-   "warnings" :  {
-       "0":{
-          "issuer": "mod1 (0000000012)",
-          "time": "2016-10-10 12:00:00",
-          "content": "Talking too much!"
-		  }
-		    },
-   "isBanned": False,
-   "tempBan": {
+  "0000000": {
+    "name": "leroy",
+    "aliases": "iso",
+    "joinedAt": [ "2015-10-09 18:28:54" ],
+    "memberAt": [ "2017-2-14 12:30:31" ],
+    "leftAt": [ "null" ],
+    "messageCount": 4000,
+    "lastOnline": "2017-02-15 19:10:30",
+    "osu": "isometricramen",
+    "weather": "Joplin MO",
+    "imgur": "chemicalreactiongifs",
+    "warnings": {
       "0": {
-       "active": False,
-       "date": "2017-02-10 14:00:00",
-       "expires": "2017-2-11 14:00:00",
-       "issuer": "mod45 (0000000420)",
-       "reason": "Was doing stupid stuff...again"
-        }
-		},
- 
-   "blockedChannels": [ "99999999" ],
-   "trackedEvents": {
+        "issuer": "mod1 (0000000012)",
+        "time": "2016-10-10 12:00:00",
+        "content": "Talking too much!"
+      }
+    },
+    "isBanned": False,
+    "tempBan": {
+      "0": {
+        "active": False,
+        "date": "2017-02-10 14:00:00",
+        "expires": "2017-2-11 14:00:00",
+        "issuer": "mod45 (0000000420)",
+        "reason": "Was doing stupid stuff...again"
+      }
+    },
+
+    "blockedChannels": [ "99999999" ],
+    "trackedEvents": {
       "00": "ignore this"
-	  },
-   "notes": {
+    },
+    "notes": {
       "00": {
-         "author": "staff 54",
-         "time": "2017-02-14 00:00:02",
-         "content": "Alone on valentines again"
-		 }
-		 }
+        "author": "staff 54",
+        "time": "2017-02-14 00:00:02",
+        "content": "Alone on valentines again"
+      }
+    }
+  }
 }
-
-
