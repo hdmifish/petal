@@ -1,6 +1,6 @@
 "0000000": 
-    "name": "leroy"
-    "aliases":  
+   "name": "leroy"
+   "aliases":  
        -"iso" 
    "joinedAt": 
        -"2015-10-09 18:28:54" 
@@ -20,7 +20,7 @@
 		    
    "isBanned": False
    "tempBan": 
-      "0": 
+      "0": x
        "active": False
        "date": "2017-02-10 14:00:00"
        "expires": "2017-2-11 14:00:00"
