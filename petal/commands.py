@@ -486,8 +486,11 @@ class Commands:
 		
 	
 		toPost = [] 
-		for i in range(len(chans.content)):
-			 toPost.append(chanList[int(i) - 1])
+		for i in chans.content:
+			print(chanList[int(i)])
+			toPost.append(chanList[int(i)])
+			
+
 		channames = []
 		for i in toPost:
 			channames.append(i.name + " [" + i.server.name + "]" )
