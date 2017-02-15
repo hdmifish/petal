@@ -2,7 +2,6 @@ import asyncio
 import discord
 import random
 
-import imghdr
 import urllib.request as urllib2
 import re
 import os

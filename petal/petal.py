@@ -10,7 +10,8 @@ import asyncio
 from datetime import datetime 
 from .grasslands import Peacock
 from .config import Config
-from .commands import Commands   
+from .commands import Commands  
+from .members import Members
 log = Peacock()
 
 
@@ -26,6 +27,9 @@ class Petal(discord.Client):
 
 		self.config = Config()
 		self.commands = Commands(self)
+		self.members = Members(self)
+		
+
 		log.info("Configuration object initalized")
 		return
 
@@ -51,7 +55,13 @@ class Petal(discord.Client):
 			log.err("This client is not a member of any servers")
 			exit(404)
 
+	async def saveloop(self):
+		while True:
+			self.members.save(vb=True)
+			self.config.save(vb=True)
+			await asyncio.sleep(3000)
 
+		
 	async def on_ready(self):
 		"""
 		Called once a connection has been established
@@ -61,7 +71,7 @@ class Petal(discord.Client):
 		log.info("Logged in as {0.name}.{0.discriminator} ({0.id})".format(self.user))
 		log.info("Prefix: " + self.config.prefix)
 		log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
-
+		await self.saveloop()
 		#log.info("Server Info: ")
 		#self.mainsvr = self.getMainServer()
 		#log.info("-  Name: " + self.mainsvr.name)
@@ -97,11 +107,17 @@ class Petal(discord.Client):
 		
 		if self.config.lockLog:
 			return	
-			
-		userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
+		
+		
+		if self.members.addMember(member):	
+			userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
+		else:
+			userEmbed = discord.Embed(title="User ReJoined", description= self.members.getMember(member.id)["aliases"][-1] + " rejoined " + member.server.name + " as " + member.name, colour=0x00FF00)
+	
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
 		userEmbed.set_thumbnail(url=member.avatar_url)
 		userEmbed.add_field(name="Name", value=member.name)
+		
 		userEmbed.add_field(name="ID", value=member.id)
 		userEmbed.add_field(name="Discriminator", value=member.discriminator)
 		if member.game is None:	
@@ -240,10 +256,16 @@ class Petal(discord.Client):
 	async def on_message(self, message):
 		await self.wait_until_ready()
 		content = message.content.strip()
+		self.members.addMember(message.author)
+		self.members.getMember(message.author.id)["messageCount"] += 1
+		
 		if message.author == self.user:
 			return
 		if message.content == self.config.prefix:
 			return
+		
+    
+    
 
 		
 		for word in message.content.split():

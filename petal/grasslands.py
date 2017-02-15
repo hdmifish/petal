@@ -15,37 +15,37 @@ class Peacock(object):
 		return "[{}]".format(str(dt.utcnow())[:-7])
 
 	def log(self, message):
-		print(Fore.WHITE + "[LOG] " + self.timestamp() + " " + message
+		print(Fore.WHITE + "[LOG] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 		return
 
 	def warn(self, message):
-		print(Fore.YELLOW + "[WARN] " + self.timestamp() + " " + message
+		print(Fore.YELLOW + "[WARN] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 		return
 
 	def err(self, message):
-		print(Fore.RED + "[ERROR] " + self.timestamp() + " " + message
+		print(Fore.RED + "[ERROR] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 
 	def info(self, message):
-		print(Fore.CYAN + "[INFO] " + self.timestamp() + " " + message
+		print(Fore.CYAN + "[INFO] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 
 	def com(self, message):
-		print(Fore.BLUE + "[COMMAND] " + self.timestamp() + " " + message
+		print(Fore.BLUE + "[COMMAND] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 
 	def member(self, message):
-		print(Fore.CYAN + "[MEMBER] " + self.timestamp() + " " + message
+		print(Fore.CYAN + "[MEMBER] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 
 	def debug(self, message):
-		print(Fore.MAGENTA + "[DEBUG] " + self.timestamp() + " " + message
+		print(Fore.MAGENTA + "[DEBUG] " + self.timestamp() + " " + message.encode('ascii', 'ignore').decode('ascii')
 			  + Fore.RESET)
 
 	def ready(self, message):
-		print(Fore.GREEN + "[READY] " + self.timestamp() + " " + message
+		print(Fore.GREEN + "[READY] " + self.timestamp() + " " + message.decode("utf-8", "replace").decode('ascii')
 			  + Fore.RESET)
 
 
