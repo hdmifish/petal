@@ -679,7 +679,7 @@ class Commands:
 	
 		else:
 			try:
-				await self.client.config.flip()
+				self.client.config.flip()
 				await self.client.ban(userToBan)
 			except discord.errors.Forbidden as ex:
 				return "It seems I don't have perms to ban this user"
