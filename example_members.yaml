@@ -1,18 +1,18 @@
-"0000000":
+"0000000": 
     "name": "leroy"
     "aliases":  
        -"iso" 
-    "joinedAt": 
+   "joinedAt": 
        -"2015-10-09 18:28:54" 
-    "memberAt": "2017-2-14 12:30:31"
-    "leftAt":
+   "memberAt": "2017-2-14 12:30:31"
+   "leftAt":
        -"null" 
-    "messageCount": 4000
-    "lastOnline": "2017-02-15 19:10:30"
-    "osu": "isometricramen"
-    "weather": "Joplin MO"
-    "imgur": "chemicalreactiongifs"
-    "warnings" : 
+   "messageCount": 4000
+   "lastOnline": "2017-02-15 19:10:30"
+   "osu": "isometricramen"
+   "weather": "Joplin MO"
+   "imgur": "chemicalreactiongifs"
+   "warnings" : 
        "0":
           "issuer": "mod1 (0000000012)"
           "time": "2016-10-10 12:00:00"
@@ -33,10 +33,10 @@
    "trackedEvents": 
       "00": "ignore this"
 
-"notes": 
-	"00":
-      "author": "staff 54"
-      "time": "2017-02-14 00:00:02"
-      "content": "Alone on valentines again"
+   "notes": 
+      "00":
+         "author": "staff 54"
+         "time": "2017-02-14 00:00:02"
+         "content": "Alone on valentines again"
 
 
