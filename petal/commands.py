@@ -693,7 +693,7 @@ class Commands:
 				logEmbed.set_thumbnail(url=userToBan.avatar_url)
 				
 				await self.client.embed(self.client.get_channel(self.config.modChannel), logEmbed)
-				await self.client.send_message(message.channel, "Clearing out messages... ")
+					await self.client.send_message(message.channel, "Clearing out messages... ")
 				await asyncio.sleep(4)
 				self.client.config.flip()							
 				return userToBan.name + " (ID: " + userToBan.id + ") was successfully banned"
@@ -723,7 +723,7 @@ class Commands:
 	
 		else:
 			try:
-				await self.client.config.flip()
+				self.client.config.flip()
 				self.client.members.addMember(userToBan)
 				if await self.client.members.tempBan(userToBan, message.author, msg.content, int(msg2.content)):
 					return "Successfully temp banned user" 
