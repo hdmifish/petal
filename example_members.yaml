@@ -1,4 +1,4 @@
-"0000000": 
+"0000000":
     "name": "leroy"
     "aliases":  
        -"iso" 
@@ -17,7 +17,7 @@
           "issuer": "mod1 (0000000012)"
           "time": "2016-10-10 12:00:00"
           "content": "Talking too much!"
-           
+		    
    "isBanned": False
    "tempBan": 
       "0": 
