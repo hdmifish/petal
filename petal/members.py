@@ -72,7 +72,7 @@ class Members(object):
 			return False
 		else:
 			self.doc[member.id]["isBanned"] = True
-			self.doc[member.id]["tempBan"][str(len(self.doc[member.id]["tempBan"]))] = {"server": member.server.id, "active": True, "date": str(datetime.utcnow()), "expires": str(datetime.uctnow() + timedelta(days=Days)), "issuer": author.name + " ({})".format(author.id), "reason": reason }
+			self.doc[member.id]["tempBan"][str(len(self.doc[member.id]["tempBan"]))] = {"server": member.server.id, "active": True, "date": str(datetime.utcnow()), "expires": str(datetime.utcnow() + timedelta(days=Days)), "issuer": author.name + " ({})".format(author.id), "reason": reason }
 			await self.client.ban(member)
 			return True
 		
