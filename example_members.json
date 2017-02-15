@@ -17,10 +17,10 @@
         "content": "Talking too much!"
       }
     },
-    "isBanned": False,
+    "isBanned": false,
     "tempBan": {
       "0": {
-        "active": False,
+        "active": false,
         "date": "2017-02-10 14:00:00",
         "expires": "2017-2-11 14:00:00",
         "issuer": "mod45 (0000000420)",
