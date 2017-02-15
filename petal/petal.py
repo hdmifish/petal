@@ -193,6 +193,8 @@ class Petal(discord.Client):
 			return 	
 		if before.content == "":
 			return 
+		if after.content == "":
+			return
 		if before.content == after.content:
 			return 
 
