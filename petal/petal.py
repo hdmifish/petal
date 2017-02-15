@@ -170,23 +170,26 @@ class Petal(discord.Client):
 
 	
 	async def on_message_delete(self, message):
-		if  self.config.lockLog:	
-			return
+		try:
+			if self.config.lockLog:	
+				return
 		
 
-		userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0xFC00a2)
-		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
-		userEmbed.add_field(name="Server", value= message.server.name)
-		userEmbed.add_field(name="Channel", value = message.channel.name)
-		userEmbed.add_field(name="Message content", value=message.content, inline=False)
-		userEmbed.add_field(name="Message creation", value=str(message.timestamp)[:-7])
-		userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
+			userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0xFC00a2)
+			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
+			userEmbed.add_field(name="Server", value= message.server.name)
+			userEmbed.add_field(name="Channel", value = message.channel.name)
+			userEmbed.add_field(name="Message content", value=message.content, inline=False)
+			userEmbed.add_field(name="Message creation", value=str(message.timestamp)[:-7])
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
 		
 	
-		await self.embed(self.get_channel(self.config.modChannel), userEmbed)
-		await asyncio.sleep(2)
-
-		return 
+			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+			await asyncio.sleep(2)
+		except discord.errors.HTTPException:
+			pass
+		else:
+			return 
 
 	async def on_message_edit(self, before, after):
 		if self.config.lockLog:
