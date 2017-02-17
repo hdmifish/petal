@@ -886,7 +886,27 @@ class Commands:
 			await asyncio.sleep(4)
 			self.client.config.flip()
 			return
-			
+	
+	async def void(self, message):
+		"""
+		>void grabs a random item from the void and displays/prints it.
+		>void <link or text message> sends to void forever
+		"""
+		args = self.cleanInput(message.content)
+		if args[0] == "":
+			response = self.config.getVoid()
+			if response.startswith("http"):
+				return "You grab a link from the void: \n" + response
+			else:
+				return response
+		else:
+			count = self.config.saveVoid(args[0], message.author.name, message.author.id)
+			if count is not None:
+				return "Added item number " + str(count) + " to the void"
+
+		
+
+				
 	async def update(self, message):
 		"""
 		>update
