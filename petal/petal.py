@@ -133,7 +133,11 @@ class Petal(discord.Client):
 		if self.members.addMember(member):	
 			userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
 		else:
-			userEmbed = discord.Embed(title="User ReJoined", description= self.members.getMember(member.id)["aliases"][-1] + " rejoined " + member.server.name + " as " + member.name, colour=0x00FF00)
+			if len(self.members.ggetMember(member.id)["aliases"]) != 0:
+				userEmbed = discord.Embed(title="User ReJoined", description= self.members.getMember(member.id)["aliases"][-1] + " rejoined " + member.server.name + " as " + member.name, colour=0x00FF00)
+			else: 
+				pass
+
 	
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
 		userEmbed.set_thumbnail(url=member.avatar_url)
