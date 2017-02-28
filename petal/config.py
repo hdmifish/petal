@@ -1,6 +1,7 @@
 from ruamel import yaml
 from .grasslands import Peacock
 from random import randint
+from datetime import datetime
 log = Peacock()
 
 
@@ -36,6 +37,7 @@ class Config(object):
 			self.l4 = self.doc["level"]["l4"]
 			self.aliases = self.doc["aliases"]
 			self.permitNSFW = self.doc["permitNSFW"]
+			self.blacklist = self.doc["blacklist"]
 			self.commands = self.doc["commands"]
 			self.useLog = "logChannel" in self.doc
 			if self.useLog:
@@ -98,7 +100,7 @@ class Config(object):
 			if e["content"] == content:
 				return None
 
-		v.append({"content":content, "author":name + " " + id})
+		v.append({"content":content, "author":name + " " + id, "number":len(v),"time":str(datetime.utcnow())} )
 		return len(v)
 			
 				

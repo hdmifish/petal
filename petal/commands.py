@@ -483,7 +483,7 @@ class Commands:
 			else:
 				await self.client.send_message(message.channel, "Invalid channel choices")
 		await self.client.send_message(message.channel, "What do you want to send? (remember: {e} = @ev and {h} = @her)")	
-		msg = await self.client.wait_for_message(channel = message.channel, author=message.author, timeout=30)
+		msg = await self.client.wait_for_message(channel = message.channel, author=message.author, timeout=120)
 		msgstr = msg.content.format(e="@everyone",h="@here")
 		
 	
@@ -1005,7 +1005,29 @@ class Commands:
 		return "Done posting"
 				
 
- 
+	async def blacklist(self,  message):
+		"""
+		Prevents tagged user from using petal
+		>blacklist <tag>
+		"""
+
+		args = self.cleanInput(message.content)
+		if not self.level2(message.author) and self.hasRole(message.author, "mod"):
+			return "You need level 2 or the `mod` role"
+		if len(args) < 1:
+			return "Tag someone ya goof"
+		else:
+			mem = self.getMember(message, args[0])
+			if mem is None:
+				return "Couldnt find user with ID: " + args[0]
+			
+			if mem.id in self.config.blacklist:
+				self.config.blacklist.remove(mem.id)
+				return mem.name  + " was given the ability to use petal again"
+			else:
+				self.config.blacklist.append(mem.id)
+				return mem.name + " was blacklisted"
+			
 
 		
 

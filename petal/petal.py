@@ -28,7 +28,7 @@ class Petal(discord.Client):
 		self.config = Config()
 		self.commands = Commands(self)
 		self.members = Members(self)
-		
+
 
 		log.info("Configuration object initalized")
 		return
@@ -46,6 +46,11 @@ class Petal(discord.Client):
 					+ " is invalid " + str(e))
 			exit(401)
 		return
+	def isPM(self, message):
+		if message.channel.is_private:
+			return True
+		else:
+			return False
 
 	def removePrefix(self, input):
 		return input[len(input.split()[0]):]
@@ -133,7 +138,7 @@ class Petal(discord.Client):
 		if self.members.addMember(member):	
 			userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
 		else:
-			if len(self.members.ggetMember(member.id)["aliases"]) != 0:
+			if len(self.members.getMember(member.id)["aliases"]) != 0:
 				userEmbed = discord.Embed(title="User ReJoined", description= self.members.getMember(member.id)["aliases"][-1] + " rejoined " + member.server.name + " as " + member.name, colour=0x00FF00)
 			else: 
 				pass
@@ -271,11 +276,11 @@ class Petal(discord.Client):
 			except discord.errors.HTTPException: 
 				log.warn("Unable to PM {user.name}".format(before))
 			else:
-				msg = self.wait_for_message(author=after, channel=after, timeout=20)
+				msg = await self.wait_for_message(author=after, check=self.isPM, timeout=200)
 				if msg is None:
 					return 
 				else:
-					if ["yes", "confirm", "please", "yeah", "yep", "mhm" ] in msg.content.lower(): 
+					if msg.content.lower() in ["yes", "confirm", "please", "yeah", "yep", "mhm" ]:
 						await self.send_message(postChan, tc["messageFormat"].format(user=after, channel=after.voice_channel))
 					else:
 						await self.send_message(after, "Alright, just to let you know. If you have a spotty connection, you may get PM'd more than once upon joining this channel") 
@@ -294,6 +299,8 @@ class Petal(discord.Client):
 		if message.content == self.config.prefix:
 			return
 		
+		if message.author.id in self.config.blacklist:
+			return 
     
     
 
@@ -372,6 +379,8 @@ class Petal(discord.Client):
 				await self.send_message(message.channel, response)
 
 			else:
+				return
+
 				log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]".format(message.channel, message.author, message.content.lstrip(self.config.prefix) ))
 				response = await self.commands.cleverbot(message)
 				await self.send_message(message.channel, response)
