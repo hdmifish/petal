@@ -7,10 +7,10 @@ written by hdmifish
 import discord
 import re
 import asyncio
-from datetime import datetime 
+from datetime import datetime
 from .grasslands import Peacock
 from .config import Config
-from .commands import Commands  
+from .commands import Commands
 from .members import Members
 log = Peacock()
 
@@ -71,7 +71,7 @@ class Petal(discord.Client):
 			for mem in self.members.doc:
 				if len(self.members.doc[mem]["tempBan"]) > 0:
 					for case in self.members.doc[mem]["tempBan"]:
-						if self.members.doc[mem]["tempBan"][case]["active"]: 
+						if self.members.doc[mem]["tempBan"][case]["active"]:
 							if datetime.utcnow() < datetime.strptime(self.members.doc[mem]["tempBan"][case]["expires"], "%y-%m-%d %H:%M:%S.%f"):
 								self.members.doc[mem]["isBanned"] = False
 								self.members.doc[mem]["tempBan"][case]["active"] = False
@@ -81,11 +81,11 @@ class Petal(discord.Client):
 									if banned.id == mem:
 										await self.unban(svr, banned)
 										log.member(banned.name + " " + banned.id + " was unbanned")
-								self.members.save() 
+								self.members.save()
 
 			await asyncio.sleep(700)
 
-		
+
 	async def on_ready(self):
 		"""
 		Called once a connection has been established
@@ -95,7 +95,7 @@ class Petal(discord.Client):
 		log.info("Logged in as {0.name}.{0.discriminator} ({0.id})".format(self.user))
 		log.info("Prefix: " + self.config.prefix)
 		log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
-		
+
 		await self.saveloop()
 		await self.banloop()
 		#log.info("Server Info: ")
@@ -130,33 +130,34 @@ class Petal(discord.Client):
 				response = " and was not PM'd :( "
 			else:
 				response = " and was PM'd :) "
-		
+
 		if self.config.lockLog:
-			return	
-		
-		
-		if self.members.addMember(member):	
+			return
+
+
+		if self.members.addMember(member):
 			userEmbed = discord.Embed(title="User Joined", description="A new user joined: " + member.server.name, colour=0x00FF00)
 		else:
 			if len(self.members.getMember(member.id)["aliases"]) != 0:
+
 				userEmbed = discord.Embed(title="User ReJoined", description= self.members.getMember(member.id)["aliases"][-1] + " rejoined " + member.server.name + " as " + member.name, colour=0x00FF00)
-			else: 
+			else:
 				pass
 
-	
+
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
 		userEmbed.set_thumbnail(url=member.avatar_url)
 		userEmbed.add_field(name="Name", value=member.name)
-		
+
 		userEmbed.add_field(name="ID", value=member.id)
 		userEmbed.add_field(name="Discriminator", value=member.discriminator)
-		if member.game is None:	
+		if member.game is None:
 			game = "(nothing)"
 		else:
 			game = member.game.name
 		userEmbed.add_field(name="Currently Playing", value=game)
-		userEmbed.add_field(name="Joined: ", value=str(member.joined_at)[:-7]) 
-		
+		userEmbed.add_field(name="Joined: ", value=str(member.joined_at)[:-7])
+
 		await self.embed(self.get_channel(self.config.logChannel), userEmbed)
 		return
 
@@ -177,12 +178,12 @@ class Petal(discord.Client):
 		await self.embed(self.get_channel(self.config.logChannel), userEmbed)
 		return
 
-	
+
 	async def on_message_delete(self, message):
 		try:
-			if self.config.lockLog:	
+			if self.config.lockLog:
 				return
-		
+
 
 			userEmbed = discord.Embed(title="Message Delete" , description=message.author.name + "#" + message.author.discriminator + "'s message was deleted", colour=0xFC00a2)
 			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
@@ -190,72 +191,72 @@ class Petal(discord.Client):
 			userEmbed.add_field(name="Channel", value = message.channel.name)
 			userEmbed.add_field(name="Message content", value=message.content, inline=False)
 			userEmbed.add_field(name="Message creation", value=str(message.timestamp)[:-7])
-			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
-		
-	
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+
+
 			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
 			await asyncio.sleep(2)
 		except discord.errors.HTTPException:
 			pass
 		else:
-			return 
+			return
 
 	async def on_message_edit(self, before, after):
 		if self.config.lockLog:
-			return 	
+			return
 		if before.content == "":
-			return 
+			return
 		if after.content == "":
 			return
 		if before.content == after.content:
-			return 
+			return
 
 		userEmbed = discord.Embed(title="Message Edit" , description=before.author.name + "#" + before.author.discriminator + " edited their message", colour=0xae00fe)
 		userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
 		userEmbed.add_field(name="Server", value= before.server.name)
 		userEmbed.add_field(name="Channel", value = before.channel.name)
-		userEmbed.add_field(name="Previous message: ", value=before.content, inline=False)	
+		userEmbed.add_field(name="Previous message: ", value=before.content, inline=False)
 		userEmbed.add_field(name="Edited message: ", value=after.content)
 		userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7], inline=False)
 
 		try:
-			await self.embed(self.get_channel(self.config.modChannel), userEmbed)	
+			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
 		except discord.errors.HTTPException:
 			print("HTTP 400 error from the edit statement. Usually it's safe to ignore it")
 			pass #this is awful but it silences a silly error that I can not find a solution to
 #		self.config.flip()
-		return 
-	
-	
+		return
+
+
 	async def on_member_update(self, before, after):
 		if self.config.lockLog:
 			return
 		gained = None
-	
+
 		for r in before.roles:
 			if r not in after.roles:
-				gained = "Lost"	
+				gained = "Lost"
 				role = r
 		for r in after.roles:
 			if r not in before.roles:
 				gained = "Gained"
 				role = r
-		
+
 		if gained is not None:
 			userEmbed = discord.Embed(title="({}) User Role ".format(role.server.name) + gained , description="{}#{} {} role".format(after.name, after.discriminator, gained), colour=0x0093c3)
 			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
-			userEmbed.add_field(name="Role", value=role.name) 
-			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
+			userEmbed.add_field(name="Role", value=role.name)
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
 
 		if before.name != after.name:
 			userEmbed = discord.Embed(title="User Name Change", description=before.name + " changed their name to " + after.name, colour=0x34f3ad)
 			userEmbed.set_author(name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png")
-			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7]) 
-	
+			userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+
 			await self.embed(self.get_channel(self.config.modChannel), userEmbed)
-		return 
-	
+		return
+
 	async def on_voice_state_update(self, before, after):
 		if self.config.tc is None:
 			return
@@ -265,46 +266,46 @@ class Petal(discord.Client):
 		if trackedChan is None:
 			log.err("Invalid tracking channel. Function disabled")
 			self.config.tc = None
-			return 
+			return
 		if postChan is None:
 			log.err("Invalid posting channel. Function disabled")
 			self.config.tc = None
-			return 
+			return
 		if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
 			try:
 				await self.send_message(after, tc["messageToUser"])
-			except discord.errors.HTTPException: 
+			except discord.errors.HTTPException:
 				log.warn("Unable to PM {user.name}".format(before))
 			else:
 				msg = await self.wait_for_message(author=after, check=self.isPM, timeout=200)
 				if msg is None:
-					return 
+					return
 				else:
 					if msg.content.lower() in ["yes", "confirm", "please", "yeah", "yep", "mhm" ]:
 						await self.send_message(postChan, tc["messageFormat"].format(user=after, channel=after.voice_channel))
 					else:
-						await self.send_message(after, "Alright, just to let you know. If you have a spotty connection, you may get PM'd more than once upon joining this channel") 
-					return 
+						await self.send_message(after, "Alright, just to let you know. If you have a spotty connection, you may get PM'd more than once upon joining this channel")
+					return
 
-				
-		
+
+
 	async def on_message(self, message):
 		await self.wait_until_ready()
 		content = message.content.strip()
 		self.members.addMember(message.author)
 		self.members.getMember(message.author.id)["messageCount"] += 1
-		
+
 		if message.author == self.user:
 			return
 		if message.content == self.config.prefix:
 			return
-		
-		if message.author.id in self.config.blacklist:
-			return 
-    
-    
 
-		
+		if message.author.id in self.config.blacklist:
+			return
+
+
+
+
 		for word in message.content.split():
 			if word in self.config.wordFilter:
 				embed = discord.Embed(title="Word Filter Hit", description="At least one filtered word was detected", colour=0x9f00ff)
@@ -313,13 +314,13 @@ class Petal(discord.Client):
 				embed.add_field(name="Channel", value=message.channel.name)
 				embed.add_field(name="Server", value=message.server.name)
 				embed.add_field(name="Content", value=message.content)
-				embed.add_field(name="Detected word", value=word, inline=False)		
+				embed.add_field(name="Detected word", value=word, inline=False)
 				embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 				embed.set_thumbnail(url=message.author.avatar_url)
-				await self.embed(self.get_channel(self.config.modChannel), embed) 
+				await self.embed(self.get_channel(self.config.modChannel), embed)
 				break
 
-				
+
 		if message.channel.id == self.config.get("roleGrant")["chan"] and discord.utils.get(self.mainsvr.roles, id=self.config.get("roleGrant")["role"]) not in message.author.roles:
 			try:
 				if self.config.get("roleGrant")["ignorecase"]:
@@ -345,13 +346,13 @@ class Petal(discord.Client):
 										"Petal has been configured by staff" +
 										" to not respond to PMs right now")
 			return
-		
+
 		if not content.startswith(self.config.prefix):
 			return
 		com = content[len(self.config.prefix):].lower().strip()
 
 
-		
+
 
 		if com.split()[0] in dir(self.commands):
 			methodToCall = getattr(self.commands, com.split()[0])

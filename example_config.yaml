@@ -22,6 +22,9 @@ wordFilter:
 - gook
 - chink
 
+blacklist:
+- assholesgohere(welltheirIDsanyway)
+
 # Give user role after typing a phrase. Requires a dedicated channel and a regex
 roleGrant:
   role: '000000000000000000'
@@ -163,3 +166,12 @@ commands:
     perm: '0'
     com: tree
 #under here is gonna be stats and shit. Do not edit this
+void:
+- content: "hello from the other side!"
+  author: isometricramen
+  num: 0
+  time: 0   
+comfyGallery:
+- exampleignore
+calmGallery:
+- exampleignore

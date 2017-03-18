@@ -6,7 +6,7 @@ from datetime import timedelta
 import discord
 import asyncio
 
-log = Peacock() 
+log = Peacock()
 
 class Members(object):
 	def __init__(self, client):
@@ -18,12 +18,12 @@ class Members(object):
 				log.info("Using local member database file")
 
 		except IOError as e:
-		
+
 			log.err("Could not open members.json: " + str(e))
 			response = urllib2.urlopen( "https://raw.githubusercontent.com/hdmifish/petal/master/example_members.json" ).read()
 			self.doc = json.loads(response.decode('utf-8'))
 			log.warn("members.json was missing, so I created one using the default on github")
-			fp = open('members.json', 'w+') 
+			fp = open('members.json', 'w+')
 			json.dump(self.doc, fp, indent=4)
 			fp.close()
 		except Exception as e:
@@ -39,20 +39,24 @@ class Members(object):
 				self.doc = json.loads(response.decode('utf-8'))
 				log.warn("members.json was missing, so I created one using the default on my github")
 			log.ready("members module is ready!")
-			return 
-	
+			return
+
 	def addMember(self, mem):
 		if mem.id in self.doc:
-			return False
+
 			if self.doc[mem.id]["name"] not in self.doc[mem.id]["aliases"]:
 				self.doc[mem.id]["aliases"].append(self.doc[mem.id]["name"])
 			else:
 				self.doc[mem.id]["name"] = mem.name
-		
-			self.doc[mem.id]["joinedAt"].append(str(mem.joinedAt))
-
+			try:
+				self.doc[mem.id]["joinedAt"].append(str(mem.joined_at))
+			except KeyError:
+				self.doc[mem.id]["joinedAt"] = [str(datetime.utcnow())]
+			except AttributeError:
+				self.doc[mem.id]["joinedAt"] = [self.doc[mem.id]["joinedAt"]].append(str(mem.joined_at))
+			return False
 		else:
-			self.doc[mem.id] = {"name": mem.name, "aliases":[], "joinedAt": [str(mem.joined_at)], "memberAt": "null", "leftAt": "null", "messageCount": 0, "lastOnline": str(datetime.utcnow()), "osu":"null", "weather": "null", "imgur": "aww", "warnings": {}, "isBanned": False, "tempBan": {}, "blockedChannels":[], "trackedEvents": {}, "notes": {}  }
+			self.doc[mem.id] = {"name": mem.name, "aliases":[],  "memberAt": "null", "leftAt": "null", "messageCount": 0, "lastOnline": str(datetime.utcnow()), "osu":"null", "weather": "null", "imgur": "aww", "warnings": {}, "isBanned": False, "tempBan": {}, "blockedChannels":[], "trackedEvents": {}, "notes": {}  }
 			log.info( mem.name + " ID: " + mem.id + " was added to the member list")
 			return True
 
@@ -63,7 +67,7 @@ class Members(object):
 			return self.doc[id]
 		else:
 			return None
-	
+
 	async def tempBan(self, member, author, reason, Days):
 		if member.id not in self.doc:
 			log.err("Invalid member to ban")
@@ -75,7 +79,7 @@ class Members(object):
 			self.doc[member.id]["tempBan"][str(len(self.doc[member.id]["tempBan"]))] = {"server": member.server.id, "active": True, "date": str(datetime.utcnow()), "expires": str(datetime.utcnow() + timedelta(days=Days)), "issuer": author.name + " ({})".format(author.id), "reason": reason }
 			await self.client.ban(member)
 			return True
-		
+
 	def searchMembers(self, name):
 		results = []
 		for mem in self.doc:
@@ -85,7 +89,7 @@ class Members(object):
 			return None
 		else:
 			return results
-	
+
 	def save(self, vb=False):
 		try:
 			with open('members.json', 'w') as fp:
@@ -102,14 +106,3 @@ class Members(object):
 			if vb:
 				log.info("Save complete")
 		return
-
-	
-
-				
-				 
-				
-				
-					
-
-
-
