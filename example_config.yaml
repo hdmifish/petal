@@ -65,7 +65,7 @@ trackChannel:
 karaokeChannel: "0000000"
 #you can generally ignore this line, basically it is a fix for a specific problem and not really applicable to most servers. 
 #when people join our karaoke channel, it server mutes them. But if they leave before the event is over, they are still muted. So this tracks both entering and exiting.
-				
+
 
 # Permission Levels
 # A big change from the old leaf setup is permission Levels
