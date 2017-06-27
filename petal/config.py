@@ -28,33 +28,32 @@ class Config(object):
         # Defining constants below
         try:
             self.prefix = self.doc["prefix"]
-            self.log.f("config", "Using prefix: " + self.prefix)
+            log.f("config", "Using prefix: " + self.prefix)
             self.owner = self.doc["owner"]
-            self.log.f("config", "Loaded ownerID")
+            log.f("config", "Loaded ownerID")
             self.pm = self.doc["acceptPMs"]
-            self.log.f("config", "AcceptPMs: " + str(self.pm))
+            log.f("config", "AcceptPMs: " + str(self.pm))
             self.l1 = self.doc["level"]["l1"]
             self.l2 = self.doc["level"]["l2"]
             self.l3 = self.doc["level"]["l3"]
             self.l4 = self.doc["level"]["l4"]
-            self.log.f("config", "Loaded Local Permissions")
+            log.f("config", "Loaded Local Permissions")
             self.aliases = self.doc["aliases"]
-            self.log.f("config", "Loaded Aliases")
+            log.f("config", "Loaded Aliases")
             self.permitNSFW = self.doc["permitNSFW"]
-            self.log.f("config", "Permiting NSFW Images: "
-                                 + str(self.permitNSFW))
+            log.f("config", "Permiting NSFW Images: " + str(self.permitNSFW))
             self.blacklist = self.doc["blacklist"]
-            self.log.f("config", "Loaded blacklist")
+            log.f("config", "Loaded blacklist")
             self.commands = self.doc["commands"]
-            self.log.f("config", "Loaded commands")
+            log.f("config", "Loaded commands")
             self.useLog = "logChannel" in self.doc
 
             if self.useLog:
-                self.log.ready("Using Action Log Features")
+                log.ready("Using Action Log Features")
                 self.logChannel = self.get("logChannel")
                 self.modChannel = self.get("modChannel")
             self.wordFilter = self.get("wordFilter")
-            self.log.f("config", "Loaded word filter")
+            log.f("config", "Loaded word filter")
             self.tc = self.get("trackChannel")
             if self.tc is None:
                 log.warn("trackChannel object not found in config.yaml. " +
@@ -63,9 +62,9 @@ class Config(object):
             # self.lockLog = False  //deprecated
             # self.imageIndex = self.doc["imageIndex"]
             self.hugDonors = self.doc["hugDonors"]
-            self.log.f("config", "Loaded hug donors")
+            log.f("config", "Loaded hug donors")
             self.stats = self.doc["stats"]
-            self.log.f("config", "Loaded stats")
+            log.f("config", "Loaded stats")
         except KeyError as e:
             log.err("Missing config item: " + str(e))
             exit(404)
