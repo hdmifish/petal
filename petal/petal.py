@@ -119,8 +119,8 @@ class Petal(discord.Client):
         # self.loop.create_task(self.banloop())
         log.ready("Auto-unban coroutine running...")
         if self.config.get("mysql") is not None:
-            # self.loop.create_task(self.askPatchLoop())
-            # log.ready("MOTD system running...")
+            self.loop.create_task(self.askPatchLoop())
+            log.ready("MOTD system running...")
             pass
         else:
             log.warn("No mysql configuration in config.yaml,"
