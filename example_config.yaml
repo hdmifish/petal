@@ -1,36 +1,49 @@
-# Hello and Welcome to the Configurator
+# Hello and Welcome to the Configuration page
+# DO NOT USE NOTEPAD
 # First up, you need to give petal a token
 #
 # Uncomment line 5 to use standard token Authentication
-token: "000"
+token: ABCDEF0
 # if this is your own token and not a bot account, set selfbot to true
-selfbot: False
-
+selfBot: false
+# Uncomment lines 9 and 10 to use email/pass (This is not reccomended)
+# email: your email
+# pass: you password
 
 # Next up Petal is going to need to know your ID.
-owner: '00000This is your id0000'
+owner: '00000'
+
+# ---BASIC PETAL CONFIGURATION--- #
+
+# How often do you want the config to be updated automatically? (300 = 5 Minutes, 600 = 10, 3600 = 1 hour, 86400 = 1 day)
+# Do not set this lower than 60 as it is possibly bad for your storage device
+autosaveInterval: 600
+
+# The interval in which petal checks if users can be un-tempbanned.
+unbanInterval: 1800
+
+# Used for askpatch, don't worry about this one
+motdInterval: 86400
 
 # Prefix for petal to listen to
-prefix: '>'
-
+prefix: '!'
+blacklist:
+- '0000'
 acceptPMs: true
+supportChannel: '12345678'
 wordFilter:
 - nigger
 - faggot
 - fag
 - retard
-- gook
-- chink
-
-blacklist:
-- assholesgohere(welltheirIDsanyway)
-
 # Give user role after typing a phrase. Requires a dedicated channel and a regex
 roleGrant:
-  role: '000000000000000000'
+  role: '00'
   chan: '000000000000000000'
   response: I love you too! Welcome to Patch
   regex: (I love you)
+
+socialMediaRole: social_media
 # ie:
 # roleGrant:
 #   role: <role ID or role name>
@@ -38,43 +51,47 @@ roleGrant:
 #   response: What petal responds on a successful message
 #   regex: "[iI\s(agree|consent|do agree|)\sto\s?(obey|follow|uphold|)\sthe\s(rules)]"
 
-socialMediaRole: "pgsm" #this is the role required to post to social media 
-
 #Message to PM users when they join the Server
 #set to "null" to disable
-welcomeMessage: null
-logChannel: '00000000'
-modChannel: '00000000'
+welcomeMessage: 'null'
+logChannel: '00000000000'
+modChannel: '00000000000'
+mysql:
+  channelid: '00000000000'
+  hostname: localhost   #this can also be an ip if you're using a remote DB
+  username: discord
+  password: fiftyCent1$theGrEAtestEv4r
+  database: askpatch
 # logChannel must be defined in order to use administrative functions
-
-# X-Post support
-xPostRole: "" #name of role that can use >event 
-#	Uncomment above to allow petal to crosspost to other servers using applicable commands (i.e. >announce )
-xPostList: 
- - "channelIDone"
-
-trackChannel: 
+trackChannel:
 # allows you to monitor users entering/leaving a voice chat. Petal sends a message to users when they join the channel.
-# It then asks for a yes/no style response. If the user responds with: yes, a message is sent to a channel. 
-  messageToUser: "Hey there, noticed you joined our support channel. Do you need help?"
-  monitoredChanel: "00000000"
-  destinationChannel: "0000000"
-  messageFormat: "Hello, @here. {user.name} is in {channel.name} ({channel.server.name}) and said they need help"
+# It then asks for a yes/no style response. If the user responds with: yes, a message is sent to a channel.
+  messageToUser: Hey there, noticed you joined our support channel. Do you need help?
+    (Type yes or no)
+  # Voice channel to track
+  monitoredChannel: '0000000000000000'
+  # Channel to ping support staff
+  destinationChannel: '0000000000000'
+  messageFormat: Hello, @here. {user.name} is in {channel.name} ({channel.server.name})
+    and said they need help
   #you can format this with user {user.name/id/discriminator} and {channel.name/id}
 
-karaokeChannel: "0000000"
-#you can generally ignore this line, basically it is a fix for a specific problem and not really applicable to most servers. 
-#when people join our karaoke channel, it server mutes them. But if they leave before the event is over, they are still muted. So this tracks both entering and exiting.
-				
+karaokeChannel: '0000000'
+#you can generally ignore this line
+# X-Post support
+xPostRole: canPost
+xPostList:
+- '00000000000'
+- '00000000000'
+- '00000000000'
 
 # Permission Levels
-# A big change from the old leaf setup is permission Levels
-# you can use >promote/demote to edit these in discord. 
-# Owner is considered level 0. All restricted commands can be run 
-# Level 1 - L2 restrictions as well as the configure command
-# Level 2 - L3 restrictions as well as BotMute and Restart
-# Level 3 - L4 + Override Role-specific commands. (Kick, Ban, User Mute)
-# Level 4 - Custom Commands and ability to delete images from gallery
+#       A big change from the old leaf setup is permission Levels
+#        Owner is considered level 0. All restricted commands can be run
+#       Level 1 - L2 restrictions as well as the configure command
+#       Level 2 - L3 restrictions as well as BotMute and Restart
+#       Level 3 - L4 + Override Role-specific commands. (Kick, Ban, User Mute)
+#       Level 4 - Custom Commands and ability to delete images from gallery
 level:
   l1:
   - make a list here
@@ -91,47 +108,43 @@ level:
 # A randomly-selected user in the list will be PM'd with the name of the user
 # who ran the command
 hugDonors:
-  '0000000':
-    name: test
-    donations: 0
 
+  '000000000':
+    donations: 0
+    name: example_name
 
 # Finally, Petal needs any API keys for certain extensions to work
 # ---API stuff---
-#imgur: 000
+# imgur: a00000000
 permitNSFW: false
-
 #reddit:
-#  clientID:
-#  clientSecret:
-#  userAgent:
-#  username:
-#  password:
-#  targetSR: "patchgaming"
+#  clientID: 000000000000
+#  clientSecret: 0000000
+#  userAgent: petal.py DiscordBot stable v0.1.2
+#  username: sarahplz
+#  password: password
+#  targetSR: patchgaming
 
 #twitter:
-#  consumerKey: "" You can get all this by following the twitter dev instructions.
-#  consumerSecret: "" 
-#  accessToken: ""
-#  accessTokenSecret: "" 
+#  consumerKey: 0000000000000000
+#  consumerSecret: 000000000
+#  accessToken: 0000000
+#  accessTokenSecret: 000000000
+
+#facebook:
+#  graphAPIAccessToken: A really big string from facebooks api goes here
+#  pageID: '0000000000'
 
 #tumblr:
-#  consumerKey: "" 
-#  consumerSecret: "" 
-#  oauthToken: ""
-#  oauthTokenSecret: ""
-#  targetBlog: ""
+#  consumerKey: 0
+#  consumerSecret: 0
+#  oauthToken: 0
+#  oauthTokenSecret: 0
+#  targetBlog: patchgaming
 
-#facebook: !!!NOTE: DOES NOT WORK FOR REGULAR ACCOUNTS, MUST BE A PAGE!!!
-#  graphAPIAccessToken: 
-#  version: "2.7" (Leave this most of the time)
-#  pageID: "" (get this from the bottom of your "about" page)
-
-
-#wolframAlpha: 000
-#osu: 000
-#weather: 000
-
+#wolframAlpha: 00000000
+#osu: 00000000
+#weather: 000000000
 #aliases allow you to change the names of commands.
 #do not change this list unless you know what you are doing
 stats:
@@ -145,33 +158,13 @@ aliases:
   imgur: sub
   hug: freehug
 
-
 commands:
   test:
     com: test worked
-    perm: 4
+    perm: '4'
 
-  weed:
-    perm: '0'
-    com: ^_^
-  poof:
-    com: '{tag} poofed'
-    perm: '0'
-  fuzzy:
-    perm: '0'
-    com: o,.,o
-
-
-  wood:
-    perm: '0'
-    com: tree
-#under here is gonna be stats and shit. Do not edit this
 void:
-- content: "hello from the other side!"
-  author: isometricramen
+- content: '*A small voice whispers, asking for you to add to the void*'
+  author: leroy
   num: 0
-  time: 0   
-comfyGallery:
-- exampleignore
-calmGallery:
-- exampleignore
+  time: 0
