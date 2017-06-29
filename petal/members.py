@@ -51,6 +51,7 @@ class Members(object):
         if mem.id in self.doc:
 
             if self.doc[mem.id]["name"] not in self.doc[mem.id]["aliases"]:
+
                 self.doc[mem.id]["aliases"].append(self.doc[mem.id]["name"])
             else:
                 self.doc[mem.id]["name"] = mem.name
