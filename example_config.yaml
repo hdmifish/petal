@@ -1,0 +1,170 @@
+# Hello and Welcome to the Configuration page
+# DO NOT USE NOTEPAD
+# First up, you need to give petal a token
+#
+# Uncomment line 5 to use standard token Authentication
+token: ABCDEF0
+# if this is your own token and not a bot account, set selfbot to true
+selfBot: false
+# Uncomment lines 9 and 10 to use email/pass (This is not reccomended)
+# email: your email
+# pass: you password
+
+# Next up Petal is going to need to know your ID.
+owner: '00000'
+
+# ---BASIC PETAL CONFIGURATION--- #
+
+# How often do you want the config to be updated automatically? (300 = 5 Minutes, 600 = 10, 3600 = 1 hour, 86400 = 1 day)
+# Do not set this lower than 60 as it is possibly bad for your storage device
+autosaveInterval: 600
+
+# The interval in which petal checks if users can be un-tempbanned.
+unbanInterval: 1800
+
+# Used for askpatch, don't worry about this one
+motdInterval: 86400
+
+# Prefix for petal to listen to
+prefix: '!'
+blacklist:
+- '0000'
+acceptPMs: true
+supportChannel: '12345678'
+wordFilter:
+- nigger
+- faggot
+- fag
+- retard
+# Give user role after typing a phrase. Requires a dedicated channel and a regex
+roleGrant:
+  role: '00'
+  chan: '000000000000000000'
+  response: I love you too! Welcome to Patch
+  regex: (I love you)
+
+socialMediaRole: social_media
+# ie:
+# roleGrant:
+#   role: <role ID or role name>
+#   chan: <channel ID or name> (channel ID is better)
+#   response: What petal responds on a successful message
+#   regex: "[iI\s(agree|consent|do agree|)\sto\s?(obey|follow|uphold|)\sthe\s(rules)]"
+
+#Message to PM users when they join the Server
+#set to "null" to disable
+welcomeMessage: 'null'
+logChannel: '00000000000'
+modChannel: '00000000000'
+mysql:
+  channelid: '00000000000'
+  hostname: localhost   #this can also be an ip if you're using a remote DB
+  username: discord
+  password: fiftyCent1$theGrEAtestEv4r
+  database: askpatch
+# logChannel must be defined in order to use administrative functions
+trackChannel:
+# allows you to monitor users entering/leaving a voice chat. Petal sends a message to users when they join the channel.
+# It then asks for a yes/no style response. If the user responds with: yes, a message is sent to a channel.
+  messageToUser: Hey there, noticed you joined our support channel. Do you need help?
+    (Type yes or no)
+  # Voice channel to track
+  monitoredChannel: '0000000000000000'
+  # Channel to ping support staff
+  destinationChannel: '0000000000000'
+  messageFormat: Hello, @here. {user.name} is in {channel.name} ({channel.server.name})
+    and said they need help
+  #you can format this with user {user.name/id/discriminator} and {channel.name/id}
+
+karaokeChannel: '0000000'
+#you can generally ignore this line
+# X-Post support
+xPostRole: canPost
+xPostList:
+- '00000000000'
+- '00000000000'
+- '00000000000'
+
+# Permission Levels
+#       A big change from the old leaf setup is permission Levels
+#        Owner is considered level 0. All restricted commands can be run
+#       Level 1 - L2 restrictions as well as the configure command
+#       Level 2 - L3 restrictions as well as BotMute and Restart
+#       Level 3 - L4 + Override Role-specific commands. (Kick, Ban, User Mute)
+#       Level 4 - Custom Commands and ability to delete images from gallery
+level:
+  l1:
+  - make a list here
+  - also here
+  l2:
+  - tadaa
+  - same
+  l3:
+  - yup here too
+  l4:
+  - and here
+
+# The freehug command allows users to request hugs from people in this list
+# A randomly-selected user in the list will be PM'd with the name of the user
+# who ran the command
+hugDonors:
+
+  '000000000':
+    donations: 0
+    name: example_name
+
+# Finally, Petal needs any API keys for certain extensions to work
+# ---API stuff---
+# imgur: a00000000
+permitNSFW: false
+#reddit:
+#  clientID: 000000000000
+#  clientSecret: 0000000
+#  userAgent: petal.py DiscordBot stable v0.1.2
+#  username: sarahplz
+#  password: password
+#  targetSR: patchgaming
+
+#twitter:
+#  consumerKey: 0000000000000000
+#  consumerSecret: 000000000
+#  accessToken: 0000000
+#  accessTokenSecret: 000000000
+
+#facebook:
+#  graphAPIAccessToken: A really big string from facebooks api goes here
+#  pageID: '0000000000'
+
+#tumblr:
+#  consumerKey: 0
+#  consumerSecret: 0
+#  oauthToken: 0
+#  oauthTokenSecret: 0
+#  targetBlog: patchgaming
+
+#wolframAlpha: 00000000
+#osu: 00000000
+#weather: 000000000
+#aliases allow you to change the names of commands.
+#do not change this list unless you know what you are doing
+stats:
+  pingScore: 0
+  pingCount: 0
+
+
+aliases:
+  sr: sub
+  subreddit: sub
+  imgur: sub
+  hug: freehug
+
+commands:
+  test:
+    com: test worked
+    perm: '4'
+
+void:
+- content: '*A small voice whispers, asking for you to add to the void*'
+  author: leroy
+  num: 0
+  time: 0
