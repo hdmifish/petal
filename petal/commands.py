@@ -1575,10 +1575,10 @@ class Commands:
                                           self.config.get("mysql")["database"])
                     conn.autocommit(True)
                     find_entry = ("SELECT entryid, author, content, used," +
-                                  "approved FROM questions WHERE entryid=" +
+                                  " approved FROM questions WHERE entryid=" +
                                   args[1])
                     approve_entry = ("UPDATE questions SET approved = true" +
-                                     "WHERE entryid=" + args[1])
+                                     " WHERE entryid=" + args[1])
                     conn.query(find_entry)
                     r = conn.store_result()
                     entry = r.fetch_row()[0]
