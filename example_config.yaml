@@ -77,6 +77,9 @@ trackChannel:
   #you can format this with user {user.name/id/discriminator} and {channel.name/id}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c1a8c4ac79a4d818bae072f99b31b185e49fb21e
 karaokeChannel: '0000000'
 #you can generally ignore this line
 # X-Post support
@@ -85,12 +88,15 @@ xPostList:
 - '00000000000'
 - '00000000000'
 - '00000000000'
+<<<<<<< HEAD
 =======
 karaokeChannel: "0000000"
 #you can generally ignore this line, basically it is a fix for a specific problem and not really applicable to most servers. 
 #when people join our karaoke channel, it server mutes them. But if they leave before the event is over, they are still muted. So this tracks both entering and exiting.
 
 >>>>>>> 2152d7c39b838e56d84568ee3d82d059e47b841d
+=======
+>>>>>>> c1a8c4ac79a4d818bae072f99b31b185e49fb21e
 
 # Permission Levels
 #       A big change from the old leaf setup is permission Levels
