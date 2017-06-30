@@ -12,6 +12,7 @@ from .grasslands import Peacock
 from .config import Config
 from .commands import Commands
 from .members import Members
+from random import randint
 log = Peacock()
 
 
@@ -142,7 +143,7 @@ class Petal(discord.Client):
         """
         To be called When a new member joins the server
         """
-        # TODO: Enable this functionality
+
         response = ""
         if self.config.get("welcomeMessage") != "null":
             try:
@@ -191,8 +192,10 @@ class Petal(discord.Client):
                             value=str(member.created_at)[:-7])
 
         await self.embed(self.get_channel(self.config.logChannel), userEmbed)
-        await self.send_message(self.get_channel(self.config.logChannel),
-                                response)
+        if response != "":
+            await self.send_message(self.get_channel(self.config.logChannel),
+                                    response)
+
 
         if (datetime.utcnow() - member.created_at).days <= 6:
             await self.send_message(self.get_channel(self.config.logChannel),
@@ -226,8 +229,9 @@ class Petal(discord.Client):
         try:
             if Petal.logLock:
                 return
-
-            if message.server.id == "126236346686636032":
+            if message.channel.is_private:
+                return
+            if message.channel.server.id == "126236346686636032":
                 return
 
             userEmbed = discord.Embed(title="Message Delete",
@@ -386,9 +390,10 @@ class Petal(discord.Client):
     async def on_message(self, message):
         await self.wait_until_ready()
         content = message.content.strip()
-        self.members.addMember(discord.utils.get(message.server.members,
-                                                 id=message.author.id))
-        self.members.getMember(message.author.id)["messageCount"] += 1
+        if not message.channel.is_private:
+            self.members.addMember(discord.utils.get(message.server.members,
+                                                     id=message.author.id))
+            self.members.getMember(message.author.id)["messageCount"] += 1
 
         if message.author == self.user:
             return

@@ -17,6 +17,9 @@ from datetime import datetime, timedelta
 from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
+from random import randint
+version = "0.1.2"
+
 
 
 class Commands:
@@ -31,6 +34,8 @@ class Commands:
         self.config = client.config
         # self.cb = Cleverbot('discordBot-petal')
         self.log = Peacock()
+        self.activeHelpers = []
+        self.activeSads = []
         self.log.info("Command module init start")
         self.supportdict = {}
         self.osuKey = self.config.get("osu")
@@ -161,6 +166,13 @@ class Commands:
         return discord.utils.get(message.server.members,
                                  id=member.lstrip("<@!").rstrip('>'))
 
+    def anonCheck(self, msg):
+        if msg.author == self.client.user:
+            return False
+        elif msg.channel.id == self.hc.id or msg.channel.id == self.sc.id:
+            return True
+        else:
+            return False
     # AskPatch is designed for discord.gg/patchgaming but you may edit it
     # for your own personal uses if you like
     # the database fields are:
@@ -350,17 +362,23 @@ class Commands:
         """
         func = self.cleanInput(message.content)[0]
         if func == "":
-            em = discord.Embed(title="Help tester!",
-                               description="A rich embed test!",
+            em = discord.Embed(title="Help",
+                               description="Petal Info and Help",
                                colour=0x0acdff)
             em.set_author(name="Petal Help Provider",
                           icon_url=self.client.user.avatar_url)
 
             em.set_thumbnail(url=message.author.avatar_url)
-            em.add_field(name="Title", value="Magic Help Text Line 1")
-            em.add_field(name="Syntax", value="`>help`")
-
+            em.add_field(name="Version", value=version)
+            em.add_field(name="Command List", value=self.config.prefix +
+                         "commands")
+            em.add_field(name="Author", value="isometricramen")
+            em.add_field(name="Help Syntax", value=self.config.prefix +
+                         "help <command name>")
+            url = "http://leaf.drunkencode.net/"
             await self.client.embed(message.channel, em)
+            await self.client.send_message(message.channel,
+                                           "Publicly available at: " + url)
             return
         if func in dir(self):
             if getattr(self, func).__doc__ is None:
@@ -614,9 +632,9 @@ class Commands:
             channel = self.client.get_channel(chan)
             if channel is not None:
                 msg += (str(len(chanList)) +
-                        ". " +
+                        ". (" +
                         channel.name + " [{}]".format(channel.server.name)
-                        + "\n )")
+                        + ")\n")
                 chanList.append(channel)
             else:
                 self.log.warn(chan +
@@ -777,6 +795,26 @@ class Commands:
                 return "Weather support has not been set up by adminstrator"
             # url = ("http://api.openweathermap.org/data/2.5/weather/?APPID=" +
             # "{}&q={}&units={}".format(key, args[1], "c"))
+
+    async def commands(self, message):
+        """
+        Lists all commands
+        >commands
+        """
+        method_list = [func for func in dir(Commands) if callable(getattr(
+                                                              Commands,
+                                                                  func))]
+        formattedList = ""
+        for f in method_list:
+            methodToCall = getattr(Commands, str(f))
+            if methodToCall.__doc__ is None:
+                self.log.f("Command List", "Ignoring " + f)
+            elif str(f).startswith("__"):
+                self.log.f("Command List", "Ignoring Builtin" + f)
+            else:
+                formattedList += (str(f) + "\n")
+
+        return "```\n" + formattedList + "```"
 
     async def reddit(self, message):
         """
@@ -1699,6 +1737,193 @@ class Commands:
             return
         else:
             return "You may not use this command"
+
+    async def forcesave(self, message):
+        """
+        Owner only, forces save to config.yaml
+        >save
+        """
+        if self.level0(message.author):
+            self.config.save(vb=1)
+            return "Saved"
+
+    async def forceload(self, message):
+        """
+        Owner only, forces config to load
+        >load
+        """
+        if self.level0(message.author):
+            self.config.load()
+            return "Loaded config file"
+
+    async def anon(self, message):
+        """
+        For use in PMs only, connects you anonymously to a listeners
+        >anon or >anon <tagged user>
+        """
+        alpha = ["giraffe", "panda", "whale", "raccoon", "rabbit",
+                 "squirell", "moose", "sheep", "ferret", "stoat", "cow",
+                 "noperope", "kitten", "puppy", "snail", "turtle", "tortoise",
+                 "zebra", "lion", "elephant", "sloth", "drop bear", "octopus",
+                 "turkey", "pelican", "GraterDog", "lesserDog", "seahorse"]
+
+        beta = ["Apple", "Apricots", "Avocado", "Banana", "Cherries",
+                "Cherimoya", "Blackberry", "Raspberry",  "Coconut",
+                "Orange", "Grapefruit", "Guava", "Honeydew", "Melon",
+                "Cantaloupe", "Lime", "Lemon", "MangoQuince", "Kiwi",
+                "Sapodilla"]
+        name1 = (beta[randint(0, len(beta)-1)] +
+                alpha[randint(0, len(alpha)-1)].title())
+        name2 = (beta[randint(0, len(beta)-1)] +
+                alpha[randint(0, len(alpha)-1)].title())
+
+
+        anondb = self.config.get("anon")
+
+        if (message.author.id in self.activeSads
+           or message.author.id in self.activeHelpers):
+            return "You're already in a call..."
+
+        if anondb is None:
+            return "Unfortunately anon support is turned off in config"
+
+        server = self.client.get_server(anondb["server"])
+        if not message.channel.is_private:
+            args = self.cleanInput(message.content)
+            if len(args) == 0:
+                return "For private chat only, unless adding users"
+            if not self.level2(message.author):
+                return "You cannot use this"
+
+
+            m = self.getMember(message, args[0])
+            try:
+                anondb = self.config.get("anon")["help"]
+                anonserver = self.client.get_server(self.config
+                                                        .get("anon")["server"])
+            except KeyError:
+                return "Anon is misconfigured, check config.yaml"
+
+            if discord.utils.get(anonserver.members, id=m.id) is None:
+                return "User must be a member of " + anonserver.name
+
+            if m.id not in anondb:
+
+                anondb.append(m.id)
+                self.config.save(vb=1)
+                self.log.f("anon", message.author.name +
+                                   " added " + m.name + " to anon list")
+                return "Added " + m.mention + " to anon list!"
+            else:
+                del anondb[anondb.index(m.id)]
+                self.config.save(vb=1)
+                self.log.f("anon", message.author.name +
+                                   " removed " + m.name + " from anon list")
+                return "Removed " + m.mention + " from anon list!"
+
+        await self.client.send_message(message.channel, "One moment while I " +
+                                                   "connect you to a listener")
+        self.activeSads.append(message.author.id)
+
+        await asyncio.sleep(1)
+        x = await self.client.send_message(message.channel, "Your name is: "
+                                                            + name1)
+
+        availableHelpers = []
+        for z in anondb["help"]:
+            if z not in self.activeHelpers and z != message.author.id:
+                h = discord.utils.get(server.members, id=z)
+                if h is not None and h.status == discord.Status.online:
+                    availableHelpers.append(z)
+
+
+
+        saduser = message.author
+        if len(availableHelpers) == 0:
+            del self.activeSads[self.activeSads.index(message.author.id)]
+            return ("All helpers are currently assisting others right now, " +
+                    " please try again later")
+        await self.client.send_message(message.channel,
+                                       "There are currently: " +
+                                       str(len(availableHelpers)) +
+                                       " available helpers.")
+        self.log.info(str(anondb["help"]))
+
+        helpid = availableHelpers[randint(0, len(availableHelpers)-1)]
+
+        helpuser = discord.utils.get(server.members, id=helpid)
+        if helpuser is None:
+            self.log.warn(helpid + " is an invalid id for anon")
+            del self.activeSads[self.activeSads.index(message.author.id)]
+            return "Found invalid user, try again"
+        self.activeHelpers.append(helpid)
+        m = await self.client.send_message(helpuser, "Hello, there is someone " +
+                                                "who wants to chat " +
+                                                "anonymously.\n " +
+                                                "Type accept to begin")
+        n = await self.client.wait_for_message(channel=m.channel,
+                                               author=helpuser,
+                                               content="accept", timeout=15)
+        if n is None:
+            await self.client.send_message(helpuser, "Timed out...")
+            del self.activeHelpers[self.activeHelpers.index(helpid)]
+            del self.activeSads[self.activeSads.index(message.author.id)]
+            return "Sorry, the user didnt respond"
+        await self.client.send_message(helpuser,
+                                       "The chat will automatically dis" +
+                                       "connect if either user is idle " +
+                                       "for more than 5 minutes" +
+                                       "\n(or type !end)" )
+        await self.client.send_message(saduser,
+                                       "The chat will automatically dis" +
+                                       "connect if either user is idle " +
+                                       "for more than 5 minutes" +
+                                       "\n(or type !end)" )
+
+        await self.client.send_message(helpuser, "Connected! Your name is: " +
+                                            name2 + ".\n Type a message.")
+
+        await self.client.send_message(helpuser,
+                                       "*Just a small note, while this is " +
+                                       "designed to be completely anon, " +
+                                       "petal still keeps a hidden record of" +
+                                       " your userID corresponding to your " +
+                                       "fake name. Only admins can see this " +
+                                       "and we will not view it unless abuse "+
+                                       " is reported from either party*")
+        await self.client.send_message(saduser,
+                                       "*Just a small note, while this is " +
+                                       "designed to be completely anon, " +
+                                       "petal still keeps a hidden record of" +
+                                       " your userID corresponding to your " +
+                                       "fake name. Only admins can see this " +
+                                       "and we will not view it unless abuse "+
+                                       " is reported from either party*")
+
+        self.log.f("anon", name1 + " is " + saduser.name + " " + saduser.id)
+        self.log.f("anon", name2 + " is " + helpuser.name + " " + helpuser.id)
+        self.hc= m.channel
+        self.sc = x.channel
+        while True:
+
+            m = await self.client.wait_for_message(check=self.anonCheck,
+                                                   timeout=300)
+            if m is None:
+                await self.client.send_message(helpuser, "Chat timed out...")
+                del self.activeHelpers[activeHelpers.index(helpid)]
+                del self.activeSads[self.activeSads.index(message.author.id)]
+                return "Chat timed out..."
+            if m.content == "!end":
+                await self.client.send_message(helpuser, "Chat ended")
+                del self.activeHelpers[self.activeHelpers.index(helpid)]
+                del self.activeSads[self.activeSads.index(message.author.id)]
+                return "Chat ended"
+            if m.channel == self.sc:
+                await self.client.send_message(self.hc, "**"+ name1 + "**: " +
+                                                        m.content)
+            else:
+                await self.client.send_message(self.sc, "**"+ name2 + "**: " +
+                                                        m.content)
 
     async def support(self, message):
         """
