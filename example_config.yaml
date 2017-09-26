@@ -24,7 +24,7 @@ unbanInterval: 1800
 
 # Used for askpatch, don't worry about this one
 motdInterval: 86400
-
+motdChannel: 3164
 # Prefix for petal to listen to
 prefix: '!'
 blacklist:

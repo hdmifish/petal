@@ -19,7 +19,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from random import randint
-version = "0.2.4(development)"
+version = "0.3.1(development)"
 
 
 
@@ -1733,7 +1733,7 @@ class Commands:
         # around in here and change things, feel free.
         # (mySql Schema in checkUpdate() )
 
-        if message.server.id != self.config.get("motdChannel");
+        if message.server.id != self.config.get("motdChannel"):
             return "Sorry, you are not permitted to use this"
         args = self.cleanInput(message.content)
         print(str(args))
@@ -2084,7 +2084,7 @@ class Commands:
                                                    timeout=300)
             if m is None:
                 await self.client.send_message(helpuser, "Chat timed out...")
-                del self.activeHelpers[activeHelpers.index(helpid)]
+                del self.activeHelpers[self.activeHelpers.index(helpid)]
                 del self.activeSads[self.activeSads.index(message.author.id)]
                 return "Chat timed out..."
             if m.content == "!end":
