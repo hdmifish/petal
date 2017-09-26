@@ -19,7 +19,7 @@ log = Peacock()
 class Petal(discord.Client):
     logLock = False
 
-    def __init__(self):
+    def __init__(self, devmode=False):
 
         try:
             super().__init__()
@@ -31,7 +31,7 @@ class Petal(discord.Client):
         self.config = Config()
         self.commands = Commands(self)
         self.members = Members(self)
-
+        self.devmode = devmode
         log.info("Configuration object initalized")
         return
 
@@ -64,6 +64,8 @@ class Petal(discord.Client):
             exit(404)
 
     async def saveloop(self):
+        if self.devmode:
+            return
         interval = self.config.get("autosaveInterval")
         while True:
             self.members.save()
@@ -71,6 +73,8 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def askPatchLoop(self):
+        if self.devmode:
+            return
         interval = self.config.get("motdInterval")
         while True:
             await self.commands.checkUpdate()
@@ -78,6 +82,8 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def banloop(self):
+        if self.devmode:
+            return
         interval = self.config.get("unbanInterval")
         while True:
             for mem in self.members.doc:
@@ -174,8 +180,6 @@ class Petal(discord.Client):
             else:
                 pass
 
-        userEmbed.set_author(name=self.user.name,
-                             icon_url="https://puu.sh/tAEjd/89f4b0a5a7.png")
 
         userEmbed.set_thumbnail(url=member.avatar_url)
         userEmbed.add_field(name="Name", value=member.name)
@@ -229,6 +233,9 @@ class Petal(discord.Client):
         try:
             if Petal.logLock:
                 return
+            if message.channel.id in self.config.get("ignoreChannels"):
+                return
+
             if message.channel.is_private:
                 return
             if message.channel.server.id == "126236346686636032":
@@ -267,6 +274,10 @@ class Petal(discord.Client):
             return
         if before.content == "":
             return
+        if before.channel.id in self.config.get("ignoreChannels"):
+            return
+        if after.channel.id in self.config.get("ignoreChannels"):
+            return
         if after.content == "":
             return
         if before.content == after.content:
@@ -276,8 +287,7 @@ class Petal(discord.Client):
                                   description=before.author.name + "#" +
                                   before.author.discriminator +
                                   " edited their message", colour=0xae00fe)
-        userEmbed.set_author(name=self.user.name,
-                             icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
+
         userEmbed.add_field(name="Server",
                             value=before.server.name)
         userEmbed.add_field(name="Channel",
@@ -333,9 +343,7 @@ class Petal(discord.Client):
                                       description=before.name +
                                       " changed their name to " +
                                       after.name, colour=0x34f3ad)
-            userEmbed.set_author(name=self.user.name,
-                                 icon_url="https://puu.sh/tBpXd/" +
-                                          "ffba5169b2.png")
+
             userEmbed.add_field(name="Timestamp",
                                 value=str(datetime.utcnow())[:-7])
 
@@ -409,9 +417,7 @@ class Petal(discord.Client):
                                       description="At least one filtered " +
                                                   "word was detected",
                                       colour=0x9f00ff)
-                embed.set_author(name=self.user.name,
-                                 icon_url="https://puu.sh/tFFD2/ff202bfc00.png"
-                                 )
+
                 embed.add_field(name="Author",
                                 value=message.author.name + "#" +
                                      message.author.discriminator)
@@ -478,8 +484,10 @@ class Petal(discord.Client):
             log.com("[{0}] [{1}] [{1.id}] [{2}] ".format(message.channel,
                                                          message.author,
                                                          com))
+
             response = await methodToCall(message)
             if response:
+                self.config.get("stats")["comCount"] += 1
                 await self.send_message(message.channel, response)
                 return
 
@@ -492,6 +500,7 @@ class Petal(discord.Client):
                                                              com))
                 response = await methodToCall(message)
                 if response:
+                    self.config.get("stats")["comCount"] += 1
                     await self.send_message(message.channel, response)
                     return
 

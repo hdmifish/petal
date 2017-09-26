@@ -3,12 +3,13 @@ import discord
 import random
 # import urllib.request as urllib2
 # import re
-# import os
+import os
 import praw
 import twitter
 import facebook
 import pytumblr
-import _mysql
+# import _mysql (deprecated in favor of the python package)
+
 import pymysql
 import time
 # from cleverbot import Cleverbot
@@ -18,7 +19,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from random import randint
-version = "0.1.2"
+version = "0.2.4(development)"
 
 
 
@@ -34,6 +35,7 @@ class Commands:
         self.config = client.config
         # self.cb = Cleverbot('discordBot-petal')
         self.log = Peacock()
+        self.startup = datetime.utcnow()
         self.activeHelpers = []
         self.activeSads = []
         self.log.info("Command module init start")
@@ -131,6 +133,11 @@ class Commands:
             newargs.append(i.strip())
         return newargs
 
+    def yesNoCheck(self, message):
+        if message.content.lower().strip() in ["yes", "no"]:
+            return True
+        return False
+
     def isNumeric(self, message):
         try:
             int(message.content)
@@ -138,6 +145,17 @@ class Commands:
             return False
         else:
             return True
+
+    def getUptime(self):
+        delta = datetime.utcnow() - self.startup
+        delta = delta.total_seconds()
+
+        d = divmod(delta,86400)  # days
+        h = divmod(d[1],3600)  # hours
+        m = divmod(h[1],60)  # minutes
+        s = m[1]  # seconds
+
+        return '%d days, %d hours, %d minutes, %d seconds' % (d[0],h[0],m[0],s)
 
     def validateChan(self, chanlist, msg):
         for i in range(len(msg.content)):
@@ -173,20 +191,99 @@ class Commands:
             return True
         else:
             return False
+
+    def getSubscriptionKey(self, post):
+        # EVENTS SCHEMA
+        # 2 Tables:
+        # CREATE TABLE subKeys(code VARCHAR(20), friendly VARCHAR(20));
+        # CREATE TABLE users(name VARCHAR(20), id VARCHAR(20),
+        #                    code VARCHAR(20));
+        try:
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
+                                   self.config.get("mysql")["username"],
+                                   self.config.get("mysql")["password"],
+                                   self.config.get("mysql")["eventdatabase"])
+        except Exception as e :
+            self.log.err("SQL Error, " + str(e))
+            return None, None
+        else:
+            cursor = conn.cursor()
+        find_entry = ("SELECT * FROM subKeys")
+        cursor.execute(find_entry)
+        data = cursor.fetchall()
+
+        if len(data) == 0:
+            self.log.f("event", "Database is empty for keys!" +
+                                " Skipping further validation")
+            return None, None
+        postdata = post.lower().split()
+
+        for row in data:
+            for i in row[1].split():
+                if i.lower() in postdata:
+                    return row[0] , row[1]
+        conn.close()
+        self.log.f("event", "could not find sub key in post")
+        return None, None
+
+
+    async def checkservers(self, message):
+        """
+        hello
+        """
+        if not self.level0(message.author):
+            return
+        for s in self.client.servers:
+            await self.client.send_message(message.channel, s.name + " " + s.id)
+
+
+
+#    async def killthenonconformist(self, message):
+ #       """
+  #      hello
+   #     """
+    #    for s in self.client.servers:
+     #        if s.id == "215170877002612737":
+      #           await self.client.leave_server(s)
+       #          return "left " + s.name
+
     # AskPatch is designed for discord.gg/patchgaming but you may edit it
     # for your own personal uses if you like
     # the database fields are:
     # Single table:
     # varchar(20) author, vc(20) id, TIMESTAMP time, TEXT content, BOOL used,
     # INT(11)PK entryid, BOOL approved
+    async def notifySubs(self, message, key):
+            return
 
-    async def checkUpdate(self):
+    async def checkUpdate(self, force=False):
+            if force:
+                self.config.doc["lastRun"] = datetime.utcnow()
+                self.config.save()
+
+            else:
+                lastRun = self.config.get("lastRun")
+                self.log.f("pa", "Last run at: " + str(lastRun))
+                if lastRun is None:
+                    lastRun = datetime.utcnow()
+                    self.config.doc["lastRun"] = lastRun
+                    self.config.save()
+                else:
+                    difference = (datetime.utcnow() - datetime.strptime(str(lastRun), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
+                    self.log.f("pa", "Difference: " + str(difference))
+                    if difference < 86400:
+                        return
+                    else:
+                        self.config.doc["lastRun"] = datetime.utcnow()
+                        self.config.save()
+
+
             self.log.f("pa", "Searching for entries...")
 
             conn = pymysql.connect(self.config.get("mysql")["hostname"],
                                    self.config.get("mysql")["username"],
                                    self.config.get("mysql")["password"],
-                                   self.config.get("mysql")["database"])
+                                   self.config.get("mysql")["padatabase"])
             cursor = conn.cursor()
             find_entry = ("SELECT entryid, author, content, used, approved " +
                           "FROM questions WHERE approved = 1 AND used = 0")
@@ -356,6 +453,7 @@ class Commands:
             self.config.save()
             return "New Command `{}` Created!".format(invoker)
 
+
     async def help(self, message):
         """
         Congrats, You did it!
@@ -378,7 +476,9 @@ class Commands:
             url = "http://leaf.drunkencode.net/"
             await self.client.embed(message.channel, em)
             await self.client.send_message(message.channel,
-                                           "Publicly available at: " + url)
+                                           "Publicly available at: " + url +
+                                           "\n\nMore Info with: " +self.config.prefix +
+                                           "statsfornerds" )
             return
         if func in dir(self):
             if getattr(self, func).__doc__ is None:
@@ -614,6 +714,75 @@ class Commands:
         else:
             return ob.link
 
+    async def subs(self, message):
+        """
+        Add or Remove subscription keys (requires level 3)
+        >subs <add/remove/list> | <name of game> | <game key>
+        """
+        if not self.level3(message.author):
+            return "You must have level 3 or above to use this"
+
+        args = self.cleanInput(message.content)
+        if args[0] == '':
+            return ("Type, add remove or list after " +  self.config.prefix +
+                    "args")
+        if args[0].lower() == "add":
+            if len(args) < 3:
+                return ("Format is: " + self.config.prefix
+                        + "subs <game name> | <game code (4 digit)>")
+
+            check_duplicate = ("SELECT * FROM subKeys WHERE friendly=\""
+                              + args[1].lower() + "\";")
+            self.log.f("subs", check_duplicate)
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
+                                  self.config.get("mysql")["username"],
+                                  self.config.get("mysql")["password"],
+                                  self.config.get("mysql")["eventdatabase"])
+            cursor = conn.cursor()
+            cursor.execute(check_duplicate)
+
+            data = cursor.fetchall()
+            if len(data) > 0:
+                for row in data:
+                    if row[1].lower() == args[1].lower():
+                        conn.close()
+                        return (row[2] + " Already corresponds to a key: " +
+                                row[1])
+
+            try:
+                insert_code = ("INSERT INTO subKeys VALUE (\"" + args[2].upper() + "\",\"" +
+                               args[1] + "\");")
+                self.log.f("subs", insert_code)
+                cursor.execute(insert_code)
+                conn.commit()
+            except:
+                self.log.err("An SQL error occurred")
+                conn.rollback()
+            finally:
+                conn.close()
+
+            return "Added " + args[1] + " with key: " + args[2]
+
+        elif args[0].lower() == "list":
+
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
+                                  self.config.get("mysql")["username"],
+                                  self.config.get("mysql")["password"],
+                                  self.config.get("mysql")["eventdatabase"])
+            cursor = conn.cursor()
+            get_all = ("SELECT * FROM subKeys")
+            cursor.execute(get_all)
+            data = cursor.fetchall()
+            if len(data) == 0:
+                return "No entries found..."
+
+            codelist =""
+            for row in data:
+                codelist += row[0] + " - " + row[1] + "\n"
+            conn.close()
+            return codelist
+
+
     async def event(self, message):
         """
         Dialog-styled event poster
@@ -689,6 +858,30 @@ class Commands:
 
         embed.add_field(name="Channels",
                         value="\n".join(channames))
+        subkey, friendly = self.getSubscriptionKey(msgstr)
+        if subkey is None:
+            await self.client.send_message(message.channel,
+                                           "I was unable to auto-detect " +
+                                           "any game titles in your post " +
+                                           "subscribers will not be notified")
+        else:
+            tempm = await self.client.send_message(message.channel,
+                                                   "auto-detect found: **" +
+                                                   friendly + "** Is this " +
+                                                   "correct?[yes/no]")
+            n = await self.client.wait_for_message(channel=tempm.channel,
+                                                   author=message.author,
+                                                   check=self.yesNoCheck,
+                                                   timeout=15)
+            if n is None:
+                return "Timed out..."
+
+
+            if n.content == "yes":
+                embed.add_field(name="Subscription Key:",
+                                value=friendly + "({})".format(subkey),
+                                inline=False)
+                await self.notifySubs(message, subkey)
 
         await self.client.embed(message.channel, embed)
         await self.client.send_message(message.channel,
@@ -1039,9 +1232,7 @@ class Commands:
                 logEmbed = discord.Embed(title="User Ban",
                                          description=msg.content,
                                          colour=0xff0000)
-                logEmbed.set_author(name=self.client.user.name,
-                                    icon_url="https:" +
-                                    "//puu.sh/tACjX/fc14b56458.png")
+
                 logEmbed.add_field(name="Issuer",
                                    value=message.author.name + "\n" +
                                    message.author.id)
@@ -1096,9 +1287,7 @@ class Commands:
                                           description="The server has sent " +
                                           " you an official warning",
                                           colour=0xfff600)
-                warnEmbed.set_author(name=self.client.user.name,
-                                     icon_url=(
-                                      "https://puu.sh/tADFM/dc80dc3a5d.png"))
+
                 warnEmbed.add_field(name="Reason", value=msg.content)
                 warnEmbed.add_field(name="Issuing Server",
                                     value=message.server.name,
@@ -1176,9 +1365,7 @@ class Commands:
                                               message.author.name,
                                               colour=0x00ff11)
 
-                    warnEmbed.set_author(name=self.client.user.name,
-                                         icon_url=("https://puu.sh/tB2KH/" +
-                                                   "cea152d8f5.png"))
+
                     warnEmbed.add_field(name="Reason",
                                         value=msg.content)
                     warnEmbed.add_field(name="Issuing Server",
@@ -1208,9 +1395,7 @@ class Commands:
                 logEmbed = discord.Embed(title="User {}".format(muteswitch),
                                          description=msg.content,
                                          colour=0x1200ff)
-                logEmbed.set_author(name=self.client.user.name,
-                                    icon_url="https://puu.sh/tB2KH/" +
-                                             "cea152d8f5.png")
+
                 logEmbed.add_field(name="Issuer",
                                    value=message.author.name + "\n" +
                                         message.author.id)
@@ -1539,8 +1724,8 @@ class Commands:
 
     async def askpatch(self, message):
         """
-        >Gives access to the askpetal database
-        >askpetal <instruction> | <extra sometimes required info>
+        >Gives access to the askpatch database
+        >askpatch <submit/approve/ignore> | <extra sometimes required info>
         """
 
         # Like I said ealier in checkUpdate(), ask patch is really only
@@ -1548,16 +1733,16 @@ class Commands:
         # around in here and change things, feel free.
         # (mySql Schema in checkUpdate() )
 
-        if message.server.id != "126236346686636032":
+        if message.server.id != self.config.get("motdChannel");
             return "Sorry, you are not permitted to use this"
         args = self.cleanInput(message.content)
         print(str(args))
         if args[0] == "submit":
-            conn = _mysql.connect(self.config.get("mysql")["hostname"],
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
                                   self.config.get("mysql")["username"],
                                   self.config.get("mysql")["password"],
-                                  self.config.get("mysql")["database"])
-            conn.autocommit(True)
+                                  self.config.get("mysql")["padatabase"])
+            cursor = conn.cursor()
             add_question = ("INSERT INTO questions (author, id, content, " +
                             "used) VALUES (\"{}\", \"{}\", \"{}\", false)"
                             .format(message.author.name,
@@ -1577,20 +1762,18 @@ class Commands:
                 return "Timed out without response"
             else:
                 if res.content == "yes":
-                    conn.query(add_question)
-                    conn.query(get_entry)
-                    r = conn.store_result()
-                    entryid = r.fetch_row()[0][0]
+                    cursor.execute(add_question)
+                    conn.commit()
+                    cursor.execute(get_entry)
+                    r = cursor.fetchone()
+                    entryid =  r[0]
                     entryid = str(entryid).lstrip("('").rstrip("',)")
-                    chan = self.client.get_channel("313614587285078016")
+                    chan = self.client.get_channel(self.config.get("motdChannel"))
                     newEmbed = discord.Embed(title="Entry " + str(entryid),
                                              description="New question from "
                                              + message.author.name,
                                              colour=0x8738f9)
-                    newEmbed.set_author(name=self.client.user.name,
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon-" +
-                                                 "Question-Mark-Icon.jpg")
+
                     newEmbed.add_field(name="Question",
                                        value=" ".join(args[1:]))
                     conn.close()
@@ -1601,31 +1784,31 @@ class Commands:
             return "Question added to database"
 
         elif args[0] == "approve":
-            if message.channel.id != "313614587285078016":
+            if message.channel.id != self.config.get("motdChannel"):
                 return "You can't use that here"
             else:
                 if len(args) < 2:
                     return "You need to specify an entry"
                 else:
-                    conn = _mysql.connect(self.config.get("mysql")["hostname"],
+                    conn = pymysql.connect(self.config.get("mysql")["hostname"],
                                           self.config.get("mysql")["username"],
                                           self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["database"])
-                    conn.autocommit(True)
+                                          self.config.get("mysql")["padatabase"])
+                    cursor = conn.cursor()
                     find_entry = ("SELECT entryid, author, content, used," +
                                   " approved FROM questions WHERE entryid=" +
                                   args[1])
                     approve_entry = ("UPDATE questions SET approved = true" +
                                      " WHERE entryid=" + args[1])
-                    conn.query(find_entry)
-                    r = conn.store_result()
-                    entry = r.fetch_row()[0]
+                    cursor.execute(find_entry)
+                    entry = cursor.fetchone()
+
                     if not entry:
                         return "Could not find any row with"
 
                     entryid = entry[0]
                     # author = entry[1].decode("utf-8")
-                    content = entry[2].decode("utf-8")
+                    content = entry[2]
                     # used = entry[3]
                     approved = entry[4]
                     if approved == "1":
@@ -1638,54 +1821,51 @@ class Commands:
                                                      ".panda.com/question-" +
                                                      "mark-icon-Question-" +
                                                      "Mark-Icon.jpg")
-                        chan = self.client.get_channel("313614587285078016")
+                        chan = self.client.get_channel(self.config.get("motdChannel"))
                         await self.client.embed(chan, newEmbed)
                         return ("Entry has already been approved, " +
                                 "use reject to remove it from the queue")
 
-                    conn.query(approve_entry)
+                    cursor.execute(approve_entry)
+                    conn.commit()
                     conn.close()
 
                     newEmbed = discord.Embed(title="Approved " + str(entryid),
                                              description=content,
                                              colour=0x00FF00)
-                    newEmbed.set_author(name="AskPatch",
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon" +
-                                                 "-Question-Mark-Icon.jpg")
+
                     newEmbed.add_field(name="Has been Approved",
                                        value="True")
-                    chan = self.client.get_channel("313614587285078016")
+                    chan = self.client.get_channel(self.config.get("motdChannel"))
                     await self.client.embed(chan, newEmbed)
 
         elif args[0] == "ignore":
-            if message.channel.id != "313614587285078016":
+            if message.channel.id != self.config.get("motdChannel"):
                 return "You can't use that here"
             else:
                 if len(args) < 2:
                     return "You need to specify an entry"
                 else:
-                    conn = _mysql.connect(self.config.get("mysql")["hostname"],
+                    conn = pymysql.connect(self.config.get("mysql")["hostname"],
                                           self.config.get("mysql")["username"],
                                           self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["database"])
-                    conn.autocommit(True)
+                                          self.config.get("mysql")["padatabase"])
+                    cursor = conn.cursor()
                     find_entry = ("SELECT entryid, author, content, used," +
                                   " approved FROM questions WHERE entryid=" +
                                   args[1])
                     approve_entry = ("UPDATE questions SET approved = false " +
                                      "WHERE entryid=" + args[1])
-                    conn.query(find_entry)
-                    r = conn.store_result()
-                    entry = r.fetch_row()
+                    cursor.execute(find_entry)
+                    entry = cursor.fetchone()
+
                     if not entry:
                         return "Could not find any row with"
-                    else:
-                        entry = entry[0]
+
 
                     entryid = entry[0]
                     # author = entry[1].decode("utf-8")
-                    content = entry[2].decode("utf-8")
+                    content = entry[2]
                     # used = entry[3]
                     approved = entry[4]
                     if approved == "0":
@@ -1693,29 +1873,23 @@ class Commands:
                                                        str(entryid),
                                                  description=content,
                                                  colour=0xFFA500)
-                        newEmbed.set_author(name="AskPatch",
-                                            icon_url="http://images." +
-                                                     "clipartpanda.com/ " +
-                                                     "question-mark-icon-" +
-                                                     "Question-Mark-Icon.jpg")
-                        chan = self.client.get_channel("313614587285078016")
+
+                        chan = self.client.get_channel(self.config.get("motdChannel"))
                         await self.client.embed(chan, newEmbed)
                         return ("Entry has already been rejected or has not " +
                                 "been approved yet, use approve to add it to" +
                                 " the queue")
 
-                    conn.query(approve_entry)
-                    conn.close()
+                    cursor.execute(approve_entry)
+                    conn.commit()
+                    cursor.close()
 
                     newEmbed = discord.Embed(title=" " + str(entryid),
                                              description=content,
                                              colour=0xFF0000)
-                    newEmbed.set_author(name="AskPatch",
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon-" +
-                                                 "Question-Mark-Icon.jpg")
+
                     newEmbed.add_field(name="Rejected", value="True")
-                    chan = self.client.get_channel("313614587285078016")
+                    chan = self.client.get_channel(self.config.get("motdChannel"))
                     await self.client.embed(chan, newEmbed)
                     return "Entry has been removed from the queue"
         elif args[0] == 'list':
@@ -1728,7 +1902,7 @@ class Commands:
         >paforce
         """
         if self.level2(message.author):
-            await self.checkUpdate()
+            await self.checkUpdate(force=True)
 
             self.log.f("pa", message.author.name + " with ID: " +
                        message.author.id +
@@ -1765,7 +1939,7 @@ class Commands:
                  "squirell", "moose", "sheep", "ferret", "stoat", "cow",
                  "noperope", "kitten", "puppy", "snail", "turtle", "tortoise",
                  "zebra", "lion", "elephant", "sloth", "drop bear", "octopus",
-                 "turkey", "pelican", "GraterDog", "lesserDog", "seahorse"]
+                 "turkey", "pelican", "GreaterDog", "lesserDog", "seahorse"]
 
         beta = ["Apple", "Apricots", "Avocado", "Banana", "Cherries",
                 "Cherimoya", "Blackberry", "Raspberry",  "Coconut",
@@ -1979,3 +2153,42 @@ class Commands:
             return (message.author.mention +
                     " do not worry, your request has been sent to the " +
                     "listener server and someone should be with you shortly")
+
+
+    async def statsfornerds(self, message):
+        """
+        Displays stats for nerds
+        !statsfornerds
+        """
+        truedelta = int(self.config.stats['pingScore'] /
+                        self.config.stats['pingCount'])
+
+        em = discord.Embed(title="Stats",
+                           description="*for nerds*",
+                           colour=0x0acdff)
+        em.add_field(name="Version", value=version)
+        em.add_field(name="Uptime", value=self.getUptime())
+        em.add_field(name="Void Count", value=str(len(self.config.get("void"))))
+        em.add_field(name="Servers", value=str(len(self.client.servers)))
+        em.add_field(name="Total Number of Commands run",
+                     value=str(self.config.get("stats")["comCount"]))
+        em.add_field(name="Average Ping", value=str(truedelta))
+        mc = 0
+        for x in self.client.get_all_members():
+            mc += 1
+        em.add_field(name="Total Members",
+                     value=str(mc))
+        role = discord.utils.get(self.client.get_server(
+                                 self.config.get("mainServer")).roles,
+                                 name=self.config.get("mainRole"))
+        c = 0
+        if role is not None:
+            for m in self.client.get_all_members():
+
+                if role in m.roles:
+                    c += 1
+
+
+            em.add_field(name="Total Validated Members", value=str(c))
+
+        await self.client.embed(message.channel, em)
