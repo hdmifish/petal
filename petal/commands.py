@@ -3,6 +3,7 @@ import discord
 import random
 # import urllib.request as urllib2
 # import re
+
 import os
 import praw
 import twitter
@@ -18,8 +19,9 @@ from datetime import datetime, timedelta
 from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
+from .grasslands import Pidgeon
 from random import randint
-version = "0.3.1(development)"
+version = "0.3.2(development)"
 
 
 
@@ -2192,3 +2194,29 @@ class Commands:
             em.add_field(name="Total Validated Members", value=str(c))
 
         await self.client.embed(message.channel, em)
+
+    async def wiki(self, message):
+        """
+        Retrieves information about a query from wikipedia
+        !wiki <query>
+        """
+        query = message.content.lstrip(self.config.prefix + "wiki")
+        self.log.f("wiki", "Query string: " + query)
+        response = Pidgeon(query, version=version).get_summary()
+        if response[0] == 0:
+            return response[1]
+
+        else:
+            if "may refer to:" in response[1]["content"]:
+                em = discord.Embed( color=0xffcc33)
+                if "may refer to:" in response[1]["content"]:
+                    em.add_field(name="Developer Note",
+                                 value="It looks like this entry may have multiple results, try and refine your search for better accuracy")
+
+            else:
+                em = discord.Embed(title=response[1]["title"], color=0xf8f9fa,
+                               description= response[1]["content"])
+
+
+            await self.client.embed(message.channel, em)
+            return "Full article: <http://en.wikipedia.org/?curid=" + str(response[1]["id"]) + ">"

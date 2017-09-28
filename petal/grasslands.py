@@ -183,3 +183,41 @@ class Giraffe(object):
             self.datetime = dt.fromtimestamp(data["datetime"])
             self.nsfw = data["nsfw"]
             self.link = data["link"]
+
+class Pidgeon:
+    def __init__(self, query, version="0.3.2"):
+        self.query = query
+        api_url = "https://en.wikipedia.org/w/api.php?action=query&titles={q}&format=json&prop=extracts&exintro&explaintext"
+        url = api_url.format(q=query)
+        headers = {'User-Agent': 'Petalbot/' + version + ' (http://leaf.drunkencode.net/; nullexistence180@gmail.com) Python 3.5.2'}
+        # Peacock().f("wiki", str(headers))
+        req = requests.get(url, headers=headers)
+        self.response = req.json()
+
+    def get_summary(self):
+        if self.response is None:
+            return (0, "No data returned for: " + self.query)
+        try:
+            page = self.response["query"]["pages"][list(self.response["query"]["pages"].keys())[0]]
+            Peacock().f("wiki", "Query: " + str(page))
+            p = page["extract"][:360] + "..."
+
+        except KeyError as e:
+
+            Peacock().f("wiki", "Response: " + str(self.response))
+            Peacock().f("wiki", "Error: " + str(e))
+            return (0, "Wikipedia didn't return any entries")
+
+        else:
+
+
+            return (1, {"title": page["title"], "content": p, "id": page["pageid"]})
+
+
+
+
+
+
+
+
+
