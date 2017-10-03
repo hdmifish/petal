@@ -1735,7 +1735,7 @@ class Commands:
         # around in here and change things, feel free.
         # (mySql Schema in checkUpdate() )
 
-        if message.server.channel.id != self.config.get("motdChannel"):
+        if message.channel.id != self.config.get("motdChannel"):
             self.log.f("ap", str(message.server.id ) + " != " + self.config.get("motdChannel")  )
             return "Sorry, you are not permitted to use this"
         args = self.cleanInput(message.content)
