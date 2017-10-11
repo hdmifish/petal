@@ -912,7 +912,11 @@ class Commands:
         what...
         """
         return await self.sub(message, "cat")
-
+    async def birb(self, message):
+        """
+        flapflap...
+        """
+        return await self.sub(message, "birb")
     async def dog(self, message):
         """
         what...
