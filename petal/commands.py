@@ -2167,8 +2167,6 @@ class Commands:
 
                 if role in m.roles:
                     c += 1
-
-
             em.add_field(name="Total Validated Members", value=str(c))
 
         await self.client.embed(message.channel, em)
@@ -2183,13 +2181,13 @@ class Commands:
         response = Pidgeon(query, version=version).get_summary()
         if response[0] == 0:
             return response[1]
-
         else:
             if "may refer to:" in response[1]["content"]:
                 em = discord.Embed( color=0xffcc33)
                 if "may refer to:" in response[1]["content"]:
                     em.add_field(name="Developer Note",
-                                 value="It looks like this entry may have multiple results, try and refine your search for better accuracy")
+                                 value="It looks like this entry may have multiple results, "
+                                       "try and refine your search for better accuracy")
 
             else:
                 em = discord.Embed(title=response[1]["title"], color=0xf8f9fa,
@@ -2229,7 +2227,6 @@ class Commands:
             while target_number == 404:
                 target_number = randint(0, number)
 
-
         try:
             if target_number != 0:
                 resp = json.loads(requests.get("http://xkcd.com/{0}/info.0.json".format(target_number)).content.decode())
@@ -2263,33 +2260,30 @@ class Commands:
             if user is None:
                 return "No user found for that name, try again"
 
-        if self.hasRole(user, "Listener"):
-            return "This user is already a listener..."
         cb = self.config.get("choppingBlock")
 
         if user.id in cb:
-            if cb[user.id]["listener"]:
-                return "User is already being voted on. You cannot vote to promote them further. " \
-                       "Although, I bet they appreciate it"
-
             if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
                 if message.author.id not in cb[user.id]["votes"]:
                     cb[user.id]["votes"][message.author.id] = 1
+                    return "You have voted to promote, " + user.name
                 else:
                     return "You already voted..."
             else:
-                return "The time to vote on this user has expired. Please run " + self.config.prefix + "lvalidate to add them to the roster"
+                return "The time to vote on this user has expired. Please run " + self.config.prefix\
+                       + "lvalidate to add them to the roster"
         else:
+            if self.hasRole(user, "Helping Hands"):
+                return "This user is already a Helping Hands..."
             now = datetime.utcnow() + timedelta(days=2)
-            cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id, "timeout": now, "listener": False}
+            cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id,
+                           "timeout": now}
             return "A vote to promote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
-                                                                                                 user.discriminator) +  \
-                   "\nYou man cancel this vote by running " + self.config.prefix \
+                                                                                                 user.discriminator)\
+                   + "\nYou man cancel this vote by running " + self.config.prefix \
                    + "lcancel (not to be confused with smash bros)"
-    
-    
-    async def ldemote(self, message, user=None):
 
+    async def ldemote(self, message, user=None):
         if user is None:
             await self.client.send_message(message.channel, "Who would you like to demote?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
@@ -2301,32 +2295,26 @@ class Commands:
             if user is None:
                 return "No user found for that name, try again"
 
-        if not self.hasRole(user, "Listener"):
-            return "This user isnt a listener..."
-
         cb = self.config.get("choppingBlock")
-
         if user.id in cb:
-            if not cb[user.id]["listener"]:
-                return "User is already being voted on. You cannot vote to demote them." \
-                       "But, im sure they got the message anyway...."
-
             if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
                 if message.author.id not in cb[user.id]["votes"]:
                     cb[user.id]["votes"][message.author.id] = -1
+                    return "You have voted to demote, " + user.name
                 else:
                     return "You already voted..."
             else:
                 return "The time to vote on this user has expired. Please run " + self.config.prefix \
                        + "lvalidate to add them to the roster"
         else:
+            if self.hasRole(user, "Helping Hands"):
+                return "This user is already a Helping Hands..."
             now = datetime.utcnow() + timedelta(days=2)
-            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now, "listener": False}
+            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now}
             return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
-                                                                                                 user.discriminator) \
+                                                                                                user.discriminator) \
                    + "\nYou may cancel this vote by running " + self.config.prefix \
                    + "lcancel (not to be confused with smash bros)"
-
 
     async def lvote(self, message):
         """
@@ -2337,7 +2325,7 @@ class Commands:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
         if not self.hasRole(message.author, "Listener"):
-            return "You must be a Listener to vote on others"
+            return "You must be a Listener to vote on Helping Hands"
         args = self.cleanInput(message.content)
         user = None
         if args[0] != '':
@@ -2348,10 +2336,11 @@ class Commands:
         while 1:
             await self.client.send_message(message.channel, "Are we calling to promote or demote?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout = 20)
-            response = response.content
+
             if response is None:
                 return "You didn't reply so I timed out..."
-            elif response.lower() in ['promote', 'p']:
+            response = response.content
+            if response.lower() in ['promote', 'p']:
                 response = await self.lpromote(message, user)
                 self.config.save()
                 return response
@@ -2363,9 +2352,7 @@ class Commands:
                 await self.client.send_message(message.channel, "Type promote or type demote [pd]")
                 await asyncio.sleep(1)
 
-
     async def lcancel(self, message):
-
         """
         Cancels all lvotes you started. Does not validate them.
         !lcancel
@@ -2375,17 +2362,23 @@ class Commands:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
         if not self.hasRole(message.author, "Listener"):
-            return "You are not a listener. You cannot use this feature"
+            return "You are not a Listener You cannot use this feature"
         if cb is None:
             return "lvotes are disabled in config, why are you even running this command...?"
 
         temp = {}
         for entry in cb:
-            if cb["started_by"] == message.author.id:
+            try:
+                if cb["started_by"] == message.author.id:
+                    temp[entry] = cb[entry]
+            except KeyError as e:
                 temp[entry] = cb[entry]
 
         for e in temp:
-            del cb[e]
+            print("Deleted: " + str(self.config.doc["choppingBlock"][e]))
+            del self.config.doc["choppingBlock"][e]
+
+        self.config.save()
         return "Deleted all lvotes if you had started any"
 
     async def lvalidate(self, message, user=None):
@@ -2398,7 +2391,8 @@ class Commands:
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-
+        if not self.hasRole(message.author, "Listener"):
+            return "You are not a Listener You cannot use this feature"
         if user is None:
             await self.client.send_message(message.channel, "Which user would you like to validate?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
@@ -2411,48 +2405,154 @@ class Commands:
                 return "No user found for that name, try again"
 
         if user.id not in cb:
-            await self.cat(message)
-            return "That user is not in the list, therefore I can't do anything. Here's a cat though."
+
+            return "That user is not in the list, therefore I can't do anything. Here's a cat though.\n" + await self.cat(message)
 
         else:
             votelist = cb[user.id]["votes"]
             if len(votelist) < 2 :
-                return "Not enough votes to pass, cancel the poll or wait longer. You may cancel with " + self.config.prefix + "lcancel"
+                return "Not enough votes to pass, cancel the poll or wait longer. You may cancel with " \
+                       + self.config.prefix + "lcancel"
 
             score = 0
             for entry in votelist:
                 score += votelist[entry]
 
-            if len(votelist) == 2 and score != 2:
-                return "Not enough votes to promote to listener. Sorry, maybe discuss more. Or if this is an error," \
+            if len(votelist) == 2 and score not in [-2, 2]:
+                return "Not enough votes to promote/demote. Sorry, maybe discuss more. Or if this is an error," \
                        " let a manager/admin know"
 
-            elif len(votelist) == 2 and score == 2:
-                await self.client.add_roles(user,
-                                            discord.utils.get(message.server.roles,
-                                                              name="Listener"))
-                try:
-                    await self.client.send_message(user, "Congrats, you have been promoted to listener by vote. Keep being awesome")
-                except:
-                    return "User could not be PM'd but they are a listener now."
+            elif len(votelist) == 2 and score in [-2, 2]:
+                if score == -2:
+                    await self.client.remove_roles(user,
+                                                   discord.utils.get(message.server.roles,
+                                                                     name="Helping Hands"))
+                    try:
+                        await self.client.send_message(user,
+                                                       "Following a vote by your fellow Helping Hands people, "
+                                                       "you have been demoted for the time being.")
+                        del self.config.doc["choppingBlock"][user.id]
+                        self.config.save()
+                    except:
+                        return "User could not be PM'd but they are a member of Helping Hands no more"
+                    else:
+                        return user.name + " has been removed from Helping Handss"
                 else:
-                    return user.name + " has been made a listener"
+                    cb[user.id]["pending"] = True
+
+                    try:
+                        await self.client.send_message(user,
+                                                       "Following a vote by your fellow members you have been chosen "
+                                                       "to be a Helping Hands! Type !Laccept in any channel")
+
+                    except:
+                        return "User could not be PM'd but they are a now able to become a member of Helping Hands." \
+                               "\nLet them know to type !Laccept in a channel"
+                    else:
+                        return user.name + " has been made a member of Helping Hands." \
+                                           "\nThey must accept the invite by following the instruction I just sent them"
 
             else:
                 avg = float(score / len(votelist))
-                if avg < 0.85:
-                    return "You need 85% of votes to pass. This poll had: " + str(avg * 100.00) + " percent"
+                if -0.85 < avg < 0.85:
+                    return "You need 85% of votes to pass current score:" + str(abs(avg * 100.00))
 
-                await self.client.add_roles(user,
-                                            discord.utils.get(message.server.roles,
-                                                              name="Listener"))
-                try:
-                    await self.client.send_message(user,
-                                                   "Congrats, you have been promoted to listener by vote. Keep being awesome")
-                except:
-                    return "User could not be PM'd but they are a listener now."
-                else:
-                    return user.name + " has been made a listener"
+                elif avg < -0.85:
+                    await self.client.remove_roles(user,
+                                                   discord.utils.get(message.server.roles,
+                                                                     name="Helping Hands"))
+                    try:
+                        await self.client.send_message(user,
+                                                       "Following a vote by your fellow Helping Handss,"
+                                                       " you have been demoted for the time being.")
+                        del self.config.doc["choppingBlock"][user.id]
+                        self.config.save()
+
+                    except:
+                        return "User could not be PM'd but they are a Helping Hands no more"
+                    else:
+                        return user.name + " has been removed from Helping Hands"
+
+                elif avg > 0.85:
+                    cb[user.id]["pending"] = True
+                    try:
+                        await self.client.send_message(user,
+                                                       "Following a vote by your fellow members you have been chosen "
+                                                       "to be a Helping Hands! Type !Laccept in any channel. "
+                                                       "Or !Lreject if you wanna not become a Helping Hands")
+                    except:
+                        return "User could not be PM'd but they are a now able to become a Helping Hands." \
+                               "\nLet them know to type !Laccept in a channel"
+                    else:
+                        return user.name + " has been made a Helping Hands!\nThey must accept" \
+                                           " the invite by following the instruction I just sent them"
+
+    async def laccept(self, message):
+        """
+        If you were voted to be a Helping Hands, running this command will accept the offer. Otherwise, run !Lreject
+        !laccept
+        """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+        if not self.hasRole(message.author, "Listener"):
+            return "You are not a Listener You cannot use this feature"
+        if message.author.id in cb:
+            if "pending" in cb[message.author.id]:
+                await self.client.add_roles(message.author,
+                                               discord.utils.get(message.server.roles,
+                                                                 name="Helping Hands"))
+                del self.config.doc["choppingBlock"][message.author.id]
+                self.config.save()
+                return "Welcome!"
+            else:
+                return "You don't have a pending invite to join the Helping Handss at this time"
+
+    async def lreject(self, message):
+        """
+        If you were voted to be a Helping Hands, running this command will reject the offer.
+        !lreject
+        """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+        if not self.hasRole(message.author, "Listener"):
+            return "You are not a Listener You cannot use this feature"
+        if message.author.id in cb:
+            if "pending" in cb[message.author.id]:
+                    del self.config.doc["choppingBlock"][message.author.id]
+                    self.config.save()
+            else:
+                return "You don't have a pending invite to join the Helping Handss at this time"
+
+    async def lshow(self, message):
+        """
+       If you were voted to be a Helping Hands, running this command will reject the offer.
+       !lreject
+       """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.hasRole(message.author, "Listener"):
+            return "You are not a Listener. You cannot use this feature"
+
+        msg = ""
+        for entry in cb:
+            mem = self.getMember(message, entry)
+            if mem is None:
+                continue
+            starter = self.getMember(message, cb[entry]["started_by"])
+            if starter is None:
+                continue
+            msg += "\n------\nVote to promote: "  + mem.name+ "\#" + mem.discriminator \
+                   + "\nstarted by: " + starter.name + "#" + starter.discriminator + "\n------\n"
+
+        return "Heres what votes are goin on: \n" + msg
+
 
 
 
