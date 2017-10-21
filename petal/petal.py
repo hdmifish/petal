@@ -75,6 +75,9 @@ class Petal(discord.Client):
     async def askPatchLoop(self):
         if self.devmode:
             return
+        if self.config.get("motdInterval") is None:
+            log.f("PA", "not using MOTD stuff...")
+            return
         interval = self.config.get("motdInterval")
         while True:
             await self.commands.checkUpdate()
@@ -135,11 +138,11 @@ class Petal(discord.Client):
 
         return
 
-    async def send_message(self, channel, message, timeout=0):
+    async def send_message(self, channel, message, timeout=0, **kwargs):
         """
-        Overload on the send_message function"
+        Overload on the send_message function
         """
-        # TODO: Make this do things
+
         return await super().send_message(channel, message)
 
     async def embed(self, channel,  embedded):
@@ -153,8 +156,7 @@ class Petal(discord.Client):
         response = ""
         if self.config.get("welcomeMessage") != "null":
             try:
-                await self.send_message(member,
-                                        self.config.get("welcomeMessage"))
+                await self.send_message(member, self.config.get("welcomeMessage"), )
             except KeyError:
                 response = " and was not PM'd :( "
             else:
@@ -197,14 +199,11 @@ class Petal(discord.Client):
 
         await self.embed(self.get_channel(self.config.logChannel), userEmbed)
         if response != "":
-            await self.send_message(self.get_channel(self.config.logChannel),
-                                    response)
-
+            await self.send_message(self.get_channel(self.config.logChannel), response, )
 
         if (datetime.utcnow() - member.created_at).days <= 6:
-            await self.send_message(self.get_channel(self.config.logChannel),
-                                    + "This member's account "
-                                    + "was created less than 7 days ago!")
+            await self.send_message(self.get_channel(self.config.logChannel), + "This member's account "
+                                    + "was created less than 7 days ago!", )
 
         return
 
@@ -274,10 +273,11 @@ class Petal(discord.Client):
             return
         if before.content == "":
             return
-        if before.channel.id in self.config.get("ignoreChannels"):
+
+        if before.server.id in self.config.get("ignoreServers") or \
+           before.channel.id in self.config.get("ignoreChannels"):
             return
-        if after.channel.id in self.config.get("ignoreChannels"):
-            return
+
         if after.content == "":
             return
         if before.content == after.content:
@@ -352,7 +352,11 @@ class Petal(discord.Client):
         return
 
     async def on_voice_state_update(self, before, after):
+
+        # FIXME: This needs to have a limiter. Use at own risk of spam.
         if self.config.tc is None:
+            return
+        else:
             return
         tc = self.config.tc
         trackedChan = self.get_channel(tc["monitoredChannel"])
@@ -368,7 +372,7 @@ class Petal(discord.Client):
         if (before.voice_channel != trackedChan
            and after.voice_channel == trackedChan):
             try:
-                await self.send_message(after, tc["messageToUser"])
+                await self.send_message(after, tc["messageToUser"], )
             except discord.errors.HTTPException:
                 log.warn("Unable to PM {user.name}".format(before))
             else:
@@ -380,19 +384,18 @@ class Petal(discord.Client):
                 else:
                     if msg.content.lower() in ["yes", "confirm", "please",
                                                "yeah", "yep", "mhm"]:
-                        await self.send_message(postChan,
-                                                tc["messageFormat"]
+                        await self.send_message(postChan, tc["messageFormat"]
                                                 .format(user=after,
                                                         channel=after.
-                                                        voice_channel))
+                                                        voice_channel), )
                     else:
                         await self.send_message(after, "Alright, just to let" +
-                                                       "you know. If you " +
-                                                       "have a spotty " +
-                                                       "connection, you may" +
-                                                       " get PM'd more than " +
-                                                       "once upon joining" +
-                                                       " this channel")
+                                                "you know. If you " +
+                                                "have a spotty " +
+                                                "connection, you may" +
+                                                " get PM'd more than " +
+                                                "once upon joining" +
+                                                " this channel", )
                     return
 
     async def on_message(self, message):
@@ -444,9 +447,8 @@ class Petal(discord.Client):
                     check = re.compile(self.config.get("roleGrant")["regex"])
 
                 if check.match(message.content):
-                    await self.send_message(message.channel,
-                                            self.config.get("roleGrant")
-                                            ["response"])
+                    await self.send_message(message.channel, self.config.get("roleGrant")
+                    ["response"], )
                     await self.add_roles(message.author,
                                          discord.utils.get(self.mainsvr.roles,
                                                            id=self.config
@@ -458,16 +460,14 @@ class Petal(discord.Client):
                     return
 
             except Exception as e:
-                await self.send_message(message.channel,
-                                        "Something went wrong will granting" +
+                await self.send_message(message.channel, "Something went wrong will granting" +
                                         " your role. Pm a member of staff " +
-                                        str(e))
+                                        str(e), )
 
         if not self.config.pm and message.channel.is_private:
             if not message.author == self.user:
-                await self.send_message(message.channel,
-                                        "Petal has been configured by staff" +
-                                        " to not respond to PMs right now")
+                await self.send_message(message.channel, "Petal has been configured by staff" +
+                                        " to not respond to PMs right now", )
             return
 
         if not content.startswith(self.config.prefix):
@@ -488,7 +488,7 @@ class Petal(discord.Client):
             response = await methodToCall(message)
             if response:
                 self.config.get("stats")["comCount"] += 1
-                await self.send_message(message.channel, response)
+                await self.send_message(message.channel, response, )
                 return
 
         else:
@@ -501,12 +501,12 @@ class Petal(discord.Client):
                 response = await methodToCall(message)
                 if response:
                     self.config.get("stats")["comCount"] += 1
-                    await self.send_message(message.channel, response)
+                    await self.send_message(message.channel, response, )
                     return
 
             if com.split()[0] in self.config.commands:
                 response = await self.commands.parseCustom(com, message)
-                await self.send_message(message.channel, response)
+                await self.send_message(message.channel, response, )
 
             else:
                 return
@@ -515,5 +515,5 @@ class Petal(discord.Client):
                         .format(message.channel, message.author,
                                 message.content.lstrip(self.config.prefix)))
                 response = await self.commands.cleverbot(message)
-                await self.send_message(message.channel, response)
+                await self.send_message(message.channel, response, )
             return

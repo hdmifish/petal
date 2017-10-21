@@ -120,7 +120,14 @@ class Config(object):
         if len(v) == 0:
             return "The void is empty"
         else:
-            return v[randint(0, len(v) - 1)]["content"]
+            return v[randint(0, len(v) - 1)]
+
+    def delVoid(self, num):
+        v = self.get("void")
+        for item in v:
+            if item["number"] == num:
+                del v[item]
+                print("deleted item #" + str(num))
 
     def saveVoid(self, content, name, id):
         v = self.get("void")

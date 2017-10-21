@@ -1,4 +1,6 @@
 import asyncio
+import json
+
 import discord
 import random
 # import urllib.request as urllib2
@@ -6,6 +8,7 @@ import random
 
 import os
 import praw
+import requests
 import twitter
 import facebook
 import pytumblr
@@ -236,7 +239,7 @@ class Commands:
         if not self.level0(message.author):
             return
         for s in self.client.servers:
-            await self.client.send_message(message.channel, s.name + " " + s.id)
+            await self.client.send_message(message.channel, s.name + " " + s.id, )
 
 
 
@@ -305,10 +308,9 @@ class Commands:
                 msg = await self.client.embed(self.client.get_channel(
                                               self.config.get
                                               ("mysql")["channelid"]), em)
-                await self.client.send_message(msg.channel,
-                                               "*today's patch asks was " +
+                await self.client.send_message(msg.channel, "*today's patch asks was " +
                                                "written by " + askrow[1]
-                                               .strip() + "*")
+                                               .strip() + "*", )
                 self.log.f("pa", "Going with entry: " + str(askrow[0]) + " by "
                                  + askrow[1].strip())
                 try:
@@ -435,10 +437,8 @@ class Commands:
             perms = '0'
 
         if invoker in self.config.commands:
-            await self.client.send_message(
-                                           message.channel,
-                                           "This command already exists, " +
-                                           "type 'yes' to rewrite it")
+            await self.client.send_message(message.channel, "This command already exists, " +
+                                           "type 'yes' to rewrite it", )
             response = (await self.client.
                         wait_for_message(timeout=15,
                                          author=message.author,
@@ -477,10 +477,9 @@ class Commands:
                          "help <command name>")
             url = "http://leaf.drunkencode.net/"
             await self.client.embed(message.channel, em)
-            await self.client.send_message(message.channel,
-                                           "Publicly available at: " + url +
-                                           "\n\nMore Info with: " +self.config.prefix +
-                                           "statsfornerds" )
+            await self.client.send_message(message.channel, "Publicly available at: " + url +
+                                           "\n\nMore Info with: " + self.config.prefix +
+                                           "statsfornerds", )
             return
         if func in dir(self):
             if getattr(self, func).__doc__ is None:
@@ -551,7 +550,7 @@ class Commands:
                                                "This message is to inform " +
                                                "you that " +
                                                message.author.name +
-                                               " has requested a hug from you")
+                                               " has requested a hug from you", )
             except discord.ClientException:
                 return ("Your hug donor was going to be: " + pick.mention +
                         " but unfortunately they were unable to be contacted")
@@ -817,9 +816,9 @@ class Commands:
                                            message.author.name +
                                            "! Please select the number of " +
                                            " each server you want to post " +
-                                           " to. (dont separate the numbers) ")
+                                           " to. (dont separate the numbers) ", )
 
-            await self.client.send_message(message.channel, msg)
+            await self.client.send_message(message.channel, msg, )
 
             chans = await self.client.wait_for_message(channel=message.channel,
                                                        author=message.author,
@@ -832,11 +831,9 @@ class Commands:
             if self.validateChan(chanList, chans):
                 break
             else:
-                await self.client.send_message(message.channel,
-                                               "Invalid channel choices")
-        await self.client.send_message(message.channel,
-                                       "What do you want to send?" +
-                                       " (remember: {e} = @ev and {h} = @her)")
+                await self.client.send_message(message.channel, "Invalid channel choices", )
+        await self.client.send_message(message.channel, "What do you want to send?" +
+                                       " (remember: {e} = @ev and {h} = @her)", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -862,15 +859,13 @@ class Commands:
                         value="\n".join(channames))
         subkey, friendly = self.getSubscriptionKey(msgstr)
         if subkey is None:
-            await self.client.send_message(message.channel,
-                                           "I was unable to auto-detect " +
+            await self.client.send_message(message.channel, "I was unable to auto-detect " +
                                            "any game titles in your post " +
-                                           "subscribers will not be notified")
+                                           "subscribers will not be notified", )
         else:
-            tempm = await self.client.send_message(message.channel,
-                                                   "auto-detect found: **" +
+            tempm = await self.client.send_message(message.channel, "auto-detect found: **" +
                                                    friendly + "** Is this " +
-                                                   "correct?[yes/no]")
+                                                   "correct?[yes/no]", )
             n = await self.client.wait_for_message(channel=tempm.channel,
                                                    author=message.author,
                                                    check=self.yesNoCheck,
@@ -886,10 +881,9 @@ class Commands:
                 await self.notifySubs(message, subkey)
 
         await self.client.embed(message.channel, embed)
-        await self.client.send_message(message.channel,
-                                       "If this is ok, type confirm. " +
+        await self.client.send_message(message.channel, "If this is ok, type confirm. " +
                                        " Otherwise, wait for it to timeout " +
-                                       " and try again")
+                                       " and try again", )
 
         msg2 = await self.client.wait_for_message(channel=message.channel,
                                                   author=message.author,
@@ -899,11 +893,10 @@ class Commands:
             return "Event post timed out"
 
         for i in toPost:
-            await self.client.send_message(i, msgstr)
+            await self.client.send_message(i, msgstr, )
             await asyncio.sleep(2)
 
-        await self.client.send_message(message.channel,
-                                       "Messages have been posted")
+        await self.client.send_message(message.channel, "Messages have been posted", )
 
     # =========REDEFINITIONS============ #
 
@@ -958,7 +951,7 @@ class Commands:
         Shows the round trip time from this bot to you and back
         Syntax: `>ping`
         """
-        msg = await self.client.send_message(message.channel, "*hugs*")
+        msg = await self.client.send_message(message.channel, "*hugs*", )
         delta = int((datetime.now() - msg.timestamp).microseconds / 1000)
         self.config.stats['pingScore'] += delta
         self.config.stats['pingCount'] += 1
@@ -1058,9 +1051,8 @@ class Commands:
         if not self.hasRole(message.author, "mod"):
             return "You must have the `mod` role"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason" +
-                                       "(just reply below): ")
+        await self.client.send_message(message.channel, "Please give a reason" +
+                                       "(just reply below): ", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -1100,8 +1092,7 @@ class Commands:
 
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel), logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Cleaning up...")
+                await self.client.send_message(message.channel, "Cleaning up...", )
                 await self.client.send_typing(message.channel)
                 await asyncio.sleep(4)
                 petal.lockLog = False
@@ -1123,9 +1114,8 @@ class Commands:
         if not self.hasRole(message.author, "mod"):
             return "You must have the `mod` role"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason" +
-                                       " (just reply below): ")
+        await self.client.send_message(message.channel, "Please give a reason" +
+                                       " (just reply below): ", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -1139,10 +1129,9 @@ class Commands:
             return "Could not get user with that id"
 
         else:
-            await self.client.send_message(message.channel,
-                                           "You are about to ban: " +
+            await self.client.send_message(message.channel, "You are about to ban: " +
                                            userToBan.name +
-                                           ". If this is correct, type `yes`")
+                                           ". If this is correct, type `yes`", )
             msg = await self.client.wait_for_message(channel=message.channel,
                                                      author=message.author,
                                                      timeout=10)
@@ -1181,8 +1170,7 @@ class Commands:
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel),
                                         logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Clearing out messages... ")
+                await self.client.send_message(message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id
@@ -1198,16 +1186,15 @@ class Commands:
             return ("I'm sorry, you must have logging enabled to" +
                     " use administrative functions")
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason " +
-                                       " (just reply below): ")
+        await self.client.send_message(message.channel, "Please give a reason " +
+                                       " (just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
         if msg is None:
             return "Timed out while waiting for input"
 
-        await self.client.send_message(message.channel, "How long? (days) ")
+        await self.client.send_message(message.channel, "How long? (days) ", )
         msg2 = await self.client.wait_for_message(channel=message.channel,
                                                   author=message.author,
                                                   check=self.isNumeric,
@@ -1252,8 +1239,7 @@ class Commands:
 
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel), logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Clearing out messages... ")
+                await self.client.send_message(message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id +
@@ -1273,9 +1259,8 @@ class Commands:
         if not self.level2(message.author):
             return "You must have lv2 perms to use the warn command"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a message to send " +
-                                       "(just reply below): ")
+        await self.client.send_message(message.channel, "Please give a message to send " +
+                                       "(just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
@@ -1348,7 +1333,7 @@ class Commands:
 
         await self.client.send_message(message.channel, "Please give a " +
                                        "reason for the mute " +
-                                       "(just reply below): ")
+                                       "(just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
@@ -1439,12 +1424,10 @@ class Commands:
         else:
             if numDelete > 200 or numDelete < 0:
                 return "That is an invalid number of messages to delete"
-        await self.client.send_message(message.channel,
-                                       "You are about to delete {} messages " +
+        await self.client.send_message(message.channel, "You are about to delete {} messages " +
                                        "(including these confirmations) in " +
                                        "this channel. Type: confirm if this " +
-                                       "is correct.".format(str(numDelete + 3))
-                                       )
+                                       "is correct.".format(str(numDelete + 3)), )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  content="confirm",
                                                  author=message.author,
@@ -1485,6 +1468,15 @@ class Commands:
         args = self.cleanInput(message.content)
         if args[0] == "":
             response = self.config.getVoid()
+            author = response["author"]
+            num = response["number"]
+            response = response["content"]
+
+            if "@everyone" in response or "@here" in response:
+                self.config.delVoid(num)
+                return "Someone (" + author + ") is a butt and tried to sneak an @ev tag into the void." \
+                                              "\n\nIt was deleted..."
+
             if response.startswith("http"):
                 return "You grab a link from the void: \n" + response
             else:
@@ -1532,13 +1524,12 @@ class Commands:
         if len(modes) == 0:
             return "No modules enabled for social media posting"
 
-        await self.client.send_message(message.channel,
-                                       "Hello, " +
+        await self.client.send_message(message.channel, "Hello, " +
                                        message.author.name +
                                        " here are the enabled social media " +
                                        "services \n" + "\n".join(names) +
                                        "\n\n Please select which ones you " +
-                                       "want to use (e.g. 023) ")
+                                       "want to use (e.g. 023) ", )
 
         sendto = await self.client.wait_for_message(channel=message.channel,
                                                     author=message.author,
@@ -1550,19 +1541,17 @@ class Commands:
         if not self.validateChan(modes, sendto):
             return "Invalid selection, please try again"
 
-        await self.client.send_message(message.channel,
-                                       "Please type a title for your post " +
-                                       "(timeout after 1 minute)")
+        await self.client.send_message(message.channel, "Please type a title for your post " +
+                                       "(timeout after 1 minute)", )
         mtitle = await self.client.wait_for_message(channel=message.channel,
                                                     author=message.author,
                                                     timeout=60)
         if mtitle is None:
             return "The process timed out, you need a valid title"
-        await self.client.send_message(message.channel,
-                                       "Please type the content of the post " +
+        await self.client.send_message(message.channel, "Please type the content of the post " +
                                        "below. Limit to 140 characters for " +
                                        "twitter posts (this process will " +
-                                       "time out after 2 minutes)")
+                                       "time out after 2 minutes)", )
         mcontent = await self.client.wait_for_message(channel=message.channel,
                                                       author=message.author,
                                                       timeout=120)
@@ -1574,9 +1563,8 @@ class Commands:
             if len(mcontent.content) > 140:
                 return "This post is too long for twitter"
 
-        await self.client.send_message(message.channel,
-                                       "Your post is ready. Please type: " +
-                                       "`send`")
+        await self.client.send_message(message.channel, "Your post is ready. Please type: " +
+                                       "`send`", )
         meh = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  content="send",
@@ -1591,22 +1579,20 @@ class Commands:
                                        send_replies=False)
                 self.log.f("smupdate", "Reddit Response: " + str(response))
             except praw.exceptions.APIException as e:
-                await self.client.send_message(message.channel,
-                                               "The post did not send, " +
+                await self.client.send_message(message.channel, "The post did not send, " +
                                                "this key has been " +
                                                "ratelimited. Please wait for" +
                                                " about 8-10 minutes before " +
-                                               "posting again")
+                                               "posting again", )
             else:
-                await self.client.send_message(message.channel,
-                                               "Submitted post to " +
+                await self.client.send_message(message.channel, "Submitted post to " +
                                                self.config.get("reddit")
-                                               ["targetSR"])
+                                               ["targetSR"], )
                 await asyncio.sleep(2)
 
         if "1" in sendto.content:
             status = self.t.PostUpdate(mcontent.clean_content)
-            await self.client.send_message(message.channel, "Submitted tweet")
+            await self.client.send_message(message.channel, "Submitted tweet", )
             await asyncio.sleep(2)
 
         if "2" in sendto.content:
@@ -1624,14 +1610,12 @@ class Commands:
             postpage = facebook.GraphAPI(page_access_token)
 
             if postpage is None:
-                await self.client.send_message(message.channel,
-                                               "Invalid page id for " +
-                                               "facebook, will not post")
+                await self.client.send_message(message.channel, "Invalid page id for " +
+                                               "facebook, will not post", )
             else:
                 status = postpage.put_wall_post(mcontent.clean_content)
-                await self.client.send_message(message.channel,
-                                               "Posted to facebook under " +
-                                               " page: " + page["name"])
+                await self.client.send_message(message.channel, "Posted to facebook under " +
+                                               " page: " + page["name"], )
                 self.log.f("smupdate", "Facebook Response: " + str(status))
                 await asyncio.sleep(2)
 
@@ -1642,10 +1626,9 @@ class Commands:
                                 title=mtitle.content,
                                 body=mcontent.clean_content)
 
-            await self.client.send_message(message.channel,
-                                           "Posted to tumblr: " +
+            await self.client.send_message(message.channel, "Posted to tumblr: " +
                                            self.config.get("tumblr")
-                                           ["targetBlog"])
+                                           ["targetBlog"], )
 
         return "Done posting"
 
@@ -1684,10 +1667,9 @@ class Commands:
         if gal is None:
             return "Sadly, calm hasn't been set up correctly"
         if self.level4(message.author) and args[0] != '':
-            await self.client.send_message(message.channel,
-                                           "You will be held accountable for" +
+            await self.client.send_message(message.channel, "You will be held accountable for" +
                                            " whatever is posted in here." +
-                                           " Just a heads up ^_^ ")
+                                           " Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                        message.author.id,
                        "content": args[0].strip()})
@@ -1706,10 +1688,9 @@ class Commands:
         if gal is None:
             return "Sadly, comfypixel hasn't been set up correctly"
         if self.level4(message.author) and args[0] != '':
-            await self.client.send_message(message.channel,
-                                           "You will be held accountable " +
+            await self.client.send_message(message.channel, "You will be held accountable " +
                                            "for whatever is posted in here." +
-                                           " Just a heads up ^_^ ")
+                                           " Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                         message.author.id,
                         "content": args[0].strip()})
@@ -1756,11 +1737,10 @@ class Commands:
                                     message.author.id,
                                     " ".join(args[1:])))
             get_entry = "SELECT MAX(entryid) from questions;"
-            await self.client.send_message(message.channel,
-                                           "Your message will be added to " +
+            await self.client.send_message(message.channel, "Your message will be added to " +
                                            "the database. Is this correct? " +
                                            "(type yes if yes)\n" +
-                                           " ".join(args[1:]))
+                                           " ".join(args[1:]), )
 
             res = await self.client.wait_for_message(author=message.author,
                                                      channel=message.channel,
@@ -2003,12 +1983,12 @@ class Commands:
                 return "Removed " + m.mention + " from anon list!"
 
         await self.client.send_message(message.channel, "One moment while I " +
-                                                   "connect you to a listener")
+                                       "connect you to a listener", )
         self.activeSads.append(message.author.id)
 
         await asyncio.sleep(1)
         x = await self.client.send_message(message.channel, "Your name is: "
-                                                            + name1)
+                                           + name1, )
 
         availableHelpers = []
         for z in anondb["help"]:
@@ -2024,10 +2004,9 @@ class Commands:
             del self.activeSads[self.activeSads.index(message.author.id)]
             return ("All helpers are currently assisting others right now, " +
                     " please try again later")
-        await self.client.send_message(message.channel,
-                                       "There are currently: " +
+        await self.client.send_message(message.channel, "There are currently: " +
                                        str(len(availableHelpers)) +
-                                       " available helpers.")
+                                       " available helpers.", )
         self.log.info(str(anondb["help"]))
 
         helpid = availableHelpers[randint(0, len(availableHelpers)-1)]
@@ -2039,47 +2018,43 @@ class Commands:
             return "Found invalid user, try again"
         self.activeHelpers.append(helpid)
         m = await self.client.send_message(helpuser, "Hello, there is someone " +
-                                                "who wants to chat " +
-                                                "anonymously.\n " +
-                                                "Type accept to begin")
+                                           "who wants to chat " +
+                                           "anonymously.\n " +
+                                           "Type accept to begin", )
         n = await self.client.wait_for_message(channel=m.channel,
                                                author=helpuser,
                                                content="accept", timeout=15)
         if n is None:
-            await self.client.send_message(helpuser, "Timed out...")
+            await self.client.send_message(helpuser, "Timed out...", )
             del self.activeHelpers[self.activeHelpers.index(helpid)]
             del self.activeSads[self.activeSads.index(message.author.id)]
             return "Sorry, the user didnt respond"
-        await self.client.send_message(helpuser,
-                                       "The chat will automatically dis" +
+        await self.client.send_message(helpuser, "The chat will automatically dis" +
                                        "connect if either user is idle " +
                                        "for more than 5 minutes" +
-                                       "\n(or type !end)" )
-        await self.client.send_message(saduser,
-                                       "The chat will automatically dis" +
+                                       "\n(or type !end)", )
+        await self.client.send_message(saduser, "The chat will automatically dis" +
                                        "connect if either user is idle " +
                                        "for more than 5 minutes" +
-                                       "\n(or type !end)" )
+                                       "\n(or type !end)", )
 
         await self.client.send_message(helpuser, "Connected! Your name is: " +
-                                            name2 + ".\n Type a message.")
+                                       name2 + ".\n Type a message.", )
 
-        await self.client.send_message(helpuser,
-                                       "*Just a small note, while this is " +
+        await self.client.send_message(helpuser, "*Just a small note, while this is " +
                                        "designed to be completely anon, " +
                                        "petal still keeps a hidden record of" +
                                        " your userID corresponding to your " +
                                        "fake name. Only admins can see this " +
-                                       "and we will not view it unless abuse "+
-                                       " is reported from either party*")
-        await self.client.send_message(saduser,
-                                       "*Just a small note, while this is " +
+                                       "and we will not view it unless abuse " +
+                                       " is reported from either party*", )
+        await self.client.send_message(saduser, "*Just a small note, while this is " +
                                        "designed to be completely anon, " +
                                        "petal still keeps a hidden record of" +
                                        " your userID corresponding to your " +
                                        "fake name. Only admins can see this " +
-                                       "and we will not view it unless abuse "+
-                                       " is reported from either party*")
+                                       "and we will not view it unless abuse " +
+                                       " is reported from either party*", )
 
         self.log.f("anon", name1 + " is " + saduser.name + " " + saduser.id)
         self.log.f("anon", name2 + " is " + helpuser.name + " " + helpuser.id)
@@ -2090,21 +2065,21 @@ class Commands:
             m = await self.client.wait_for_message(check=self.anonCheck,
                                                    timeout=300)
             if m is None:
-                await self.client.send_message(helpuser, "Chat timed out...")
+                await self.client.send_message(helpuser, "Chat timed out...", )
                 del self.activeHelpers[self.activeHelpers.index(helpid)]
                 del self.activeSads[self.activeSads.index(message.author.id)]
                 return "Chat timed out..."
             if m.content == "!end":
-                await self.client.send_message(helpuser, "Chat ended")
+                await self.client.send_message(helpuser, "Chat ended", )
                 del self.activeHelpers[self.activeHelpers.index(helpid)]
                 del self.activeSads[self.activeSads.index(message.author.id)]
                 return "Chat ended"
             if m.channel == self.sc:
-                await self.client.send_message(self.hc, "**"+ name1 + "**: " +
-                                                        m.content)
+                await self.client.send_message(self.hc, "**" + name1 + "**: " +
+                                               m.content, )
             else:
-                await self.client.send_message(self.sc, "**"+ name2 + "**: " +
-                                                        m.content)
+                await self.client.send_message(self.sc, "**" + name2 + "**: " +
+                                               m.content, )
 
     async def support(self, message):
         """
@@ -2135,27 +2110,25 @@ class Commands:
         args = self.cleanInput(message.content)
 
         if len(args) == 0:
-            await self.client.send_message(
-                  self.client.get_channel(
-                   self.config.get("supportChannel")), "@here, " +
-                                                       message.author.mention +
-                                                       " (mobile friendly: " +
-                                                       message.author.name +
-                                                       ") has requested " +
-                                                       "listener support in " +
-                                                       message.channel.name +
-                                                       " (" + message.server
-                                                       .name + ")" +
-                                                       "\n (They gave no " +
-                                                       "message)")
+            await self.client.send_message(self.client.get_channel(
+                self.config.get("supportChannel")), "@here, " +
+                                                    message.author.mention +
+                                                    " (mobile friendly: " +
+                                                    message.author.name +
+                                                    ") has requested " +
+                                                    "listener support in " +
+                                                    message.channel.name +
+                                                    " (" + message.server
+                                                    .name + ")" +
+                                                    "\n (They gave no " +
+                                                    "message)", )
 
         else:
-            await self.client.send_message(
-                  self.client.get_channel(self.config.get("supportChannel")),
-                  "@here, " + message.author.mention + " (mobile friendly: " +
-                  message.author.name + ") has requested listener support " +
-                  "in " + message.channel.name + " (" + message.server.name +
-                  ")." + "\n Message: `" + ' '.join(args) + "`")
+            await self.client.send_message(self.client.get_channel(self.config.get("supportChannel")),
+                                           "@here, " + message.author.mention + " (mobile friendly: " +
+                                           message.author.name + ") has requested listener support " +
+                                           "in " + message.channel.name + " (" + message.server.name +
+                                           ")." + "\n Message: `" + ' '.join(args) + "`", )
 
             return (message.author.mention +
                     " do not worry, your request has been sent to the " +
@@ -2225,3 +2198,262 @@ class Commands:
 
             await self.client.embed(message.channel, em)
             return "Full article: <http://en.wikipedia.org/?curid=" + str(response[1]["id"]) + ">"
+
+    async def xkcd(self, message):
+        """
+        Gets an xkcd. Random if number isn't specified
+        !xkcd <optional: number>
+        """
+        args = self.cleanInput(message.content)
+        target_number = 0
+        try:
+            indexresp = json.loads(requests.get("http://xkcd.com/info.0.json").content.decode())
+        except requests.exceptions.ConnectionError:
+            return "XKCD did not return a valid response. It may be down."
+        except ValueError as e:
+            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+
+        if args[0] != '':
+            try:
+                target_number = int(args[0])
+
+            except ValueError:
+                return "You must enter a **number** for a custom xkcd"
+            else:
+                if int(target_number) == 404:
+                    return "Don't be that guy"
+
+        else:
+            number = indexresp["num"]
+            target_number = randint(0, number)
+            while target_number == 404:
+                target_number = randint(0, number)
+
+
+        try:
+            if target_number != 0:
+                resp = json.loads(requests.get("http://xkcd.com/{0}/info.0.json".format(target_number)).content.decode())
+            else:
+                resp = json.loads(requests.get("http://xkcd.com/info.0.json").content.decode())
+            number = resp["num"]
+
+        except requests.exceptions.ConnectionError:
+            return "XKCD did not return a valid response. It may be down."
+        except ValueError as e:
+            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+
+        embed = discord.Embed(title= str(resp["num"]) + ". " + resp["safe_title"],
+                              description="*" + resp["alt"] + "*",
+                              color=0x96A8C8)
+        embed.add_field(name="Date Published", value=resp["year"] + "-" + resp["month"] + "-" + resp["day"])
+
+        await self.client.embed(message.channel, embed)
+        return "link: " + resp["img"]
+
+    async def lpromote(self, message, user=None):
+        
+        if user is None:
+            await self.client.send_message(message.channel, "Who would you like to promote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.getMember(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        if self.hasRole(user, "Listener"):
+            return "This user is already a listener..."
+        cb = self.config.get("choppingBlock")
+
+        if user.id in cb:
+            if cb[user.id]["listener"]:
+                return "User is already being voted on. You cannot vote to promote them further. " \
+                       "Although, I bet they appreciate it"
+
+            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+                if message.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][message.author.id] = 1
+                else:
+                    return "You already voted..."
+            else:
+                return "The time to vote on this user has expired. Please run " + self.config.prefix + "lvalidate to add them to the roster"
+        else:
+            now = datetime.utcnow() + timedelta(days=2)
+            cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id, "timeout": now, "listener": False}
+            return "A vote to promote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
+                                                                                                 user.discriminator) +  \
+                   "\nYou man cancel this vote by running " + self.config.prefix \
+                   + "lcancel (not to be confused with smash bros)"
+    
+    
+    async def ldemote(self, message, user=None):
+
+        if user is None:
+            await self.client.send_message(message.channel, "Who would you like to demote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.getMember(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        if not self.hasRole(user, "Listener"):
+            return "This user isnt a listener..."
+
+        cb = self.config.get("choppingBlock")
+
+        if user.id in cb:
+            if not cb[user.id]["listener"]:
+                return "User is already being voted on. You cannot vote to demote them." \
+                       "But, im sure they got the message anyway...."
+
+            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+                if message.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][message.author.id] = -1
+                else:
+                    return "You already voted..."
+            else:
+                return "The time to vote on this user has expired. Please run " + self.config.prefix \
+                       + "lvalidate to add them to the roster"
+        else:
+            now = datetime.utcnow() + timedelta(days=2)
+            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now, "listener": False}
+            return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
+                                                                                                 user.discriminator) \
+                   + "\nYou may cancel this vote by running " + self.config.prefix \
+                   + "lcancel (not to be confused with smash bros)"
+
+
+    async def lvote(self, message):
+        """
+        ITs back boooyyyysssss!!!!
+        !lvote
+        """
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.hasRole(message.author, "Listener"):
+            return "You must be a Listener to vote on others"
+        args = self.cleanInput(message.content)
+        user = None
+        if args[0] != '':
+            user = self.getMember(message, args[0])
+            if user is None:
+                return "No member with that id..."
+
+        while 1:
+            await self.client.send_message(message.channel, "Are we calling to promote or demote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout = 20)
+            response = response.content
+            if response is None:
+                return "You didn't reply so I timed out..."
+            elif response.lower() in ['promote', 'p']:
+                response = await self.lpromote(message, user)
+                self.config.save()
+                return response
+            elif response.lower() in ['demote', 'd']:
+                response = await self.ldemote(message, user)
+                self.config.save()
+                return response
+            else:
+                await self.client.send_message(message.channel, "Type promote or type demote [pd]")
+                await asyncio.sleep(1)
+
+
+    async def lcancel(self, message):
+
+        """
+        Cancels all lvotes you started. Does not validate them.
+        !lcancel
+        """
+        cb = self.config.get("choppingBlock")
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.hasRole(message.author, "Listener"):
+            return "You are not a listener. You cannot use this feature"
+        if cb is None:
+            return "lvotes are disabled in config, why are you even running this command...?"
+
+        temp = {}
+        for entry in cb:
+            if cb["started_by"] == message.author.id:
+                temp[entry] = cb[entry]
+
+        for e in temp:
+            del cb[e]
+        return "Deleted all lvotes if you had started any"
+
+    async def lvalidate(self, message, user=None):
+        """
+        Ends a vote and promotes/demotes user. Can be used prematurely
+        !lvalidate <optional: tagged user>
+        """
+
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if user is None:
+            await self.client.send_message(message.channel, "Which user would you like to validate?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.getMember(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        if user.id not in cb:
+            await self.cat(message)
+            return "That user is not in the list, therefore I can't do anything. Here's a cat though."
+
+        else:
+            votelist = cb[user.id]["votes"]
+            if len(votelist) < 2 :
+                return "Not enough votes to pass, cancel the poll or wait longer. You may cancel with " + self.config.prefix + "lcancel"
+
+            score = 0
+            for entry in votelist:
+                score += votelist[entry]
+
+            if len(votelist) == 2 and score != 2:
+                return "Not enough votes to promote to listener. Sorry, maybe discuss more. Or if this is an error," \
+                       " let a manager/admin know"
+
+            elif len(votelist) == 2 and score == 2:
+                await self.client.add_roles(user,
+                                            discord.utils.get(message.server.roles,
+                                                              name="Listener"))
+                try:
+                    await self.client.send_message(user, "Congrats, you have been promoted to listener by vote. Keep being awesome")
+                except:
+                    return "User could not be PM'd but they are a listener now."
+                else:
+                    return user.name + " has been made a listener"
+
+            else:
+                avg = float(score / len(votelist))
+                if avg < 0.85:
+                    return "You need 85% of votes to pass. This poll had: " + str(avg * 100.00) + " percent"
+
+                await self.client.add_roles(user,
+                                            discord.utils.get(message.server.roles,
+                                                              name="Listener"))
+                try:
+                    await self.client.send_message(user,
+                                                   "Congrats, you have been promoted to listener by vote. Keep being awesome")
+                except:
+                    return "User could not be PM'd but they are a listener now."
+                else:
+                    return user.name + " has been made a listener"
+
+
+
+
