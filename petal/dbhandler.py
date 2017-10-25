@@ -1,6 +1,9 @@
 # 2017 John Shell
 import discord
 from datetime import datetime, timezone
+
+import pytz
+
 from .grasslands import Peacock
 log = Peacock()
 
@@ -24,17 +27,25 @@ def ts(dt):
     :param dt: datetime object
     :return: seconds since epoch
     """
-    return (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
+    try:
+        dt = dt.replace(tzinfo=pytz.utc)
+        return (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
+    except TypeError:
+        return dt
 
 
 class DBHandler(object):
     """
-    Handle connections between leaf and the database. If config.yaml has Databasing turned off, functionality will be solely
+    Handle connections between leaf and the database. If config.yaml has
+    Databasing turned off, functionality will be solely
     to let the user know it is off.
 
     """
     def __init__(self, config):
         if config.get("dbconf") is None:
+            log.f("DBHandler", "Could not find database config entry "
+                               "in config.yaml. "
+                               "Certain features will be disabled")
             self.useDB = False
             return
 
@@ -52,9 +63,9 @@ class DBHandler(object):
             self.db = client["petal"]
         else:
             self.db = client[db_conf["name"]]
-            self.members = self.db['members']
-            self.reminders = self.db['reminders']
-            self.motd = self.db['motd']
+        self.members = self.db['members']
+        self.reminders = self.db['reminders']
+        self.motd = self.db['motd']
 
         log.f("DBHandler", "Database system ready")
 
@@ -63,13 +74,18 @@ class DBHandler(object):
         :param member: id of member to look up
         :return: bool member id is in the member collection
         """
+        if not self.useDB:
+            return False
         if self.members.find_one({"uid": m2id(member)}) is not None:
             return True
         return False
 
     def add_member(self, member):
+        if not self.useDB:
+            return False
         if self.member_exists(member):
-            log.f("DBhandler", "Member already exists in database, use update_member to update them")
+            log.f("DBhandler", "Member already exists in database, "
+                               "use update_member to update them")
             return False
         else:
 
@@ -108,23 +124,100 @@ class DBHandler(object):
         :param member: discord.Member or str id of member
         :return: dict member
         """
+        if not self.useDB:
+            return False
         r = self.members.find_one({"uid": m2id(member)})
         if r is not None:
             return r
         return None
 
-    def update_member(self, member, data=None):
+    def get_attribute(self, member, key):
+        """
+        Retrieves a specific field from a stored member object
+        :param member: discord.Member or str id of member
+        :param key: field to return
+        :return: member[key] or None if none
+        """
+        if not self.useDB:
+            return False
+        mem = self.get_member(member)
+        if mem is None:
+            log.f("DBHandler",  m2id(member) + " not found in db")
+            return None
+
+        if key in mem:
+            return mem[key]
+        else:
+            log.f("DBHandler", m2id(member) + " has no field: " + key)
+            return None
+
+    def update_member(self, member, data=None, type=0):
         """
         Updates a the database with keys and values provided in the data field
+
         :param member: member to update
         :param data: dictionary containing data to update
+        :param type: 0 = None, 1 = Message, 2 = Command
         :return: str response
         """
+        if not self.useDB:
+            return False
         if data is None:
-            return "Please provide data first!"
-
+            log.f("DBhandler", "Please provide data first!")
+            return False
         if not self.member_exists(member):
             self.add_member(member)
+
+        mem = self.get_member(member)
+        if mem is None:
+            log.f("DBhandler", "Member doesn't exist")
+            return False
+
         # TODO: get member dict first then query over. Update finally
+        count = 0
         for key in data:
-            if key in
+            if key in mem:
+                if isinstance(mem[key], list):
+                    if isinstance(data[key], list):
+                        for item in data[key]:
+                            # log.f("DBHandler", "Item: " + item)
+                            if item not in mem[key]:
+                               #  log.f("DBHandler", "ON key: " + key + " added " + item + " to " + str(mem[key]))
+                                mem[key].append(item)
+                                count += 1
+                    else:
+                        if data[key] not in mem[key]:
+                            mem[key].append(data[key])
+                            log.f("DBHandler", "added " + data[key] + " to " + key )
+                            count += 1
+
+                else:
+                    # log.f("DBHandler", "replace key: " + key + " -> "
+                    #  + str(mem[key]) + " with "
+                    #      + str(data[key]))
+                    # log.f("Replaced " + key + ": " + str(mem[key]) + " -> " + str(ts(data[key])))
+                    mem[key] = ts(data[key])
+
+
+
+            else:
+                # log.f("Added " + key)
+                mem[key] = ts(data[key])
+                count += 1
+
+        if type == 1:
+            mem["message_count"] += 1
+        elif type == 2:
+            mem["commands_count"] += 1
+
+        if count > 0:
+            log.f("DBHandler", "Added "  + str(count) + " fields to "
+                  + mem["name"])
+
+        self.members.replace_one({"uid": m2id(member)}, mem, upsert=False)
+
+        return True
+
+
+
+

@@ -6,6 +6,7 @@ import random
 # import urllib.request as urllib2
 # import re
 
+
 import os
 import praw
 import requests
@@ -14,6 +15,7 @@ import facebook
 import pytumblr
 # import _mysql (deprecated in favor of the python package)
 
+# FIXME: replace pymysql with mongo functionality
 import pymysql
 import time
 # from cleverbot import Cleverbot
@@ -23,8 +25,9 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
+from .dbhandler import DBHandler
 from random import randint
-version = "0.3.2(development)"
+version = "0.3.5(Experimental)"
 
 
 
@@ -38,6 +41,7 @@ class Commands:
 
         self.client = client
         self.config = client.config
+        self.db = client.db
         # self.cb = Cleverbot('discordBot-petal')
         self.log = Peacock()
         self.startup = datetime.utcnow()
@@ -386,8 +390,17 @@ class Commands:
         except AttributeError:
             return "Osu Support is disabled by administrator"
         uid = self.removePrefix(message.content)
+        user = message.author.name
         if uid.strip() == "":
-            user = self.o.get_user(message.author.name)
+            if self.db.useDB:
+                m = self.db.get_attribute(message.author, "osu")
+                if m is None:
+                    m = ""
+                if m != "" :
+                    user = m
+
+            user = self.o.get_user(user)
+
             if user is None:
                 return ("Looks like there is no osu data associated with" +
                         " your discord name")
@@ -2554,6 +2567,26 @@ class Commands:
         return "Heres what votes are goin on: \n" + msg
 
 
+    async def setosu(self, message):
+        """
+        Sets a users preferred osu account
+        !setosu <name>
+        """
+        args = self.cleanInput(message.content)
+        if args[0] == "":
+            osu = message.author.name
+        else:
+            osu = args[0]
 
+        if not self.db.useDB:
+            return "Database is not enabled, so you can't save an osu name.\n" \
+                   "You can still use !osu <osu name> though"
+
+
+        self.db.update_member(message.author, {"osu": osu})
+
+        return "You have set: " + osu + " as your preferred OSU account. " \
+                                        "You can now run, !osu and it " \
+                                        "will use this name automatically!"
 
 

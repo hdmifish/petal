@@ -5,8 +5,8 @@ import traceback
 import os
 import sys
 print("DETECTED ARGS: " + str(sys.argv))
-if "--devmode" in sys.argv:
-    print("using devmode")
+if "--dev_mode" in sys.argv:
+    print("using dev_mode")
     bot = Petal(devmode=True)
 else:
     bot = Petal(devmode=False)
