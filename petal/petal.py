@@ -502,13 +502,13 @@ class Petal(discord.Client):
             log.com("[{0}] [{1}] [{1.id}] [{2}] ".format(message.channel,
                                                          message.author,
                                                          com))
-
-            self.db.update_member(message.author,
-                                  {"aliases": message.author.name,
-                                   "servers": message.author.server.id,
-                                   "last_message_channel": message.channel.id,
-                                   "last_active": message.timestamp,
-                                   "last_message": message.timestamp}, type=2)
+            if not message.channel.is_private:
+                self.db.update_member(message.author,
+                                      {"aliases": message.author.name,
+                                       "servers": message.author.server.id,
+                                       "last_message_channel": message.channel.id,
+                                       "last_active": message.timestamp,
+                                       "last_message": message.timestamp}, type=2)
             response = await methodToCall(message)
             if response:
                 self.config.get("stats")["comCount"] += 1

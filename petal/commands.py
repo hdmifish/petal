@@ -396,7 +396,7 @@ class Commands:
                 m = self.db.get_attribute(message.author, "osu")
                 if m is None:
                     m = ""
-                if m != "" :
+                if m != "":
                     user = m
 
             user = self.o.get_user(user)
@@ -2320,8 +2320,8 @@ class Commands:
                 return "The time to vote on this user has expired. Please run " + self.config.prefix \
                        + "lvalidate to add them to the roster"
         else:
-            if self.hasRole(user, "Helping Hands"):
-                return "This user is already a Helping Hands..."
+            if not self.hasRole(user, "Helping Hands"):
+                return "This user is not a member of Helping Hands. I cannot demote them"
             now = datetime.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now}
             return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
@@ -2442,25 +2442,27 @@ class Commands:
                                                                      name="Helping Hands"))
                     try:
                         await self.client.send_message(user,
-                                                       "Following a vote by your fellow Helping Hands people, "
+                                                       "Following a vote by the listeners: "
                                                        "you have been demoted for the time being.")
                         del self.config.doc["choppingBlock"][user.id]
                         self.config.save()
                     except:
                         return "User could not be PM'd but they are a member of Helping Hands no more"
                     else:
-                        return user.name + " has been removed from Helping Handss"
+                        return user.name + " has been removed from Helping Hands"
                 else:
                     cb[user.id]["pending"] = True
+                    cb[user.id]["server_id"] = message.server.id
+                    cb[user.id]["channel_id"] = message.channel.id
 
                     try:
-                        await self.client.send_message(user,
-                                                       "Following a vote by your fellow members you have been chosen "
-                                                       "to be a Helping Hands! Type !Laccept in any channel")
+                        mop= await self.client.send_message(user,
+                                                       "Following a vote by the listeners: you have been chosen "
+                                                       "to be a Helping Hands! Reply !Laccept or !Lreject")
 
                     except:
                         return "User could not be PM'd but they are a now able to become a member of Helping Hands." \
-                               "\nLet them know to type !Laccept in a channel"
+                               "\nLet them know to type !Laccept or !Lreject in PMs in leaf"
                     else:
                         return user.name + " has been made a member of Helping Hands." \
                                            "\nThey must accept the invite by following the instruction I just sent them"
@@ -2478,6 +2480,7 @@ class Commands:
                         await self.client.send_message(user,
                                                        "Following a vote by your fellow Helping Handss,"
                                                        " you have been demoted for the time being.")
+
                         del self.config.doc["choppingBlock"][user.id]
                         self.config.save()
 
@@ -2509,18 +2512,29 @@ class Commands:
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if not self.hasRole(message.author, "Listener"):
-            return "You are not a Listener You cannot use this feature"
+        if not message.channel.is_private:
+            return "You must reply only in PMs with petal. Not in a channel"
         if message.author.id in cb:
             if "pending" in cb[message.author.id]:
-                await self.client.add_roles(message.author,
-                                               discord.utils.get(message.server.roles,
+                svr = self.client.get_server(cb[message.author.id]["server_id"])
+                if svr is None:
+                    return "Error fetching server with ID: " + cb[message.author.id]["server_id"] + " ask who promoted you to do it manually"
+                member = svr.get_member(message.author.id)
+                await self.client.add_roles(member,
+                                               discord.utils.get(svr.roles,
                                                                  name="Helping Hands"))
+
+                chan = svr.get_channel(cb[message.author.id]["channel_id"])
                 del self.config.doc["choppingBlock"][message.author.id]
                 self.config.save()
+                if chan is None:
+                   return "You will need to tell them you have accepted as I could not notify them"
+                else:
+                    await self.client.send_message(chan, "Just letting y'all know that " + member.name + " has accepted their role")
+
                 return "Welcome!"
             else:
-                return "You don't have a pending invite to join the Helping Handss at this time"
+                return "You don't have a pending invite to join the Helping Hands at this time"
 
     async def lreject(self, message):
         """
@@ -2531,12 +2545,24 @@ class Commands:
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if not self.hasRole(message.author, "Listener"):
-            return "You are not a Listener You cannot use this feature"
+
         if message.author.id in cb:
             if "pending" in cb[message.author.id]:
+
+                    svr = self.client.get_server(cb[message.author.id]["server_id"])
+                    if svr is not None:
+                        chan = svr.get_channel(cb[message.author.id]["channel_id"])
+                    else:
+                        chan = None
+                    if chan is None:
+                        return "You will need to tell them you have accepted as I could not notify them"
+                    else:
+                        await self.client.send_message(chan,
+                                                       "Just letting y'all know that " + message.author.name +
+                                                       " has rejected their role")
                     del self.config.doc["choppingBlock"][message.author.id]
                     self.config.save()
+                    return "You have rejected to join the helping hands. If this was on accident, let a listener know"
             else:
                 return "You don't have a pending invite to join the Helping Handss at this time"
 
@@ -2561,7 +2587,7 @@ class Commands:
             starter = self.getMember(message, cb[entry]["started_by"])
             if starter is None:
                 continue
-            msg += "\n------\nVote to promote: "  + mem.name+ "\#" + mem.discriminator \
+            msg += "\n------\nVote started by: "  + mem.name+ "\#" + mem.discriminator \
                    + "\nstarted by: " + starter.name + "#" + starter.discriminator + "\n------\n"
 
         return "Heres what votes are goin on: \n" + msg
