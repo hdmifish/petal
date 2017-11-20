@@ -1487,7 +1487,8 @@ class Commands:
 
             if "@everyone" in response or "@here" in response:
                 self.config.delVoid(num)
-                return "Someone (" + author + ") is a butt and tried to sneak an @ev tag into the void." \
+                return "Someone (" + author + ") is a butt and tried to " \
+                                              "sneak an @ev tag into the void." \
                                               "\n\nIt was deleted..."
 
             if response.startswith("http"):
@@ -2147,7 +2148,6 @@ class Commands:
                     " do not worry, your request has been sent to the " +
                     "listener server and someone should be with you shortly")
 
-
     async def statsfornerds(self, message):
         """
         Displays stats for nerds
@@ -2614,5 +2614,50 @@ class Commands:
         return "You have set: " + osu + " as your preferred OSU account. " \
                                         "You can now run, !osu and it " \
                                         "will use this name automatically!"
+
+    async def alias(self, message):
+        """
+        Returns a list of all previous names a user has had
+        !alias <tag/id>
+        """
+        args = self.cleanInput(message.content)
+        if args[0] == "":
+            member = message.author
+        else:
+            member = self.getMember(message, args[0])
+
+        if member is None:
+            return "Couldn't find that member in the server\n\nJust a note, " \
+                   "I may have record of them, but it's iso's policy to not " \
+                   "display userinfo without consent. If you are staff and" \
+                   " have a justified reason for this request. Please " \
+                   "ask whomever hosts this bot to manually look up the" \
+                   " records in their database"
+
+        if not self.db.useDB:
+            return "Database is not configured correctly (or at all). " \
+                   "Contact your bot developer and tell them if you think" \
+                   " this is an error"
+
+        self.db.add_member(member)
+
+        alias = self.db.get_attribute(member, "aliases")
+        if len(alias) == 0:
+            return "`This member has no aliases`"
+        else:
+            await self.client.send_message(message.channel,
+                                           "__Aliases for "
+                                           + member.id
+                                           + "__")
+            msg = ""
+
+            for a in alias:
+                msg += "**" + a + "**\n"
+
+            return msg
+
+
+
+
 
 

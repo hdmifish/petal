@@ -162,6 +162,7 @@ class DBHandler(object):
         """
         if not self.useDB:
             return False
+
         if data is None:
             log.f("DBhandler", "Please provide data first!")
             return False
