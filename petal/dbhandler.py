@@ -27,6 +27,8 @@ def ts(dt):
     :param dt: datetime object
     :return: seconds since epoch
     """
+    if isinstance(dt, bool):
+        return dt
     try:
         dt = dt.replace(tzinfo=pytz.utc)
         return (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
@@ -67,6 +69,7 @@ class DBHandler(object):
         self.reminders = self.db['reminders']
         self.motd = self.db['motd']
         self.void = self.db["void"]
+        self.ac = self.db["ac"]
 
         log.f("DBHandler", "Database system ready")
 

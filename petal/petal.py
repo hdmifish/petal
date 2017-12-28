@@ -142,12 +142,18 @@ class Petal(discord.Client):
 
         return
 
-    async def send_message(self, channel, message, timeout=0, **kwargs):
+    async def send_message(self, author, channel, message, timeout=0, **kwargs):
         """
         Overload on the send_message function
         """
         if self.dev_mode:
             message = "[DEV]" + message + "[DEV]"
+        if author is not None:
+            if self.db.get_member(author) is not None:
+                if self.db.get_attribute(author, "ac") is not None:
+                    if self.db.get_attribute(author, "ac"):
+                        message += ", " + self.commands.get_ac()
+
         return await super().send_message(channel, message)
 
     async def embed(self, channel,  embedded):
@@ -516,7 +522,7 @@ class Petal(discord.Client):
             response = await methodToCall(message)
             if response:
                 self.config.get("stats")["comCount"] += 1
-                await self.send_message(message.channel, response, )
+                await self.send_message(message.author, message.channel, response, )
                 return
 
         else:
@@ -529,12 +535,12 @@ class Petal(discord.Client):
                 response = await methodToCall(message)
                 if response:
                     self.config.get("stats")["comCount"] += 1
-                    await self.send_message(message.channel, response, )
+                    await self.send_message(message.author, message.channel, response, )
                     return
 
             if com.split()[0] in self.config.commands:
                 response = await self.commands.parseCustom(com, message)
-                await self.send_message(message.channel, response, )
+                await self.send_message(message.author, message.channel, response, )
 
             # else:
             #    return
