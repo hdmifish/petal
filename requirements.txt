@@ -1,8 +1,8 @@
-colorama==0.3.9
-discord.py==0.16.11
-facebook-sdk==2.0.0
-praw==5.1.0
-pymongo==3.5.1
-PyTumblr==0.0.6
-requests==2.18.4
-tweepy==3.5.0
+colorama
+discord.py
+facebook-sdk
+praw
+pymongo
+PyTumblr
+requests
+tweepy

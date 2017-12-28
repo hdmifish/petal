@@ -1480,25 +1480,27 @@ class Commands:
         """
         args = self.cleanInput(message.content)
         if args[0] == "":
-            response = self.config.getVoid()
+            response = self.db.get_void()
             author = response["author"]
             num = response["number"]
             response = response["content"]
 
             if "@everyone" in response or "@here" in response:
-                self.config.delVoid(num)
+                self.db.delete_void()
                 return "Someone (" + author + ") is a butt and tried to " \
                                               "sneak an @ev tag into the void." \
                                               "\n\nIt was deleted..."
 
             if response.startswith("http"):
-                return "You grab a link from the void: \n" + response
+                return "*You grab a link from the void* \n" + response
             else:
+                self.log.f("VOID", message.author.name + " retrieved " + str(response["number"]) + " from the void")
                 return response
         else:
-            count = self.config.saveVoid(args[0],
-                                         message.author.name,
-                                         message.author.id)
+            count = self.db.save_void(args[0],
+                                      message.author.name,
+                                      message.author.id)
+
             if count is not None:
                 return "Added item number " + str(count) + " to the void"
 
@@ -2161,7 +2163,7 @@ class Commands:
                            colour=0x0acdff)
         em.add_field(name="Version", value=version)
         em.add_field(name="Uptime", value=self.getUptime())
-        em.add_field(name="Void Count", value=str(len(self.config.get("void"))))
+        em.add_field(name="Void Count", value=str(self.db.void.count()))
         em.add_field(name="Servers", value=str(len(self.client.servers)))
         em.add_field(name="Total Number of Commands run",
                      value=str(self.config.get("stats")["comCount"]))
@@ -2592,7 +2594,6 @@ class Commands:
 
         return "Heres what votes are goin on: \n" + msg
 
-
     async def setosu(self, message):
         """
         Sets a users preferred osu account
@@ -2656,8 +2657,50 @@ class Commands:
 
             return msg
 
+    async def dumpvoid(self, message):
+        """
+        Owner reserved function
+        This will dump every single void post in your PMs. It takes ~ 1.2-1.7 seconds per post so please wait
 
+        """
+        if not self.level0(message.author):
+            return "You must be the bot owner to perform this"
+        for i in self.db.void.find():
+            try:
+                msg = "Number **" + str(i["number"]) + "**\n Author: " + i["author"] + "\nTime Uploaded: " + str(i["time"]) + "\nContent: "+ i["content"]
+            except KeyError:
+                print(str(i) + " missing key")
+                continue
+            else:
+                try:
+                    await self.client.send_message(message.channel, msg)
+                except discord.errors.HTTPException:
+                    self.log.err("Possible empty message or overflow in void, printing here instead...")
+                    self.log.info(msg)
 
+            await asyncio.sleep(1)
 
+    async def journal(self, message):
+        """
+        Volatile journal System. Allows users to write an entry that anyone can read later.
+        !journal <entry> or !journal <user>
+        """
+        args = self.cleanInput(message.content)
+        if args[0] == "":
+            entry = self.db.get_attribute(message.author, "journal")
+            if entry is None:
+                return "*You peek into your own journal...*\n\n" + "But find nothing."
+            return "*You peek into your own journal...*\n\nYou find:\n\n" + entry["content"]
+
+        mem = self.getMember(message, args[0])
+        if mem is not None:
+            entry = self.db.get_attribute(mem, "journal")
+            if entry is None:
+                return "*You peek into {}'s journal...*\n\n".format(mem.name) + "But find nothing"
+            return "*You peek into {}'s journal...*\n\nYou find:\n\n".format(mem.name) + entry["content"]
+        entry = self.db.update_member(message.author,
+                                      data={"journal": {"content": args[0], "time": str(datetime.utcnow())}})
+
+        return "Your journal has been updated. Anyone can read it with " + message.author.mention
 
 

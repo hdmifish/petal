@@ -77,7 +77,6 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def ask_patch_loop(self):
-        return
         if self.dev_mode:
             return
         if self.config.get("motdInterval") is None:
@@ -147,10 +146,13 @@ class Petal(discord.Client):
         """
         Overload on the send_message function
         """
-
+        if self.dev_mode:
+            message = "[DEV]" + message + "[DEV]"
         return await super().send_message(channel, message)
 
     async def embed(self, channel,  embedded):
+        if self.dev_mode:
+            embedded.add_field(name="DEV", value="DEV")
         return await super().send_message(channel, embed=embedded)
 
     async def on_member_join(self, member):
@@ -284,6 +286,8 @@ class Petal(discord.Client):
         if Petal.logLock:
             return
         if before.content == "":
+            return
+        if before.channel.is_private:
             return
 
         if before.server.id in self.config.get("ignoreServers") or \

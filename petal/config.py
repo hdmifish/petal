@@ -115,28 +115,4 @@ class Config(object):
         else:
             return self
 
-    def getVoid(self):
-        v = self.get("void")
-        if len(v) == 0:
-            return "The void is empty"
-        else:
-            return v[randint(0, len(v) - 1)]
 
-    def delVoid(self, num):
-        v = self.get("void")
-        for item in v:
-            if item["number"] == num:
-                del v[item]
-                print("deleted item #" + str(num))
-
-    def saveVoid(self, content, name, id):
-        v = self.get("void")
-        for e in v:
-            if e["content"] == content:
-                return None
-
-        v.append({"content": content,
-                  "author": name + " " + id,
-                  "number": len(v),
-                  "time": str(datetime.utcnow())})
-        return len(v)

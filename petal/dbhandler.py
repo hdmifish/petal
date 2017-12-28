@@ -1,7 +1,7 @@
 # 2017 John Shell
 import discord
 from datetime import datetime, timezone
-
+from random import randint as rand
 import pytz
 
 from .grasslands import Peacock
@@ -66,6 +66,7 @@ class DBHandler(object):
         self.members = self.db['members']
         self.reminders = self.db['reminders']
         self.motd = self.db['motd']
+        self.void = self.db["void"]
 
         log.f("DBHandler", "Database system ready")
 
@@ -176,8 +177,16 @@ class DBHandler(object):
 
         # TODO: get member dict first then query over. Update finally
         count = 0
+
         for key in data:
-            if key in mem:
+            if isinstance(data[key], dict):
+                print(str(key) + "\n" + str(data) + "\n")
+                mem[key] = data[key]
+                print(str(mem[key]))
+                for vk in mem[key]:
+                    mem[key][vk] = ts(mem[key][vk])
+
+            elif key in mem:
                 if isinstance(mem[key], list):
                     if isinstance(data[key], list):
                         for item in data[key]:
@@ -219,6 +228,34 @@ class DBHandler(object):
 
         return True
 
+    def get_void(self):
+        void_size = self.void.count()
+        if void_size == 0:
+            return "Nothing in void storage"
 
+        response = None
+        while response is None:
+            index = rand(0, void_size - 1)
+            response = self.void.find_one({"number": index})
+
+        return response
+
+    def save_void(self, content, name, id):
+        if self.void.count({"content" : content}) > 0:
+            return None
+
+        self.void.insert({"content": content, "number": self.void.count(), "author": name + " " + id})
+        return self.void.count()
+
+    def delete_void(self, number):
+        return self.void.delete_one({"number": number})
+
+    def get_reminders(self, timestamp):
+        timestamp = ts(timestamp)
+        return self.reminders.find({"ts": {"$lr": timestamp}})
+
+    def add_reminder(self, author, content, timestamp):
+        timestamp = ts(timestamp)
+        return self.reminders.insert_one({"ts": timestamp, "author": author.id, "content": content})
 
 
