@@ -27,7 +27,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 from .dbhandler import DBHandler
 from random import randint
-version = "0.3.5(Experimental)"
+version = "0.4.1 Development"
 
 
 
@@ -2767,4 +2767,50 @@ class Commands:
         return l[random.randint(0, len(l) - 1)]["ending"]
 
     
+    async def bugger(self, message):
+        """
+        Report a bug by adding it to the Trello board.
+        >bugger <your report here>
+        """
+        if self.config.get("trello") is None:
+            return "Sorry the bot owner has not enabled trello bug reports"
+        try:
+            url = "https://api.trello.com/1/lists/{}/cards".format(self.config.get("trello")["list_id"])
+            params = {"key": self.config.get("trello")["app_key"],
+                      "token": self.config.get("trello")["token"]}
+            response = requests.request("GET", url, params=params)
 
+        except KeyError as e:
+            return "The trello keys are misconfigured, check your config file"
+
+
+        if response is None:
+            return "Could not get cards for the list ID provided. Talk to your bot owner."
+        r = response.json()
+        top = 0
+        for c in r:
+            try:
+                if int(c["name"]) > top:
+                    top = int(c["name"]) + 1
+            except ValueError:
+                continue
+
+        m = " ".join(message.content.split()[1:])
+
+        url = "https://api.trello.com/1/cards"
+
+        params = {"name": str(top).zfill(3),
+                  "desc": m + "\n\n\n\n\nSubmitted by: {}\nTimestamp: {}\nServer: {}\nChannel: {}".format(message.author.name + "(" + message.author.id + ")", str(datetime.utcnow()), message.server.name + "(" + message.server.id + ")", message.channel.name + "(" + message.channel.id + ")"),
+                  "pos": "bottom",
+                  "idList": self.config.get("trello")["list_id"],
+                  "username": self.config.get("trello")["username"],
+                  "key": self.config.get("trello")["app_key"],
+                  "token": self.config.get("trello")["token"]}
+
+        response = requests.request("POST", url, params=params)
+
+        if response is None:
+            return "Could not create bug report. Talk to your bot owner."
+
+        print(str(response.text))
+        return "Created bug report with ID: " + str(top)
