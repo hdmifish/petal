@@ -2738,6 +2738,7 @@ class Commands:
         try:
             response = self.t.PostRetweet(int(args[0]), trim_user=True)
             self.log.f("TWEET", message.author.name + " posted a retweet!")
+            print(str(response.json()))
         except Exception as e:
             print(str(e))
         else:
@@ -2787,13 +2788,13 @@ class Commands:
         if response is None:
             return "Could not get cards for the list ID provided. Talk to your bot owner."
         r = response.json()
-        top = 0
-        for c in r:
-            try:
-                if int(c["name"]) > top:
-                    top = int(c["name"]) + 1
-            except ValueError:
-                continue
+        nums = []
+        for card in r:
+            if self.isNumeric(card["name"]):
+                nums.append(int(card["name"]))
+
+        top = max(nums) + 1
+
 
         m = " ".join(message.content.split()[1:])
 
@@ -2812,5 +2813,5 @@ class Commands:
         if response is None:
             return "Could not create bug report. Talk to your bot owner."
 
-        print(str(response.text))
+        #print(str(response.text))
         return "Created bug report with ID: " + str(top)
