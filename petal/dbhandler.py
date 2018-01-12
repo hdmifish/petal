@@ -261,4 +261,17 @@ class DBHandler(object):
         timestamp = ts(timestamp)
         return self.reminders.insert_one({"ts": timestamp, "author": author.id, "content": content})
 
+    def get_motd_entry(self, update=False):
+        response = self.motd.find_one({"used": False, "approved": True})
+        if response is None:
+            return None
+        if not update:
+            return response
+        self.motd.update({'_id': response['_id']}, {'$set': {"used": True}},  upsert=False, multi=False)
+        return response
+
+    def submit_motd(self, author, content):
+        object = {""}
+
+
 

@@ -7,7 +7,7 @@ import random
 # import re
 
 
-import os
+# import os
 import praw
 import requests
 import twitter
@@ -46,9 +46,9 @@ class Commands:
         self.log = Peacock()
         self.startup = datetime.utcnow()
         self.activeHelpers = []
-        self.activeSads = []
+        self.activeSad = []
         self.log.info("Command module init start")
-        self.supportdict = {}
+        self.support_dict = {}
         self.osuKey = self.config.get("osu")
         if self.osuKey is not None:
             self.o = Octopus(self.osuKey)
@@ -74,7 +74,7 @@ class Commands:
                 self.r = None
                 return
         else:
-            self.log.warn("No reddit keys found")
+            self.log.warn("No Reddit keys found")
 
         if self.config.get("twitter") is not None:
             tweet = self.config.get("twitter")
@@ -85,12 +85,12 @@ class Commands:
                                  )
             # tweet test
             if "id" not in str(self.t.VerifyCredentials()):
-                self.log.warn("Your twitter authentication is invalid, " +
-                              " twitter posting will not work")
+                self.log.warn("Your Twitter authentication is invalid, " +
+                              " Twitter posting will not work")
                 self.t = None
                 return
         else:
-            self.log.warn("No twitter keys found.")
+            self.log.warn("No Twitter keys found.")
 
         if self.config.get("facebook") is not None:
             fb = self.config.get("facebook")
@@ -104,7 +104,7 @@ class Commands:
                                                 tumble["oauthToken"],
                                                 tumble["oauthTokenSecret"])
         else:
-            self.log.warn("No tumblr keys found.")
+            self.log.warn("No Tumblr keys found.")
 
     def level0(self, author):
         # this supercedes all other levels so, use it carefully
@@ -122,7 +122,7 @@ class Commands:
     def level4(self, author):
         return author.id in self.config.l4 or self.level3(author)
 
-    def getlevel(self, author):
+    def get_user_level(self, author):
         count = 0
         if self.level0(author):
             return 0
@@ -132,22 +132,25 @@ class Commands:
                 return count
         return 5
 
-    def check(self, message):
+    @staticmethod
+    def check(message):
         return message.content.lower() == 'yes'
 
-    def cleanInput(self, input):
-        args = input[len(input.split()[0]):].split('|')
-        newargs = []
+    @staticmethod
+    def clean_input(input_string):
+        args = input_string[len(input_string.split()[0]):].split('|')
+        new_args = list()
         for i in args:
-            newargs.append(i.strip())
-        return newargs
-
-    def yesNoCheck(self, message):
+            new_args.append(i.strip())
+        return new_args
+    @staticmethod
+    def check_yes_no(message):
         if message.content.lower().strip() in ["yes", "no"]:
             return True
         return False
 
-    def isNumeric(self, message):
+    @staticmethod
+    def check_is_numeric(message):
         try:
             int(message.content)
         except ValueError:
@@ -162,7 +165,7 @@ class Commands:
         else:
             return True
 
-    def getUptime(self):
+    def get_uptime(self):
         delta = datetime.utcnow() - self.startup
         delta = delta.total_seconds()
 
@@ -173,16 +176,17 @@ class Commands:
 
         return '%d days, %d hours, %d minutes, %d seconds' % (d[0],h[0],m[0],s)
 
-    def validateChan(self, chanlist, msg):
+    @staticmethod
+    def validate_channel(chanlist, msg):
         for i in range(len(msg.content)):
             try:
                 print(msg.content[i])
                 chanlist[int(msg.content[int(i)])]
-            except:
+            except AttributeError:
                 return False
         return True
 
-    def hasRole(self, user, role):
+    def check_user_has_role(self, user, role):
         target = discord.utils.get(user.server.roles, name=role)
         if target is None:
             self.log.err(role + " does not exist")
@@ -193,14 +197,25 @@ class Commands:
             else:
                 return False
 
-    def removePrefix(self, input):
+    def remove_prefix(self, input):
         return input[len(input.split()[0]):]
 
-    def getMember(self, message, member):
+    @staticmethod
+    def get_member(message, member):
         return discord.utils.get(message.server.members,
                                  id=member.lstrip("<@!").rstrip('>'))
+    @staticmethod
+    def get_member_name(server, member):
+        try:
+            m = server.get_member(member).name
+            if m is None:
+                m = member
+        except AttributeError:
+            m = member
 
-    def anonCheck(self, msg):
+        return m
+
+    def check_anon_message(self, msg):
         if msg.author == self.client.user:
             return False
         elif msg.channel.id == self.hc.id or msg.channel.id == self.sc.id:
@@ -208,7 +223,8 @@ class Commands:
         else:
             return False
 
-    def getSubscriptionKey(self, post):
+    # TODO: Convert to Mongo
+    def get_event_subscription(self, post):
         # EVENTS SCHEMA
         # 2 Tables:
         # CREATE TABLE subKeys(code VARCHAR(20), friendly VARCHAR(20));
@@ -243,7 +259,7 @@ class Commands:
         return None, None
 
 
-    async def checkservers(self, message):
+    async def list_connected_servers(self, message):
         """
         hello
         """
@@ -253,39 +269,36 @@ class Commands:
             await self.client.send_message(message.author, message.channel, s.name + " " + s.id, )
 
 
-
 #    async def killthenonconformist(self, message):
- #       """
-  #      hello
-   #     """
-    #    for s in self.client.servers:
-     #        if s.id == "215170877002612737":
-      #           await self.client.leave_server(s)
-       #          return "left " + s.name
+#        """
+#        hello
+#        """
+#       for s in self.client.servers:
+#           if s.id == "215170877002612737":
+#               await self.client.leave_server(s)
+#               return "left " + s.name
 
-    # AskPatch is designed for discord.gg/patchgaming but you may edit it
-    # for your own personal uses if you like
-    # the database fields are:
-    # Single table:
-    # varchar(20) author, vc(20) id, TIMESTAMP time, TEXT content, BOOL used,
-    # INT(11)PK entryid, BOOL approved
-    async def notifySubs(self, message, key):
+    # AskPatch is designed specifically for discord.gg/patchgaming but you may edit it
+    # for your own personal uses if you like. You will need a mongoDB instance and be familiar with pyMongo
+    # I personally prefer the free cloud.mongodb.com instances they have available.
+
+    async def notify_subscribers(self, message, key):
             return
 
-    async def checkUpdate(self, force=False):
+    async def check_pa_updates(self, force=False):
             if force:
                 self.config.doc["lastRun"] = datetime.utcnow()
                 self.config.save()
 
             else:
-                lastRun = self.config.get("lastRun")
-                self.log.f("pa", "Last run at: " + str(lastRun))
-                if lastRun is None:
-                    lastRun = datetime.utcnow()
-                    self.config.doc["lastRun"] = lastRun
+                last_run = self.config.get("lastRun")
+                self.log.f("pa", "Last run at: " + str(last_run))
+                if last_run is None:
+                    last_run = datetime.utcnow()
+                    self.config.doc["lastRun"] = last_run
                     self.config.save()
                 else:
-                    difference = (datetime.utcnow() - datetime.strptime(str(lastRun), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
+                    difference = (datetime.utcnow() - datetime.strptime(str(last_run), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
                     self.log.f("pa", "Difference: " + str(difference))
                     if difference < 86400:
                         return
@@ -295,50 +308,42 @@ class Commands:
 
 
             self.log.f("pa", "Searching for entries...")
+            response = self.db.get_motd_entry(update=True)
 
-            conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                   self.config.get("mysql")["username"],
-                                   self.config.get("mysql")["password"],
-                                   self.config.get("mysql")["padatabase"])
-            cursor = conn.cursor()
-            find_entry = ("SELECT entryid, author, content, used, approved " +
-                          "FROM questions WHERE approved = 1 AND used = 0")
 
-            cursor.execute(find_entry)
-            data = cursor.fetchall()
+            if response is None:
+                if force:
+                    return "Could not find suitable entry, make sure you have added questions to the DB"
 
-            if len(data) == 0:
                 self.log.f("pa", "Could not find suitable entry")
-            else:
-                askrow = data[random.randint(0, len(data) - 1)]
-                em = discord.Embed(title="Patch Asks",
-                                   description="Today Patch asks: \n "
-                                   + askrow[2],
-                                   colour=0x0acdff)
 
-                msg = await self.client.embed(self.client.get_channel(
-                                              self.config.get
-                                              ("mysql")["channelid"]), em)
-                await self.client.send_message(message.author, msg.channel, "*today's patch asks was " +
-                                               "written by " + askrow[1]
-                                               .strip() + "*", )
-                self.log.f("pa", "Going with entry: " + str(askrow[0]) + " by "
-                                 + askrow[1].strip())
+            else:
                 try:
-                    mark_entry = ("UPDATE questions SET used = 1 WHERE " +
-                                  "entryid={}".format(askrow[0]))
-                    cursor.execute(mark_entry)
-                    conn.commit()
-                except:
-                    self.log.err("An SQL error occurred")
-                    conn.rollback()
-                finally:
-                    conn.close()
+                    em = discord.Embed(title="Patch Asks",
+                                           description="Today Patch asks: \n "
+                                           + response['content'],
+                                           colour=0x0acdff)
+
+                    msg = await self.client.embed(self.client.get_channel(
+                                                  self.config.get
+                                                  ("motdChannel")), em)
+
+                    await self.client.send_message(msg.author, msg.channel, "*today's question was " +
+                                                   "written by " + self.get_member_name(msg.server, response['author'])
+                                                   + "*")
+                    self.log.f("pa", "Going with entry: " + str(response["num"]) + " by "
+                                     + self.get_member_name(msg.server, response['author']))
+
+                except KeyError as e:
+                    self.log.f("pa", "Malformed entry, dumping: " + str(response))
+
+
+
 
     async def parseCustom(self, command, message):
         invoker = command.split()[0]
         if len(command.split()) > 1:
-            tags = self.getMember(message, command.split()[1].strip()).mention
+            tags = self.get_member(message, command.split()[1].strip()).mention
         else:
             tags = "<poof>"
         com = self.config.commands[invoker]
@@ -374,7 +379,7 @@ class Commands:
         Chooses a random option from a list, separated by |
         Syntax: `>choose foo | bar`
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         response = ("From what you gave me, I believe `{}` " +
                     "is the best choice".format(args[random.randint(0,
                                                 len(args) - 1)]))
@@ -385,7 +390,7 @@ class Commands:
         Sends your message to cleverbot
         Syntax: `>(your message)`
         """
-        return self.cb.ask(self.removePrefix(message.content))
+        return self.cb.ask(self.remove_prefix(message.content))
 
     async def osu(self, message):
         """
@@ -396,7 +401,7 @@ class Commands:
             self.o
         except AttributeError:
             return "Osu Support is disabled by administrator"
-        uid = self.removePrefix(message.content)
+        uid = self.remove_prefix(message.content)
         user = message.author.name
         if uid.strip() == "":
             if self.db.useDB:
@@ -445,14 +450,14 @@ class Commands:
         """
         if not self.level4(message.author):
             return
-        if len(self.removePrefix(message.content).split('|')) < 2:
+        if len(self.remove_prefix(message.content).split('|')) < 2:
             return "This command needs at least 2 arguments"
 
-        invoker = self.removePrefix(message.content).split('|')[0].strip()
-        command = self.removePrefix(message.content).split('|')[1].strip()
+        invoker = self.remove_prefix(message.content).split('|')[0].strip()
+        command = self.remove_prefix(message.content).split('|')[1].strip()
 
-        if len(self.removePrefix(message.content).split('|')) > 3:
-            perms = self.removePrefix(message.content).split('|')[2].strip()
+        if len(self.remove_prefix(message.content).split('|')) > 3:
+            perms = self.remove_prefix(message.content).split('|')[2].strip()
         else:
             perms = '0'
 
@@ -480,7 +485,7 @@ class Commands:
         """
         Congrats, You did it!
         """
-        func = self.cleanInput(message.content)[0]
+        func = self.clean_input(message.content)[0]
         if func == "":
             em = discord.Embed(title="Help",
                                description="Petal Info and Help",
@@ -549,12 +554,12 @@ class Commands:
         'freehug status' - If you're a donor, see how many requests you have recieved
         'freehug' - requests a hug
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
 
         if args[0] == '':
             valid = []
             for m in self.config.hugDonors:
-                user = self.getMember(message, m)
+                user = self.get_member(message, m)
                 if user is not None:
                     if (user.status == discord.Status.online
                        and user != message.author):
@@ -582,7 +587,7 @@ class Commands:
         if args[0].lower() == 'add':
             if len(args) < 2:
                 return "To add a user, please tag them after add | "
-            user = self.getMember(message, args[1].lower())
+            user = self.get_member(message, args[1].lower())
             if user is None:
                 return "No valid user found for " + args[1]
             if user.id in self.config.hugDonors:
@@ -596,7 +601,7 @@ class Commands:
         elif args[0].lower() == 'del':
             if len(args) < 2:
                 return "To remove a user, please tag them after del | "
-            user = self.getMember(message, args[1].lower())
+            user = self.get_member(message, args[1].lower())
             if user is None:
                 return "No valid user for " + args[1]
             if user.id not in self.config.hugDonors:
@@ -636,15 +641,15 @@ class Commands:
         if not self.level4(message.author):
             return ("Dude, you don't have any perms at all. " +
                     "You can't promote people.")
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             return "Tag someone first ya goof"
-        mem = self.getMember(message, args[0])
+        mem = self.get_member(message, args[0])
         if mem is None:
             return "Couldn't find a member with that tag/id"
 
-        if self.getlevel(message.author) < self.getlevel(mem):
-            mlv = self.getlevel(mem)
+        if self.get_user_level(message.author) < self.get_user_level(mem):
+            mlv = self.get_user_level(mem)
             if mlv < 2:
                 return ("You cannot promote this person any further. " +
                         " There can only be one level 0 (owner)")
@@ -670,15 +675,15 @@ class Commands:
             return ("Dude, you don't have any perms at all. " +
                     "You can't demote people")
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             return "Tag someone first ya goof"
-        mem = self.getMember(message, args[0])
+        mem = self.get_member(message, args[0])
         if mem is None:
             return "Couldn't find a member with that tag/id"
 
-        if self.getlevel(message.author) < self.getlevel(mem):
-            mlv = self.getlevel(mem)
+        if self.get_user_level(message.author) < self.get_user_level(mem):
+            mlv = self.get_user_level(mem)
             if mlv == 4:
                 for l in self.config.get("level"):
                     if mem.id in self.config.get("level")[l]:
@@ -701,7 +706,7 @@ class Commands:
         Returns a random image from a given subreddit.
         Syntax: '>sub (subreddit)'
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             sr = "cat"
         else:
@@ -743,7 +748,7 @@ class Commands:
         if not self.level3(message.author):
             return "You must have level 3 or above to use this"
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             return ("Type, add remove or list after " +  self.config.prefix +
                     "args")
@@ -809,8 +814,8 @@ class Commands:
         Dialog-styled event poster
         >event
         """
-        if (not self.hasRole(message.author,
-                             self.config.get("xPostRole"))
+        if (not self.check_user_has_role(message.author,
+                                         self.config.get("xPostRole"))
            and not self.level4(message.author)):
 
             return ("You need the: " + self.config.get("xPostRole") +
@@ -842,13 +847,13 @@ class Commands:
 
             chans = await self.client.wait_for_message(channel=message.channel,
                                                        author=message.author,
-                                                       check=self.isNumeric,
+                                                       check=self.check_is_numeric,
                                                        timeout=20)
 
             if chans is None:
                 return ("Sorry, the request timed out. Please make sure you" +
                         " type a valid sequence of numbers")
-            if self.validateChan(chanList, chans):
+            if self.validate_channel(chanList, chans):
                 break
             else:
                 await self.client.send_message(message.author, message.channel, "Invalid channel choices", )
@@ -877,7 +882,7 @@ class Commands:
 
         embed.add_field(name="Channels",
                         value="\n".join(channames))
-        subkey, friendly = self.getSubscriptionKey(msgstr)
+        subkey, friendly = self.get_event_subscription(msgstr)
         if subkey is None:
             await self.client.send_message(message.author, message.channel, "I was unable to auto-detect " +
                                            "any game titles in your post " +
@@ -888,7 +893,7 @@ class Commands:
                                                    "correct?[yes/no]", )
             n = await self.client.wait_for_message(channel=tempm.channel,
                                                    author=message.author,
-                                                   check=self.yesNoCheck,
+                                                   check=self.check_yes_no,
                                                    timeout=15)
             if n is None:
                 return "Timed out..."
@@ -898,7 +903,7 @@ class Commands:
                 embed.add_field(name="Subscription Key:",
                                 value=friendly + "({})".format(subkey),
                                 inline=False)
-                await self.notifySubs(message, subkey)
+                await self.notify_subscribers(message, subkey)
 
         await self.client.embed(message.channel, embed)
         await self.client.send_message(message.author, message.channel, "If this is ok, type confirm. " +
@@ -990,7 +995,7 @@ class Commands:
         Displays the weather for a location.
         Syntax: `>weather (location)`
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         return "Weather support is not available on petal just yet"
 
         if args[0] == '':
@@ -1036,7 +1041,7 @@ class Commands:
         if not self.level3(message.author):
             return "You must have level4 access to perform this command"
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if len(args) < 3:
             return ("You must have a title, a post and a subreddit. " +
                     "Check the help text")
@@ -1068,7 +1073,7 @@ class Commands:
             return ("I'm sorry, you must have logging enabled to use" +
                     " administrative functions")
 
-        if not self.hasRole(message.author, "mod"):
+        if not self.check_user_has_role(message.author, "mod"):
             return "You must have the `mod` role"
 
         await self.client.send_message(message.author, message.channel, "Please give a reason" +
@@ -1080,8 +1085,8 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -1131,7 +1136,7 @@ class Commands:
             return ("I'm sorry, you must have logging enabled " +
                     "to use administrative functions")
 
-        if not self.hasRole(message.author, "mod"):
+        if not self.check_user_has_role(message.author, "mod"):
             return "You must have the `mod` role"
 
         await self.client.send_message(message.author, message.channel, "Please give a reason" +
@@ -1143,8 +1148,8 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -1217,13 +1222,13 @@ class Commands:
         await self.client.send_message(message.author, message.channel, "How long? (days) ", )
         msg2 = await self.client.wait_for_message(channel=message.channel,
                                                   author=message.author,
-                                                  check=self.isNumeric,
+                                                  check=self.check_is_numeric,
                                                   timeout=30)
         if msg2 is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -1287,8 +1292,8 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.getMember(message,
-                                    self.cleanInput(message.content)[0])
+        userToWarn = self.get_member(message,
+                                     self.clean_input(message.content)[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -1347,7 +1352,7 @@ class Commands:
                     "use administrative functions")
 
         if (not self.level3(message.author) and
-           not self.hasRole(message.author, "mod")):
+           not self.check_user_has_role(message.author, "mod")):
             return ("You must have lv3 perms or the `mod`" +
                     " role to use the mute command")
 
@@ -1360,8 +1365,8 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.getMember(message,
-                                    self.cleanInput(message.content)[0])
+        userToWarn = self.get_member(message,
+                                     self.clean_input(message.content)[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -1434,7 +1439,7 @@ class Commands:
         if not self.level2(message.author):
             return ("You do not have sufficient permissions to use the purge" +
                     " function")
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if len(args) < 1:
             return "Please provide a number between 1 and 200"
         try:
@@ -1485,7 +1490,7 @@ class Commands:
         >void grabs a random item from the void and displays/prints it.
         >void <link or text message> sends to void forever
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == "":
             response = self.db.get_void()
             author = response["author"]
@@ -1517,8 +1522,8 @@ class Commands:
         Post updates to social media
         """
 
-        if not self.hasRole(message.author,
-                            self.config.get("socialMediaRole")):
+        if not self.check_user_has_role(message.author,
+                                        self.config.get("socialMediaRole")):
             return "You must have `{}` to post social media updates"
         modes = []
         names = []
@@ -1556,12 +1561,12 @@ class Commands:
 
         sendto = await self.client.wait_for_message(channel=message.channel,
                                                     author=message.author,
-                                                    check=self.isNumeric,
+                                                    check=self.check_is_numeric,
                                                     timeout=20)
         if sendto is None:
             return ("The process timed out, " +
                     "please enter a valid string of numbers")
-        if not self.validateChan(modes, sendto):
+        if not self.validate_channel(modes, sendto):
             return "Invalid selection, please try again"
 
         await self.client.send_message(message.author, message.channel, "Please type a title for your post " +
@@ -1661,14 +1666,14 @@ class Commands:
         >blacklist <tag>
         """
 
-        args = self.cleanInput(message.content)
-        if not self.level2(message.author) and self.hasRole(message.author,
+        args = self.clean_input(message.content)
+        if not self.level2(message.author) and self.check_user_has_role(message.author,
                                                             "mod"):
             return "You need level 2 or the `mod` role"
         if len(args) < 1:
             return "Tag someone ya goof"
         else:
-            mem = self.getMember(message, args[0])
+            mem = self.get_member(message, args[0])
             if mem is None:
                 return "Couldnt find user with ID: " + args[0]
 
@@ -1685,7 +1690,7 @@ class Commands:
         >calm <link to add to calm>
         """
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         gal = self.config.get("calmGallery")
         if gal is None:
             return "Sadly, calm hasn't been set up correctly"
@@ -1706,7 +1711,7 @@ class Commands:
         >comfypixel <link to add to comfypixel>
         """
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         gal = self.config.get("comfyGallery")
         if gal is None:
             return "Sadly, comfypixel hasn't been set up correctly"
@@ -1738,22 +1743,19 @@ class Commands:
         >askpatch <submit/approve/ignore> | <extra sometimes required info>
         """
 
-        # Like I said ealier in checkUpdate(), ask patch is really only
+        # Like I said earlier in check_pa_updates(), ask patch is really only
         # designed to work with discord.gg/patchgaming. If you want to dig
         # around in here and change things, feel free.
-        # (mySql Schema in checkUpdate() )
+        # (mySql Schema in check_pa_updates() )
 
         if message.channel.id != self.config.get("motdChannel"):
-            self.log.f("ap", str(message.server.id ) + " != " + self.config.get("motdChannel")  )
+            self.log.f("ap", str(message.server.id) + " != " + self.config.get("motdChannel"))
             return "Sorry, you are not permitted to use this"
-        args = self.cleanInput(message.content)
+
+        args = self.clean_input(message.content)
         print(str(args))
         if args[0] == "submit":
-            conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                  self.config.get("mysql")["username"],
-                                  self.config.get("mysql")["password"],
-                                  self.config.get("mysql")["padatabase"])
-            cursor = conn.cursor()
+
             add_question = ("INSERT INTO questions (author, id, content, " +
                             "used) VALUES (\"{}\", \"{}\", \"{}\", false)"
                             .format(message.author.name,
@@ -1912,13 +1914,14 @@ class Commands:
         >paforce
         """
         if self.level2(message.author):
-            await self.checkUpdate(force=True)
+            response = await self.check_pa_updates(force=True)
 
             self.log.f("pa", message.author.name + " with ID: " +
                        message.author.id +
                        " used the force!")
             await self.client.delete_message(message)
-            return
+            if response is not None:
+                return response
         else:
             return "You may not use this command"
 
@@ -1964,7 +1967,7 @@ class Commands:
 
         anondb = self.config.get("anon")
 
-        if (message.author.id in self.activeSads
+        if (message.author.id in self.active_sad
            or message.author.id in self.activeHelpers):
             return "You're already in a call..."
 
@@ -1973,14 +1976,14 @@ class Commands:
 
         server = self.client.get_server(anondb["server"])
         if not message.channel.is_private:
-            args = self.cleanInput(message.content)
+            args = self.clean_input(message.content)
             if len(args) == 0:
                 return "For private chat only, unless adding users"
             if not self.level2(message.author):
                 return "You cannot use this"
 
 
-            m = self.getMember(message, args[0])
+            m = self.get_member(message, args[0])
             try:
                 anondb = self.config.get("anon")["help"]
                 anonserver = self.client.get_server(self.config
@@ -2007,7 +2010,7 @@ class Commands:
 
         await self.client.send_message(message.author, message.channel, "One moment while I " +
                                        "connect you to a listener", )
-        self.activeSads.append(message.author.id)
+        self.active_sad.append(message.author.id)
 
         await asyncio.sleep(1)
         x = await self.client.send_message(message.author, message.channel, "Your name is: "
@@ -2024,7 +2027,7 @@ class Commands:
 
         saduser = message.author
         if len(availableHelpers) == 0:
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return ("All helpers are currently assisting others right now, " +
                     " please try again later")
         await self.client.send_message(message.author, message.channel, "There are currently: " +
@@ -2037,7 +2040,7 @@ class Commands:
         helpuser = discord.utils.get(server.members, id=helpid)
         if helpuser is None:
             self.log.warn(helpid + " is an invalid id for anon")
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return "Found invalid user, try again"
         self.activeHelpers.append(helpid)
         m = await self.client.send_message(message.author, helpuser, "Hello, there is someone " +
@@ -2050,7 +2053,7 @@ class Commands:
         if n is None:
             await self.client.send_message(message.author, helpuser, "Timed out...", )
             del self.activeHelpers[self.activeHelpers.index(helpid)]
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return "Sorry, the user didnt respond"
         await self.client.send_message(message.author, helpuser, "The chat will automatically dis" +
                                        "connect if either user is idle " +
@@ -2085,17 +2088,17 @@ class Commands:
         self.sc = x.channel
         while True:
 
-            m = await self.client.wait_for_message(check=self.anonCheck,
+            m = await self.client.wait_for_message(check=self.check_anon_message,
                                                    timeout=300)
             if m is None:
                 await self.client.send_message(message.author, helpuser, "Chat timed out...", )
                 del self.activeHelpers[self.activeHelpers.index(helpid)]
-                del self.activeSads[self.activeSads.index(message.author.id)]
+                del self.active_sad[self.active_sad.index(message.author.id)]
                 return "Chat timed out..."
             if m.content == "!end":
                 await self.client.send_message(message.author, helpuser, "Chat ended", )
                 del self.activeHelpers[self.activeHelpers.index(helpid)]
-                del self.activeSads[self.activeSads.index(message.author.id)]
+                del self.active_sad[self.active_sad.index(message.author.id)]
                 return "Chat ended"
             if m.channel == self.sc:
                 await self.client.send_message(message.author, self.hc, "**" + name1 + "**: " +
@@ -2113,10 +2116,10 @@ class Commands:
             self.log.err("supportChannel not found")
             return "SupportChannel not configured in settings."
 
-        if message.author.id in self.supportdict:
-            if time.time() - self.supportdict[message.author.id] < 300:
+        if message.author.id in self.support_dict:
+            if time.time() - self.support_dict[message.author.id] < 300:
                 tval = 500 - round(time.time()
-                                   - self.supportdict[message.author.id], 2)
+                                   - self.support_dict[message.author.id], 2)
                 em = discord.Embed(title="Spam prevention",
                                    description="You are doing that too much",
                                    colour=0x0acdff)
@@ -2127,10 +2130,10 @@ class Commands:
                         + " emergency line (911, 999, etc)")
 
             else:
-                self.supportdict[message.author.id] = time.time()
+                self.support_dict[message.author.id] = time.time()
         else:
-            self.supportdict[message.author.id] = time.time()
-        args = self.cleanInput(message.content)
+            self.support_dict[message.author.id] = time.time()
+        args = self.clean_input(message.content)
         if message.channel.is_private:
             await self.client.send_message(message.author, self.client.get_channel(
                 self.config.get("supportChannel")), "@here, " + message.author.mention +
@@ -2177,7 +2180,7 @@ class Commands:
                            description="*for nerds*",
                            colour=0x0acdff)
         em.add_field(name="Version", value=version)
-        em.add_field(name="Uptime", value=self.getUptime())
+        em.add_field(name="Uptime", value=self.get_uptime())
         em.add_field(name="Void Count", value=str(self.db.void.count()))
         em.add_field(name="Servers", value=str(len(self.client.servers)))
         em.add_field(name="Total Number of Commands run",
@@ -2232,7 +2235,7 @@ class Commands:
         Gets an xkcd. Random if number isn't specified
         !xkcd <optional: number>
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         target_number = 0
         try:
             indexresp = json.loads(requests.get("http://xkcd.com/info.0.json").content.decode())
@@ -2283,7 +2286,7 @@ class Commands:
             await self.client.send_message(message.author, message.channel, "Who would you like to promote?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
             response = response.content
-            user = self.getMember(message, response.strip())
+            user = self.get_member(message, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -2303,7 +2306,7 @@ class Commands:
                 return "The time to vote on this user has expired. Please run " + self.config.prefix\
                        + "lvalidate to add them to the roster"
         else:
-            if self.hasRole(user, "Helping Hands"):
+            if self.check_user_has_role(user, "Helping Hands"):
                 return "This user is already a Helping Hands..."
             now = datetime.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id,
@@ -2318,7 +2321,7 @@ class Commands:
             await self.client.send_message(message.author, message.channel, "Who would you like to demote?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
             response = response.content
-            user = self.getMember(message, response.strip())
+            user = self.get_member(message, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -2337,7 +2340,7 @@ class Commands:
                 return "The time to vote on this user has expired. Please run " + self.config.prefix \
                        + "lvalidate to add them to the roster"
         else:
-            if not self.hasRole(user, "Helping Hands"):
+            if not self.check_user_has_role(user, "Helping Hands"):
                 return "This user is not a member of Helping Hands. I cannot demote them"
             now = datetime.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now}
@@ -2354,12 +2357,12 @@ class Commands:
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.hasRole(message.author, "Listener"):
+        if not self.check_user_has_role(message.author, "Listener"):
             return "You must be a Listener to vote on Helping Hands"
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         user = None
         if args[0] != '':
-            user = self.getMember(message, args[0])
+            user = self.get_member(message, args[0])
             if user is None:
                 return "No member with that id..."
 
@@ -2391,7 +2394,7 @@ class Commands:
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.hasRole(message.author, "Listener"):
+        if not self.check_user_has_role(message.author, "Listener"):
             return "You are not a Listener You cannot use this feature"
         if cb is None:
             return "lvotes are disabled in config, why are you even running this command...?"
@@ -2421,13 +2424,13 @@ class Commands:
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if not self.hasRole(message.author, "Listener"):
+        if not self.check_user_has_role(message.author, "Listener"):
             return "You are not a Listener You cannot use this feature"
         if user is None:
             await self.client.send_message(message.author, message.channel, "Which user would you like to validate?")
             response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
             response = response.content
-            user = self.getMember(message, response.strip())
+            user = self.get_member(message, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -2593,15 +2596,15 @@ class Commands:
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.hasRole(message.author, "Listener"):
+        if not self.check_user_has_role(message.author, "Listener"):
             return "You are not a Listener. You cannot use this feature"
 
         msg = ""
         for entry in cb:
-            mem = self.getMember(message, entry)
+            mem = self.get_member(message, entry)
             if mem is None:
                 continue
-            starter = self.getMember(message, cb[entry]["started_by"])
+            starter = self.get_member(message, cb[entry]["started_by"])
             if starter is None:
                 continue
             msg += "\n------\nVote started by: "  + mem.name+ "\#" + mem.discriminator \
@@ -2615,7 +2618,7 @@ class Commands:
         Sets a users preferred osu account
         !setosu <name>
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == "":
             osu = message.author.name
         else:
@@ -2637,11 +2640,11 @@ class Commands:
         Returns a list of all previous names a user has had
         !alias <tag/id>
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == "":
             member = message.author
         else:
-            member = self.getMember(message, args[0])
+            member = self.get_member(message, args[0])
 
         if member is None:
             return "Couldn't find that member in the server\n\nJust a note, " \
@@ -2700,14 +2703,14 @@ class Commands:
         Volatile journal System. Allows users to write an entry that anyone can read later.
         !journal <entry> or !journal <user>
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == "":
             entry = self.db.get_attribute(message.author, "journal")
             if entry is None:
                 return "*You peek into your own journal...*\n\n" + "But find nothing."
             return "*You peek into your own journal...*\n\nYou find:\n\n" + entry["content"]
 
-        mem = self.getMember(message, args[0])
+        mem = self.get_member(message, args[0])
         if mem is not None:
             entry = self.db.get_attribute(mem, "journal")
             if entry is None:
@@ -2724,15 +2727,15 @@ class Commands:
         Retweets on behalf of the twitter account linked to this
         """
 
-        if not self.hasRole(message.author, self.config.get("socialMediaRole")):
+        if not self.check_user_has_role(message.author, self.config.get("socialMediaRole")):
             return "You must be a part of the social media team to retweet a status on the bot's behalf"
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
 
         if args[0] == '':
             return "You cant retweet nothing, silly :P"
 
-        if not self.isNumeric(args[0]):
+        if not self.check_is_numeric(args[0]):
             return "Retweet ID must only be numbers"
 
         try:
@@ -2790,7 +2793,7 @@ class Commands:
         r = response.json()
         nums = []
         for card in r:
-            if self.isNumeric(card["name"]):
+            if self.check_is_numeric(card["name"]):
                 nums.append(int(card["name"]))
 
         top = max(nums) + 1

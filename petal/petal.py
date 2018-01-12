@@ -13,8 +13,7 @@ from .config import Config
 from .commands import Commands
 from .members import Members
 from .dbhandler import DBHandler
-
-from random import randint
+# from random import randint
 log = Peacock()
 
 
@@ -53,14 +52,16 @@ class Petal(discord.Client):
             exit(401)
         return
 
-    def is_pm(self, message):
+    @staticmethod
+    def is_pm(message):
         if message.channel.is_private:
             return True
         else:
             return False
 
-    def remove_prefix(self, input):
-        return input[len(input.split()[0]):]
+    @staticmethod
+    def remove_prefix(content):
+        return content[len(content.split()[0]):]
 
     def get_main_server(self):
         if len(self.servers) == 0:
@@ -84,7 +85,7 @@ class Petal(discord.Client):
             return
         interval = self.config.get("motdInterval")
         while True:
-            await self.commands.checkUpdate()
+            await self.commands.check_pa_updates()
 
             await asyncio.sleep(interval)
 
@@ -142,7 +143,7 @@ class Petal(discord.Client):
 
         return
 
-    async def send_message(self, author, channel, message, timeout=0, **kwargs):
+    async def send_message(self, author=None, channel=None, message=None, timeout=0, **kwargs):
         """
         Overload on the send_message function
         """
@@ -181,47 +182,44 @@ class Petal(discord.Client):
         self.db.update_member(member, {"aliases": [member.name],
                                        "servers": [member.server.id]})
 
-
-
         if self.members.addMember(discord.utils.get(member.server.members,
                                   id=member.id)):
-            userEmbed = discord.Embed(title="User Joined",
+            user_embed = discord.Embed(title="User Joined",
                                       description="A new user joined: "
                                       + member.server.name, colour=0x00FF00)
         else:
             if len(self.members.getMember(member.id)["aliases"]) != 0:
 
-                userEmbed = discord.Embed(title="User ReJoined",
+                user_embed = discord.Embed(title="User ReJoined",
                                           description=self.members.
                                           getMember(member.id)["aliases"][-1]
                                           + " rejoined " + member.server.name
                                           + " as " + member.name,
                                           colour=0x00FF00)
             else:
-                pass
+                return
 
+        user_embed.set_thumbnail(url=member.avatar_url)
+        user_embed.add_field(name="Name", value=member.name)
 
-        userEmbed.set_thumbnail(url=member.avatar_url)
-        userEmbed.add_field(name="Name", value=member.name)
-
-        userEmbed.add_field(name="ID", value=member.id)
-        userEmbed.add_field(name="Discriminator", value=member.discriminator)
+        user_embed.add_field(name="ID", value=member.id)
+        user_embed.add_field(name="Discriminator", value=member.discriminator)
         if member.game is None:
             game = "(nothing)"
         else:
             game = member.game.name
-        userEmbed.add_field(name="Currently Playing", value=game)
-        userEmbed.add_field(name="Joined: ", value=str(member.joined_at)[:-7])
-        userEmbed.add_field(name="Account Created: ",
-                            value=str(member.created_at)[:-7])
+        user_embed.add_field(name="Currently Playing", value=game)
+        user_embed.add_field(name="Joined: ", value=str(member.joined_at)[:-7])
+        user_embed.add_field(name="Account Created: ",
+                             value=str(member.created_at)[:-7])
 
-        await self.embed(self.get_channel(self.config.logChannel), userEmbed)
+        await self.embed(self.get_channel(self.config.logChannel), user_embed)
         if response != "":
             await self.send_message(self.get_channel(self.config.logChannel), response, )
 
         if (datetime.utcnow() - member.created_at).days <= 6:
-            await self.send_message(self.get_channel(self.config.logChannel), + "This member's account "
-                                    + "was created less than 7 days ago!", )
+            await self.send_message(self.get_channel(self.config.logChannel), "This member's account "
+                                    + "was created less than 7 days ago!" )
 
         return
 
