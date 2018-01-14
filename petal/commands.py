@@ -27,7 +27,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 from .dbhandler import DBHandler
 from random import randint
-version = "0.4.1 Development"
+version = "0.4.3 Development"
 
 
 
@@ -1375,6 +1375,7 @@ class Commands:
 
                 if muteRole in userToWarn.roles:
                     await self.client.remove_roles(userToWarn, muteRole)
+                    await self.client.server_voice_state(userToWarn, mute=False)
                     warnEmbed = discord.Embed(title="User Unmute",
                                               description="You have been " +
                                               "unmuted by" +
@@ -1390,6 +1391,7 @@ class Commands:
                     muteswitch = "Unmute"
                 else:
                     await self.client.add_roles(userToWarn, muteRole)
+                    await self.client.server_voice_state(userToWarn, mute=True)
                     warnEmbed = discord.Embed(title="User Mute",
                                               description="You have been " +
                                                           "muted by" +
@@ -1748,165 +1750,78 @@ class Commands:
         # around in here and change things, feel free.
         # (mySql Schema in check_pa_updates() )
 
-        if message.channel.id != self.config.get("motdChannel"):
-            self.log.f("ap", str(message.server.id) + " != " + self.config.get("motdChannel"))
+        if message.channel.id != self.config.get("motdModChannel"):
+            self.log.f("ap", str(message.server.id) + " != " + self.config.get("motdModChannel"))
             return "Sorry, you are not permitted to use this"
 
         args = self.clean_input(message.content)
         print(str(args))
         if args[0] == "submit":
+            response = self.db.submit_motd(message.author.id, " ".join(args[1:]))
+            if response is None:
+                return "Unable to add to database, ask your bot owner as to why"
 
-            add_question = ("INSERT INTO questions (author, id, content, " +
-                            "used) VALUES (\"{}\", \"{}\", \"{}\", false)"
-                            .format(message.author.name,
-                                    message.author.id,
-                                    " ".join(args[1:])))
-            get_entry = "SELECT MAX(entryid) from questions;"
-            await self.client.send_message(message.author, message.channel, "Your message will be added to " +
-                                           "the database. Is this correct? " +
-                                           "(type yes if yes)\n" +
-                                           " ".join(args[1:]), )
+            newEmbed = discord.Embed(title="Entry " + str(response["num"]),
+                                     description="New question from "
+                                                 + message.author.name,
+                                     colour=0x8738f)
+            newEmbed.add_field(name="content", value=response["content"])
 
-            res = await self.client.wait_for_message(author=message.author,
-                                                     channel=message.channel,
-                                                     timeout=20)
-            if res is None:
-                return "Timed out without response"
-            else:
-                if res.content == "yes":
-                    cursor.execute(add_question)
-                    conn.commit()
-                    cursor.execute(get_entry)
-                    r = cursor.fetchone()
-                    entryid =  r[0]
-                    entryid = str(entryid).lstrip("('").rstrip("',)")
-                    chan = self.client.get_channel(self.config.get("motdChannel"))
-                    newEmbed = discord.Embed(title="Entry " + str(entryid),
-                                             description="New question from "
-                                             + message.author.name,
-                                             colour=0x8738f9)
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, embedded=newEmbed)
 
-                    newEmbed.add_field(name="Question",
-                                       value=" ".join(args[1:]))
-                    conn.close()
-
-                    await self.client.embed(chan, newEmbed)
-                else:
-                    return "Okie dokie, try again if you like"
             return "Question added to database"
 
         elif args[0] == "approve":
-            if message.channel.id != self.config.get("motdChannel"):
+            if message.channel.id != self.config.get("motdModChannel"):
                 return "You can't use that here"
-            else:
-                if len(args) < 2:
-                    return "You need to specify an entry"
-                else:
-                    conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                          self.config.get("mysql")["username"],
-                                          self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["padatabase"])
-                    cursor = conn.cursor()
-                    find_entry = ("SELECT entryid, author, content, used," +
-                                  " approved FROM questions WHERE entryid=" +
-                                  args[1])
-                    approve_entry = ("UPDATE questions SET approved = true" +
-                                     " WHERE entryid=" + args[1])
-                    cursor.execute(find_entry)
-                    entry = cursor.fetchone()
 
-                    if not entry:
-                        return "Could not find any row with"
+            if len(args) < 2:
+                return "You need to specify an entry"
 
-                    entryid = entry[0]
-                    # author = entry[1].decode("utf-8")
-                    content = entry[2]
-                    # used = entry[3]
-                    approved = entry[4]
-                    if approved == "1":
-                        newEmbed = discord.Embed(title="Already Approved " +
-                                                       str(entryid),
-                                                 description=content,
-                                                 colour=0xFFA500)
-                        newEmbed.set_author(name="AskPatch",
-                                            icon_url="http://images.clipart" +
-                                                     ".panda.com/question-" +
-                                                     "mark-icon-Question-" +
-                                                     "Mark-Icon.jpg")
-                        chan = self.client.get_channel(self.config.get("motdChannel"))
-                        await self.client.embed(chan, newEmbed)
-                        return ("Entry has already been approved, " +
-                                "use reject to remove it from the queue")
+            if not self.check_is_numeric(args[1]):
+                return "Entry must be an integer"
 
-                    cursor.execute(approve_entry)
-                    conn.commit()
-                    conn.close()
+            result = self.db.update_motd(int(args[1]))
+            if result is None:
+                return "No entries exist with id number: " + args[1]
 
-                    newEmbed = discord.Embed(title="Approved " + str(entryid),
-                                             description=content,
-                                             colour=0x00FF00)
 
-                    newEmbed.add_field(name="Has been Approved",
-                                       value="True")
-                    chan = self.client.get_channel(self.config.get("motdChannel"))
-                    await self.client.embed(chan, newEmbed)
 
-        elif args[0] == "ignore":
-            if message.channel.id != self.config.get("motdChannel"):
+            newEmbed = discord.Embed(title="Approved " + str(result["num"]),
+                                     description=result["content"],
+                                     colour=0x00FF00)
+
+
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, newEmbed)
+
+        elif args[0] == "reject":
+            if message.channel.id != self.config.get("motdModChannel"):
                 return "You can't use that here"
-            else:
-                if len(args) < 2:
-                    return "You need to specify an entry"
-                else:
-                    conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                          self.config.get("mysql")["username"],
-                                          self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["padatabase"])
-                    cursor = conn.cursor()
-                    find_entry = ("SELECT entryid, author, content, used," +
-                                  " approved FROM questions WHERE entryid=" +
-                                  args[1])
-                    approve_entry = ("UPDATE questions SET approved = false " +
-                                     "WHERE entryid=" + args[1])
-                    cursor.execute(find_entry)
-                    entry = cursor.fetchone()
 
-                    if not entry:
-                        return "Could not find any row with"
+            if len(args) < 2:
+                return "You need to specify an entry"
+
+            if not self.check_is_numeric(args[1]):
+                return "Entry must be an integer"
+
+            result = self.db.update_motd(int(args[1]), approve=False)
+            if result is None:
+                return "No entries exist with id number: " + args[1]
 
 
-                    entryid = entry[0]
-                    # author = entry[1].decode("utf-8")
-                    content = entry[2]
-                    # used = entry[3]
-                    approved = entry[4]
-                    if approved == "0":
-                        newEmbed = discord.Embed(title="Rejected " +
-                                                       str(entryid),
-                                                 description=content,
-                                                 colour=0xFFA500)
 
-                        chan = self.client.get_channel(self.config.get("motdChannel"))
-                        await self.client.embed(chan, newEmbed)
-                        return ("Entry has already been rejected or has not " +
-                                "been approved yet, use approve to add it to" +
-                                " the queue")
+            newEmbed = discord.Embed(title="Rejected" + str(result["num"]),
+                                     description=result["content"],
+                                     colour=0xFFA500)
 
-                    cursor.execute(approve_entry)
-                    conn.commit()
-                    cursor.close()
 
-                    newEmbed = discord.Embed(title=" " + str(entryid),
-                                             description=content,
-                                             colour=0xFF0000)
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, newEmbed)
 
-                    newEmbed.add_field(name="Rejected", value="True")
-                    chan = self.client.get_channel(self.config.get("motdChannel"))
-                    await self.client.embed(chan, newEmbed)
-                    return "Entry has been removed from the queue"
         elif args[0] == 'list':
-            return ("Patch Asks info can be found at " +
-                    " http://drunkencode.net/askpatch")
+            return ("Patch Asks info is currently disabled")
 
     async def paforce(self, message):
         """

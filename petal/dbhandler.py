@@ -54,6 +54,7 @@ class DBHandler(object):
         self.useDB = True
         self.config = config
         db_conf = self.config.get("dbconf")
+
         from pymongo import MongoClient
 
         if "remote_uri" in db_conf:
@@ -270,8 +271,33 @@ class DBHandler(object):
         self.motd.update({'_id': response['_id']}, {'$set': {"used": True}},  upsert=False, multi=False)
         return response
 
-    def submit_motd(self, author, content):
-        object = {""}
+    def get_motd_max(self):
+        return self.motd.find_one(sort=[("num", -1)])
 
+    def submit_motd(self, author, content):
+        num = self.get_motd_max()
+
+        if num is None:
+            num = 2000
+        else:
+            num = num["num"] + 1
+        object = {"author": author,
+                  "num": num,
+                  "content": content,
+                  "approved": False,
+                  "used": False}
+        # print(str(object))
+        return self.motd.find_one({"_id": self.motd.insert_one(object).inserted_id})
+
+
+    def update_motd(self, num, approve=True):
+        if approve:
+            self.motd.update_one({"num": num},{"$set" : {"approved": True, "used": False}}, upsert=False)
+        else:
+            self.motd.update_one({"num": num},
+                                 {"$set": {"approved": False, "used": False}},
+                                 upsert=False)
+
+        return self.motd.find_one({"num": num})
 
 
