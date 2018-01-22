@@ -14,7 +14,7 @@ def m2id(mem):
     :param mem: discord.Member or id str
     :return: str id
     """
-    if isinstance(mem, discord.Member):
+    if isinstance(mem, discord.Member) or isinstance(mem, discord.User):
         mid = mem.id
     else:
         mid = mem

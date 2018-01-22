@@ -18,6 +18,7 @@ import pytumblr
 # FIXME: replace pymysql with mongo functionality
 import pymysql
 import time
+import pytz
 # from cleverbot import Cleverbot
 import petal
 from datetime import datetime, timedelta
@@ -27,7 +28,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 from .dbhandler import DBHandler
 from random import randint
-version = "0.4.3 Development"
+version = "0.4.4 Development"
 
 
 
@@ -1508,7 +1509,7 @@ class Commands:
             if response.startswith("http"):
                 return "*You grab a link from the void* \n" + response
             else:
-                self.log.f("VOID", message.author.name + " retrieved " + str(response["number"]) + " from the void")
+                self.log.f("VOID", message.author.name + " retrieved " + str(num) + " from the void")
                 return response
         else:
             count = self.db.save_void(args[0],
@@ -2685,7 +2686,7 @@ class Commands:
         l = list(self.db.ac.find())
         return l[random.randint(0, len(l) - 1)]["ending"]
 
-    
+
     async def bugger(self, message):
         """
         Report a bug by adding it to the Trello board.
@@ -2733,3 +2734,73 @@ class Commands:
 
         #print(str(response.text))
         return "Created bug report with ID: " + str(top)
+
+    async def tz(self, message):
+        """
+        >tz [0-23] or "now for UTC" | location or number adjustment (e.g. -6)
+        TimeZone Converter
+        """
+
+        args = self.clean_input(message.content)
+
+
+        input_time = args[0]
+        conversion = args[1]
+
+        print(str(args))
+
+        if input_time.lower() == "now":
+            input_time = "UTC"
+        parsed = None
+        input_p = None
+        for timezone in pytz.all_timezones:
+            if conversion.lower() in str(timezone).lower():
+                parsed = pytz.timezone(timezone)
+                break
+
+        for timezone in pytz.all_timezones:
+            if input_time.lower() in str(timezone).lower():
+                input_p = pytz.timezone(timezone)
+                break
+
+        if parsed is None:
+            return "Unable to parse a pytz timezone from: " + conversion
+
+        if input_p is None:
+            return "Unable to parse a pytz timezone from: " + input_time
+
+
+        localnow = input_p.localize(datetime.utcnow()).strftime('%z')
+        now = parsed.localize(datetime.utcnow()).strftime('%z')
+        print(str(int(localnow)))
+        print(str(int(now)))
+        localnow = datetime.utcnow() + timedelta(hours=int(localnow) / 100)
+        now = datetime.utcnow() + timedelta(hours=int(now) / 100)
+
+
+
+
+
+
+
+
+        self.db.update_member(message.author, {"tz": parsed.zone})
+        em = discord.Embed(title="TimeZone Info for " + parsed.zone, color=0x00acff)
+        em.add_field(name="Petal's UTC Time", value=str(datetime.utcnow())[:-7])
+        em.add_field(name="Input Time(" + input_p.zone + ")", value=str(localnow)[:-7], inline=False)
+        em.add_field(name="Converted(" + parsed.zone + ")", value=str(now)[:-7], inline=False)
+
+        await self.client.embed(message.channel, em)
+        return None
+
+
+
+
+
+
+
+
+
+
+
+
