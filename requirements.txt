@@ -1,9 +1,9 @@
-discord.py
-ruamel.yaml
-cleverbot
 colorama
+discord.py
 facebook-sdk
 praw
-https://github.com/dianakhuang/pytumblr/archive/diana/python-3-support.zip
-python-twitter
+pymongo
+PyTumblr
 requests
+tweepy
+pytz

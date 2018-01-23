@@ -1,24 +1,34 @@
 import asyncio
+import json
+
 import discord
 import random
 # import urllib.request as urllib2
 # import re
+
+
 # import os
 import praw
+import requests
 import twitter
 import facebook
 import pytumblr
-import _mysql
+# import _mysql (deprecated in favor of the python package)
+
+# FIXME: replace pymysql with mongo functionality
 import pymysql
 import time
+import pytz
 # from cleverbot import Cleverbot
 import petal
 from datetime import datetime, timedelta
 from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
+from .grasslands import Pidgeon
+from .dbhandler import DBHandler
 from random import randint
-version = "0.1.2"
+version = "0.4.4 Development"
 
 
 
@@ -32,12 +42,14 @@ class Commands:
 
         self.client = client
         self.config = client.config
+        self.db = client.db
         # self.cb = Cleverbot('discordBot-petal')
         self.log = Peacock()
+        self.startup = datetime.utcnow()
         self.activeHelpers = []
-        self.activeSads = []
+        self.activeSad = []
         self.log.info("Command module init start")
-        self.supportdict = {}
+        self.support_dict = {}
         self.osuKey = self.config.get("osu")
         if self.osuKey is not None:
             self.o = Octopus(self.osuKey)
@@ -63,7 +75,7 @@ class Commands:
                 self.r = None
                 return
         else:
-            self.log.warn("No reddit keys found")
+            self.log.warn("No Reddit keys found")
 
         if self.config.get("twitter") is not None:
             tweet = self.config.get("twitter")
@@ -74,12 +86,12 @@ class Commands:
                                  )
             # tweet test
             if "id" not in str(self.t.VerifyCredentials()):
-                self.log.warn("Your twitter authentication is invalid, " +
-                              " twitter posting will not work")
+                self.log.warn("Your Twitter authentication is invalid, " +
+                              " Twitter posting will not work")
                 self.t = None
                 return
         else:
-            self.log.warn("No twitter keys found.")
+            self.log.warn("No Twitter keys found.")
 
         if self.config.get("facebook") is not None:
             fb = self.config.get("facebook")
@@ -93,7 +105,7 @@ class Commands:
                                                 tumble["oauthToken"],
                                                 tumble["oauthTokenSecret"])
         else:
-            self.log.warn("No tumblr keys found.")
+            self.log.warn("No Tumblr keys found.")
 
     def level0(self, author):
         # this supercedes all other levels so, use it carefully
@@ -111,7 +123,7 @@ class Commands:
     def level4(self, author):
         return author.id in self.config.l4 or self.level3(author)
 
-    def getlevel(self, author):
+    def get_user_level(self, author):
         count = 0
         if self.level0(author):
             return 0
@@ -121,34 +133,61 @@ class Commands:
                 return count
         return 5
 
-    def check(self, message):
+    @staticmethod
+    def check(message):
         return message.content.lower() == 'yes'
 
-    def cleanInput(self, input):
-        args = input[len(input.split()[0]):].split('|')
-        newargs = []
+    @staticmethod
+    def clean_input(input_string):
+        args = input_string[len(input_string.split()[0]):].split('|')
+        new_args = list()
         for i in args:
-            newargs.append(i.strip())
-        return newargs
+            new_args.append(i.strip())
+        return new_args
+    @staticmethod
+    def check_yes_no(message):
+        if message.content.lower().strip() in ["yes", "no"]:
+            return True
+        return False
 
-    def isNumeric(self, message):
+    @staticmethod
+    def check_is_numeric(message):
         try:
             int(message.content)
         except ValueError:
             return False
+        except AttributeError:
+            try:
+                int(message)
+            except ValueError:
+                return False
+            else:
+                return True
         else:
             return True
 
-    def validateChan(self, chanlist, msg):
+    def get_uptime(self):
+        delta = datetime.utcnow() - self.startup
+        delta = delta.total_seconds()
+
+        d = divmod(delta,86400)  # days
+        h = divmod(d[1],3600)  # hours
+        m = divmod(h[1],60)  # minutes
+        s = m[1]  # seconds
+
+        return '%d days, %d hours, %d minutes, %d seconds' % (d[0],h[0],m[0],s)
+
+    @staticmethod
+    def validate_channel(chanlist, msg):
         for i in range(len(msg.content)):
             try:
                 print(msg.content[i])
                 chanlist[int(msg.content[int(i)])]
-            except:
+            except AttributeError:
                 return False
         return True
 
-    def hasRole(self, user, role):
+    def check_user_has_role(self, user, role):
         target = discord.utils.get(user.server.roles, name=role)
         if target is None:
             self.log.err(role + " does not exist")
@@ -159,74 +198,153 @@ class Commands:
             else:
                 return False
 
-    def removePrefix(self, input):
+    def remove_prefix(self, input):
         return input[len(input.split()[0]):]
 
-    def getMember(self, message, member):
+    @staticmethod
+    def get_member(message, member):
         return discord.utils.get(message.server.members,
                                  id=member.lstrip("<@!").rstrip('>'))
+    @staticmethod
+    def get_member_name(server, member):
+        try:
+            m = server.get_member(member).name
+            if m is None:
+                m = member
+        except AttributeError:
+            m = member
 
-    def anonCheck(self, msg):
+        return m
+
+    def check_anon_message(self, msg):
         if msg.author == self.client.user:
             return False
         elif msg.channel.id == self.hc.id or msg.channel.id == self.sc.id:
             return True
         else:
             return False
-    # AskPatch is designed for discord.gg/patchgaming but you may edit it
-    # for your own personal uses if you like
-    # the database fields are:
-    # Single table:
-    # varchar(20) author, vc(20) id, TIMESTAMP time, TEXT content, BOOL used,
-    # INT(11)PK entryid, BOOL approved
 
-    async def checkUpdate(self):
-            self.log.f("pa", "Searching for entries...")
-
+    # TODO: Convert to Mongo
+    def get_event_subscription(self, post):
+        # EVENTS SCHEMA
+        # 2 Tables:
+        # CREATE TABLE subKeys(code VARCHAR(20), friendly VARCHAR(20));
+        # CREATE TABLE users(name VARCHAR(20), id VARCHAR(20),
+        #                    code VARCHAR(20));
+        try:
             conn = pymysql.connect(self.config.get("mysql")["hostname"],
                                    self.config.get("mysql")["username"],
                                    self.config.get("mysql")["password"],
-                                   self.config.get("mysql")["database"])
+                                   self.config.get("mysql")["eventdatabase"])
+        except Exception as e :
+            self.log.err("SQL Error, " + str(e))
+            return None, None
+        else:
             cursor = conn.cursor()
-            find_entry = ("SELECT entryid, author, content, used, approved " +
-                          "FROM questions WHERE approved = 1 AND used = 0")
+        find_entry = ("SELECT * FROM subKeys")
+        cursor.execute(find_entry)
+        data = cursor.fetchall()
 
-            cursor.execute(find_entry)
-            data = cursor.fetchall()
+        if len(data) == 0:
+            self.log.f("event", "Database is empty for keys!" +
+                                " Skipping further validation")
+            return None, None
+        postdata = post.lower().split()
 
-            if len(data) == 0:
-                self.log.f("pa", "Could not find suitable entry")
+        for row in data:
+            for i in row[1].split():
+                if i.lower() in postdata:
+                    return row[0] , row[1]
+        conn.close()
+        self.log.f("event", "could not find sub key in post")
+        return None, None
+
+
+    async def list_connected_servers(self, message):
+        """
+        hello
+        """
+        if not self.level0(message.author):
+            return
+        for s in self.client.servers:
+            await self.client.send_message(message.author, message.channel, s.name + " " + s.id, )
+
+
+#    async def killthenonconformist(self, message):
+#        """
+#        hello
+#        """
+#       for s in self.client.servers:
+#           if s.id == "215170877002612737":
+#               await self.client.leave_server(s)
+#               return "left " + s.name
+
+    # AskPatch is designed specifically for discord.gg/patchgaming but you may edit it
+    # for your own personal uses if you like. You will need a mongoDB instance and be familiar with pyMongo
+    # I personally prefer the free cloud.mongodb.com instances they have available.
+
+    async def notify_subscribers(self, message, key):
+            return
+
+    async def check_pa_updates(self, force=False):
+            if force:
+                self.config.doc["lastRun"] = datetime.utcnow()
+                self.config.save()
+
             else:
-                askrow = data[random.randint(0, len(data) - 1)]
-                em = discord.Embed(title="Patch Asks",
-                                   description="Today Patch asks: \n "
-                                   + askrow[2],
-                                   colour=0x0acdff)
+                last_run = self.config.get("lastRun")
+                self.log.f("pa", "Last run at: " + str(last_run))
+                if last_run is None:
+                    last_run = datetime.utcnow()
+                    self.config.doc["lastRun"] = last_run
+                    self.config.save()
+                else:
+                    difference = (datetime.utcnow() - datetime.strptime(str(last_run), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
+                    self.log.f("pa", "Difference: " + str(difference))
+                    if difference < 86400:
+                        return
+                    else:
+                        self.config.doc["lastRun"] = datetime.utcnow()
+                        self.config.save()
 
-                msg = await self.client.embed(self.client.get_channel(
-                                              self.config.get
-                                              ("mysql")["channelid"]), em)
-                await self.client.send_message(msg.channel,
-                                               "*today's patch asks was " +
-                                               "written by " + askrow[1]
-                                               .strip() + "*")
-                self.log.f("pa", "Going with entry: " + str(askrow[0]) + " by "
-                                 + askrow[1].strip())
+
+            self.log.f("pa", "Searching for entries...")
+            response = self.db.get_motd_entry(update=True)
+
+
+            if response is None:
+                if force:
+                    return "Could not find suitable entry, make sure you have added questions to the DB"
+
+                self.log.f("pa", "Could not find suitable entry")
+
+            else:
                 try:
-                    mark_entry = ("UPDATE questions SET used = 1 WHERE " +
-                                  "entryid={}".format(askrow[0]))
-                    cursor.execute(mark_entry)
-                    conn.commit()
-                except:
-                    self.log.err("An SQL error occurred")
-                    conn.rollback()
-                finally:
-                    conn.close()
+                    em = discord.Embed(title="Patch Asks",
+                                           description="Today Patch asks: \n "
+                                           + response['content'],
+                                           colour=0x0acdff)
+
+                    msg = await self.client.embed(self.client.get_channel(
+                                                  self.config.get
+                                                  ("motdChannel")), em)
+
+                    await self.client.send_message(msg.author, msg.channel, "*today's question was " +
+                                                   "written by " + self.get_member_name(msg.server, response['author'])
+                                                   + "*")
+                    self.log.f("pa", "Going with entry: " + str(response["num"]) + " by "
+                                     + self.get_member_name(msg.server, response['author']))
+
+                except KeyError as e:
+                    self.log.f("pa", "Malformed entry, dumping: " + str(response))
+
+
+
 
     async def parseCustom(self, command, message):
         invoker = command.split()[0]
         if len(command.split()) > 1:
-            tags = self.getMember(message, command.split()[1].strip()).mention
+            tags = self.get_member(message, command.split()[1].strip()).mention
         else:
             tags = "<poof>"
         com = self.config.commands[invoker]
@@ -262,7 +380,7 @@ class Commands:
         Chooses a random option from a list, separated by |
         Syntax: `>choose foo | bar`
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         response = ("From what you gave me, I believe `{}` " +
                     "is the best choice".format(args[random.randint(0,
                                                 len(args) - 1)]))
@@ -273,7 +391,7 @@ class Commands:
         Sends your message to cleverbot
         Syntax: `>(your message)`
         """
-        return self.cb.ask(self.removePrefix(message.content))
+        return self.cb.ask(self.remove_prefix(message.content))
 
     async def osu(self, message):
         """
@@ -284,9 +402,18 @@ class Commands:
             self.o
         except AttributeError:
             return "Osu Support is disabled by administrator"
-        uid = self.removePrefix(message.content)
+        uid = self.remove_prefix(message.content)
+        user = message.author.name
         if uid.strip() == "":
-            user = self.o.get_user(message.author.name)
+            if self.db.useDB:
+                m = self.db.get_attribute(message.author, "osu")
+                if m is None:
+                    m = ""
+                if m != "":
+                    user = m
+
+            user = self.o.get_user(user)
+
             if user is None:
                 return ("Looks like there is no osu data associated with" +
                         " your discord name")
@@ -324,22 +451,20 @@ class Commands:
         """
         if not self.level4(message.author):
             return
-        if len(self.removePrefix(message.content).split('|')) < 2:
+        if len(self.remove_prefix(message.content).split('|')) < 2:
             return "This command needs at least 2 arguments"
 
-        invoker = self.removePrefix(message.content).split('|')[0].strip()
-        command = self.removePrefix(message.content).split('|')[1].strip()
+        invoker = self.remove_prefix(message.content).split('|')[0].strip()
+        command = self.remove_prefix(message.content).split('|')[1].strip()
 
-        if len(self.removePrefix(message.content).split('|')) > 3:
-            perms = self.removePrefix(message.content).split('|')[2].strip()
+        if len(self.remove_prefix(message.content).split('|')) > 3:
+            perms = self.remove_prefix(message.content).split('|')[2].strip()
         else:
             perms = '0'
 
         if invoker in self.config.commands:
-            await self.client.send_message(
-                                           message.channel,
-                                           "This command already exists, " +
-                                           "type 'yes' to rewrite it")
+            await self.client.send_message(message.author, message.channel, "This command already exists, " +
+                                           "type 'yes' to rewrite it", )
             response = (await self.client.
                         wait_for_message(timeout=15,
                                          author=message.author,
@@ -356,11 +481,12 @@ class Commands:
             self.config.save()
             return "New Command `{}` Created!".format(invoker)
 
+
     async def help(self, message):
         """
         Congrats, You did it!
         """
-        func = self.cleanInput(message.content)[0]
+        func = self.clean_input(message.content)[0]
         if func == "":
             em = discord.Embed(title="Help",
                                description="Petal Info and Help",
@@ -377,8 +503,9 @@ class Commands:
                          "help <command name>")
             url = "http://leaf.drunkencode.net/"
             await self.client.embed(message.channel, em)
-            await self.client.send_message(message.channel,
-                                           "Publicly available at: " + url)
+            await self.client.send_message(message.author, message.channel, "Publicly available at: " + url +
+                                           "\n\nMore Info with: " + self.config.prefix +
+                                           "statsfornerds", )
             return
         if func in dir(self):
             if getattr(self, func).__doc__ is None:
@@ -428,12 +555,12 @@ class Commands:
         'freehug status' - If you're a donor, see how many requests you have recieved
         'freehug' - requests a hug
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
 
         if args[0] == '':
             valid = []
             for m in self.config.hugDonors:
-                user = self.getMember(message, m)
+                user = self.get_member(message, m)
                 if user is not None:
                     if (user.status == discord.Status.online
                        and user != message.author):
@@ -445,11 +572,11 @@ class Commands:
             pick = valid[random.randint(0, len(valid) - 1)]
 
             try:
-                await self.client.send_message(pick, "Hello there. " +
+                await self.client.send_message(message.author, pick, "Hello there. " +
                                                "This message is to inform " +
                                                "you that " +
                                                message.author.name +
-                                               " has requested a hug from you")
+                                               " has requested a hug from you", )
             except discord.ClientException:
                 return ("Your hug donor was going to be: " + pick.mention +
                         " but unfortunately they were unable to be contacted")
@@ -461,7 +588,7 @@ class Commands:
         if args[0].lower() == 'add':
             if len(args) < 2:
                 return "To add a user, please tag them after add | "
-            user = self.getMember(message, args[1].lower())
+            user = self.get_member(message, args[1].lower())
             if user is None:
                 return "No valid user found for " + args[1]
             if user.id in self.config.hugDonors:
@@ -475,7 +602,7 @@ class Commands:
         elif args[0].lower() == 'del':
             if len(args) < 2:
                 return "To remove a user, please tag them after del | "
-            user = self.getMember(message, args[1].lower())
+            user = self.get_member(message, args[1].lower())
             if user is None:
                 return "No valid user for " + args[1]
             if user.id not in self.config.hugDonors:
@@ -515,15 +642,15 @@ class Commands:
         if not self.level4(message.author):
             return ("Dude, you don't have any perms at all. " +
                     "You can't promote people.")
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             return "Tag someone first ya goof"
-        mem = self.getMember(message, args[0])
+        mem = self.get_member(message, args[0])
         if mem is None:
             return "Couldn't find a member with that tag/id"
 
-        if self.getlevel(message.author) < self.getlevel(mem):
-            mlv = self.getlevel(mem)
+        if self.get_user_level(message.author) < self.get_user_level(mem):
+            mlv = self.get_user_level(mem)
             if mlv < 2:
                 return ("You cannot promote this person any further. " +
                         " There can only be one level 0 (owner)")
@@ -549,15 +676,15 @@ class Commands:
             return ("Dude, you don't have any perms at all. " +
                     "You can't demote people")
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             return "Tag someone first ya goof"
-        mem = self.getMember(message, args[0])
+        mem = self.get_member(message, args[0])
         if mem is None:
             return "Couldn't find a member with that tag/id"
 
-        if self.getlevel(message.author) < self.getlevel(mem):
-            mlv = self.getlevel(mem)
+        if self.get_user_level(message.author) < self.get_user_level(mem):
+            mlv = self.get_user_level(mem)
             if mlv == 4:
                 for l in self.config.get("level"):
                     if mem.id in self.config.get("level")[l]:
@@ -580,7 +707,7 @@ class Commands:
         Returns a random image from a given subreddit.
         Syntax: '>sub (subreddit)'
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == '':
             sr = "cat"
         else:
@@ -614,13 +741,82 @@ class Commands:
         else:
             return ob.link
 
+    async def subs(self, message):
+        """
+        Add or Remove subscription keys (requires level 3)
+        >subs <add/remove/list> | <name of game> | <game key>
+        """
+        if not self.level3(message.author):
+            return "You must have level 3 or above to use this"
+
+        args = self.clean_input(message.content)
+        if args[0] == '':
+            return ("Type, add remove or list after " +  self.config.prefix +
+                    "args")
+        if args[0].lower() == "add":
+            if len(args) < 3:
+                return ("Format is: " + self.config.prefix
+                        + "subs <game name> | <game code (4 digit)>")
+
+            check_duplicate = ("SELECT * FROM subKeys WHERE friendly=\""
+                              + args[1].lower() + "\";")
+            self.log.f("subs", check_duplicate)
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
+                                  self.config.get("mysql")["username"],
+                                  self.config.get("mysql")["password"],
+                                  self.config.get("mysql")["eventdatabase"])
+            cursor = conn.cursor()
+            cursor.execute(check_duplicate)
+
+            data = cursor.fetchall()
+            if len(data) > 0:
+                for row in data:
+                    if row[1].lower() == args[1].lower():
+                        conn.close()
+                        return (row[2] + " Already corresponds to a key: " +
+                                row[1])
+
+            try:
+                insert_code = ("INSERT INTO subKeys VALUE (\"" + args[2].upper() + "\",\"" +
+                               args[1] + "\");")
+                self.log.f("subs", insert_code)
+                cursor.execute(insert_code)
+                conn.commit()
+            except:
+                self.log.err("An SQL error occurred")
+                conn.rollback()
+            finally:
+                conn.close()
+
+            return "Added " + args[1] + " with key: " + args[2]
+
+        elif args[0].lower() == "list":
+
+            conn = pymysql.connect(self.config.get("mysql")["hostname"],
+                                  self.config.get("mysql")["username"],
+                                  self.config.get("mysql")["password"],
+                                  self.config.get("mysql")["eventdatabase"])
+            cursor = conn.cursor()
+            get_all = ("SELECT * FROM subKeys")
+            cursor.execute(get_all)
+            data = cursor.fetchall()
+            if len(data) == 0:
+                return "No entries found..."
+
+            codelist =""
+            for row in data:
+                codelist += row[0] + " - " + row[1] + "\n"
+            conn.close()
+            return codelist
+
+
     async def event(self, message):
         """
         Dialog-styled event poster
         >event
         """
-        if (not self.hasRole(message.author,
-                             self.config.get("xPostRole"))
+        if (not self.check_user_has_role(message.author,
+                                         self.config.get("xPostRole"))
            and not self.level4(message.author)):
 
             return ("You need the: " + self.config.get("xPostRole") +
@@ -642,30 +838,28 @@ class Commands:
                               " I'd remove it if I were you.")
 
         while True:
-            await self.client.send_message(message.channel, "Hi there, " +
+            await self.client.send_message(message.author, message.channel, "Hi there, " +
                                            message.author.name +
                                            "! Please select the number of " +
                                            " each server you want to post " +
-                                           " to. (dont separate the numbers) ")
+                                           " to. (dont separate the numbers) ", )
 
-            await self.client.send_message(message.channel, msg)
+            await self.client.send_message(message.author, message.channel, msg, )
 
             chans = await self.client.wait_for_message(channel=message.channel,
                                                        author=message.author,
-                                                       check=self.isNumeric,
+                                                       check=self.check_is_numeric,
                                                        timeout=20)
 
             if chans is None:
                 return ("Sorry, the request timed out. Please make sure you" +
                         " type a valid sequence of numbers")
-            if self.validateChan(chanList, chans):
+            if self.validate_channel(chanList, chans):
                 break
             else:
-                await self.client.send_message(message.channel,
-                                               "Invalid channel choices")
-        await self.client.send_message(message.channel,
-                                       "What do you want to send?" +
-                                       " (remember: {e} = @ev and {h} = @her)")
+                await self.client.send_message(message.author, message.channel, "Invalid channel choices", )
+        await self.client.send_message(message.author, message.channel, "What do you want to send?" +
+                                       " (remember: {e} = @ev and {h} = @her)", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -689,12 +883,33 @@ class Commands:
 
         embed.add_field(name="Channels",
                         value="\n".join(channames))
+        subkey, friendly = self.get_event_subscription(msgstr)
+        if subkey is None:
+            await self.client.send_message(message.author, message.channel, "I was unable to auto-detect " +
+                                           "any game titles in your post " +
+                                           "subscribers will not be notified", )
+        else:
+            tempm = await self.client.send_message(message.author, message.channel, "auto-detect found: **" +
+                                                   friendly + "** Is this " +
+                                                   "correct?[yes/no]", )
+            n = await self.client.wait_for_message(channel=tempm.channel,
+                                                   author=message.author,
+                                                   check=self.check_yes_no,
+                                                   timeout=15)
+            if n is None:
+                return "Timed out..."
+
+
+            if n.content == "yes":
+                embed.add_field(name="Subscription Key:",
+                                value=friendly + "({})".format(subkey),
+                                inline=False)
+                await self.notify_subscribers(message, subkey)
 
         await self.client.embed(message.channel, embed)
-        await self.client.send_message(message.channel,
-                                       "If this is ok, type confirm. " +
+        await self.client.send_message(message.author, message.channel, "If this is ok, type confirm. " +
                                        " Otherwise, wait for it to timeout " +
-                                       " and try again")
+                                       " and try again", )
 
         msg2 = await self.client.wait_for_message(channel=message.channel,
                                                   author=message.author,
@@ -704,11 +919,10 @@ class Commands:
             return "Event post timed out"
 
         for i in toPost:
-            await self.client.send_message(i, msgstr)
+            await self.client.send_message(message.author, i, msgstr, )
             await asyncio.sleep(2)
 
-        await self.client.send_message(message.channel,
-                                       "Messages have been posted")
+        await self.client.send_message(message.author, message.channel, "Messages have been posted", )
 
     # =========REDEFINITIONS============ #
 
@@ -717,7 +931,11 @@ class Commands:
         what...
         """
         return await self.sub(message, "cat")
-
+    async def birb(self, message):
+        """
+        flapflap...
+        """
+        return await self.sub(message, "birb")
     async def dog(self, message):
         """
         what...
@@ -759,7 +977,7 @@ class Commands:
         Shows the round trip time from this bot to you and back
         Syntax: `>ping`
         """
-        msg = await self.client.send_message(message.channel, "*hugs*")
+        msg = await self.client.send_message(message.author, message.channel, "*hugs*", )
         delta = int((datetime.now() - msg.timestamp).microseconds / 1000)
         self.config.stats['pingScore'] += delta
         self.config.stats['pingCount'] += 1
@@ -778,7 +996,7 @@ class Commands:
         Displays the weather for a location.
         Syntax: `>weather (location)`
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         return "Weather support is not available on petal just yet"
 
         if args[0] == '':
@@ -824,7 +1042,7 @@ class Commands:
         if not self.level3(message.author):
             return "You must have level4 access to perform this command"
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if len(args) < 3:
             return ("You must have a title, a post and a subreddit. " +
                     "Check the help text")
@@ -856,12 +1074,11 @@ class Commands:
             return ("I'm sorry, you must have logging enabled to use" +
                     " administrative functions")
 
-        if not self.hasRole(message.author, "mod"):
+        if not self.check_user_has_role(message.author, "mod"):
             return "You must have the `mod` role"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason" +
-                                       "(just reply below): ")
+        await self.client.send_message(message.author, message.channel, "Please give a reason" +
+                                       "(just reply below): ", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -869,8 +1086,8 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -901,8 +1118,7 @@ class Commands:
 
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel), logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Cleaning up...")
+                await self.client.send_message(message.author, message.channel, "Cleaning up...", )
                 await self.client.send_typing(message.channel)
                 await asyncio.sleep(4)
                 petal.lockLog = False
@@ -921,12 +1137,11 @@ class Commands:
             return ("I'm sorry, you must have logging enabled " +
                     "to use administrative functions")
 
-        if not self.hasRole(message.author, "mod"):
+        if not self.check_user_has_role(message.author, "mod"):
             return "You must have the `mod` role"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason" +
-                                       " (just reply below): ")
+        await self.client.send_message(message.author, message.channel, "Please give a reason" +
+                                       " (just reply below): ", )
 
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
@@ -934,16 +1149,15 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
         else:
-            await self.client.send_message(message.channel,
-                                           "You are about to ban: " +
+            await self.client.send_message(message.author, message.channel, "You are about to ban: " +
                                            userToBan.name +
-                                           ". If this is correct, type `yes`")
+                                           ". If this is correct, type `yes`", )
             msg = await self.client.wait_for_message(channel=message.channel,
                                                      author=message.author,
                                                      timeout=10)
@@ -982,8 +1196,7 @@ class Commands:
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel),
                                         logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Clearing out messages... ")
+                await self.client.send_message(message.author, message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id
@@ -999,25 +1212,24 @@ class Commands:
             return ("I'm sorry, you must have logging enabled to" +
                     " use administrative functions")
 
-        await self.client.send_message(message.channel,
-                                       "Please give a reason " +
-                                       " (just reply below): ")
+        await self.client.send_message(message.author, message.channel, "Please give a reason " +
+                                       " (just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
         if msg is None:
             return "Timed out while waiting for input"
 
-        await self.client.send_message(message.channel, "How long? (days) ")
+        await self.client.send_message(message.author, message.channel, "How long? (days) ", )
         msg2 = await self.client.wait_for_message(channel=message.channel,
                                                   author=message.author,
-                                                  check=self.isNumeric,
+                                                  check=self.check_is_numeric,
                                                   timeout=30)
         if msg2 is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.getMember(message,
-                                   self.cleanInput(message.content)[0])
+        userToBan = self.get_member(message,
+                                    self.clean_input(message.content)[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -1039,9 +1251,7 @@ class Commands:
                 logEmbed = discord.Embed(title="User Ban",
                                          description=msg.content,
                                          colour=0xff0000)
-                logEmbed.set_author(name=self.client.user.name,
-                                    icon_url="https:" +
-                                    "//puu.sh/tACjX/fc14b56458.png")
+
                 logEmbed.add_field(name="Issuer",
                                    value=message.author.name + "\n" +
                                    message.author.id)
@@ -1055,8 +1265,7 @@ class Commands:
 
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel), logEmbed)
-                await self.client.send_message(message.channel,
-                                               "Clearing out messages... ")
+                await self.client.send_message(message.author, message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id +
@@ -1076,17 +1285,16 @@ class Commands:
         if not self.level2(message.author):
             return "You must have lv2 perms to use the warn command"
 
-        await self.client.send_message(message.channel,
-                                       "Please give a message to send " +
-                                       "(just reply below): ")
+        await self.client.send_message(message.author, message.channel, "Please give a message to send " +
+                                       "(just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.getMember(message,
-                                    self.cleanInput(message.content)[0])
+        userToWarn = self.get_member(message,
+                                     self.clean_input(message.content)[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -1096,9 +1304,7 @@ class Commands:
                                           description="The server has sent " +
                                           " you an official warning",
                                           colour=0xfff600)
-                warnEmbed.set_author(name=self.client.user.name,
-                                     icon_url=(
-                                      "https://puu.sh/tADFM/dc80dc3a5d.png"))
+
                 warnEmbed.add_field(name="Reason", value=msg.content)
                 warnEmbed.add_field(name="Issuing Server",
                                     value=message.server.name,
@@ -1147,21 +1353,21 @@ class Commands:
                     "use administrative functions")
 
         if (not self.level3(message.author) and
-           not self.hasRole(message.author, "mod")):
+           not self.check_user_has_role(message.author, "mod")):
             return ("You must have lv3 perms or the `mod`" +
                     " role to use the mute command")
 
-        await self.client.send_message(message.channel, "Please give a " +
+        await self.client.send_message(message.author, message.channel, "Please give a " +
                                        "reason for the mute " +
-                                       "(just reply below): ")
+                                       "(just reply below): ", )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.getMember(message,
-                                    self.cleanInput(message.content)[0])
+        userToWarn = self.get_member(message,
+                                     self.clean_input(message.content)[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -1170,15 +1376,14 @@ class Commands:
 
                 if muteRole in userToWarn.roles:
                     await self.client.remove_roles(userToWarn, muteRole)
+                    await self.client.server_voice_state(userToWarn, mute=False)
                     warnEmbed = discord.Embed(title="User Unmute",
                                               description="You have been " +
                                               "unmuted by" +
                                               message.author.name,
                                               colour=0x00ff11)
 
-                    warnEmbed.set_author(name=self.client.user.name,
-                                         icon_url=("https://puu.sh/tB2KH/" +
-                                                   "cea152d8f5.png"))
+
                     warnEmbed.add_field(name="Reason",
                                         value=msg.content)
                     warnEmbed.add_field(name="Issuing Server",
@@ -1187,6 +1392,7 @@ class Commands:
                     muteswitch = "Unmute"
                 else:
                     await self.client.add_roles(userToWarn, muteRole)
+                    await self.client.server_voice_state(userToWarn, mute=True)
                     warnEmbed = discord.Embed(title="User Mute",
                                               description="You have been " +
                                                           "muted by" +
@@ -1208,9 +1414,7 @@ class Commands:
                 logEmbed = discord.Embed(title="User {}".format(muteswitch),
                                          description=msg.content,
                                          colour=0x1200ff)
-                logEmbed.set_author(name=self.client.user.name,
-                                    icon_url="https://puu.sh/tB2KH/" +
-                                             "cea152d8f5.png")
+
                 logEmbed.add_field(name="Issuer",
                                    value=message.author.name + "\n" +
                                         message.author.id)
@@ -1238,7 +1442,7 @@ class Commands:
         if not self.level2(message.author):
             return ("You do not have sufficient permissions to use the purge" +
                     " function")
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if len(args) < 1:
             return "Please provide a number between 1 and 200"
         try:
@@ -1248,12 +1452,10 @@ class Commands:
         else:
             if numDelete > 200 or numDelete < 0:
                 return "That is an invalid number of messages to delete"
-        await self.client.send_message(message.channel,
-                                       "You are about to delete {} messages " +
+        await self.client.send_message(message.author, message.channel, "You are about to delete {} messages " +
                                        "(including these confirmations) in " +
                                        "this channel. Type: confirm if this " +
-                                       "is correct.".format(str(numDelete + 3))
-                                       )
+                                       "is correct.".format(str(numDelete + 3)), )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  content="confirm",
                                                  author=message.author,
@@ -1291,17 +1493,29 @@ class Commands:
         >void grabs a random item from the void and displays/prints it.
         >void <link or text message> sends to void forever
         """
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         if args[0] == "":
-            response = self.config.getVoid()
+            response = self.db.get_void()
+            author = response["author"]
+            num = response["number"]
+            response = response["content"]
+
+            if "@everyone" in response or "@here" in response:
+                self.db.delete_void()
+                return "Someone (" + author + ") is a butt and tried to " \
+                                              "sneak an @ev tag into the void." \
+                                              "\n\nIt was deleted..."
+
             if response.startswith("http"):
-                return "You grab a link from the void: \n" + response
+                return "*You grab a link from the void* \n" + response
             else:
+                self.log.f("VOID", message.author.name + " retrieved " + str(num) + " from the void")
                 return response
         else:
-            count = self.config.saveVoid(args[0],
-                                         message.author.name,
-                                         message.author.id)
+            count = self.db.save_void(args[0],
+                                      message.author.name,
+                                      message.author.id)
+
             if count is not None:
                 return "Added item number " + str(count) + " to the void"
 
@@ -1311,8 +1525,8 @@ class Commands:
         Post updates to social media
         """
 
-        if not self.hasRole(message.author,
-                            self.config.get("socialMediaRole")):
+        if not self.check_user_has_role(message.author,
+                                        self.config.get("socialMediaRole")):
             return "You must have `{}` to post social media updates"
         modes = []
         names = []
@@ -1341,37 +1555,34 @@ class Commands:
         if len(modes) == 0:
             return "No modules enabled for social media posting"
 
-        await self.client.send_message(message.channel,
-                                       "Hello, " +
+        await self.client.send_message(message.author, message.channel, "Hello, " +
                                        message.author.name +
                                        " here are the enabled social media " +
                                        "services \n" + "\n".join(names) +
                                        "\n\n Please select which ones you " +
-                                       "want to use (e.g. 023) ")
+                                       "want to use (e.g. 023) ", )
 
         sendto = await self.client.wait_for_message(channel=message.channel,
                                                     author=message.author,
-                                                    check=self.isNumeric,
+                                                    check=self.check_is_numeric,
                                                     timeout=20)
         if sendto is None:
             return ("The process timed out, " +
                     "please enter a valid string of numbers")
-        if not self.validateChan(modes, sendto):
+        if not self.validate_channel(modes, sendto):
             return "Invalid selection, please try again"
 
-        await self.client.send_message(message.channel,
-                                       "Please type a title for your post " +
-                                       "(timeout after 1 minute)")
+        await self.client.send_message(message.author, message.channel, "Please type a title for your post " +
+                                       "(timeout after 1 minute)", )
         mtitle = await self.client.wait_for_message(channel=message.channel,
                                                     author=message.author,
                                                     timeout=60)
         if mtitle is None:
             return "The process timed out, you need a valid title"
-        await self.client.send_message(message.channel,
-                                       "Please type the content of the post " +
+        await self.client.send_message(message.author, message.channel, "Please type the content of the post " +
                                        "below. Limit to 140 characters for " +
                                        "twitter posts (this process will " +
-                                       "time out after 2 minutes)")
+                                       "time out after 2 minutes)", )
         mcontent = await self.client.wait_for_message(channel=message.channel,
                                                       author=message.author,
                                                       timeout=120)
@@ -1383,9 +1594,8 @@ class Commands:
             if len(mcontent.content) > 140:
                 return "This post is too long for twitter"
 
-        await self.client.send_message(message.channel,
-                                       "Your post is ready. Please type: " +
-                                       "`send`")
+        await self.client.send_message(message.author, message.channel, "Your post is ready. Please type: " +
+                                       "`send`", )
         meh = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  content="send",
@@ -1400,22 +1610,20 @@ class Commands:
                                        send_replies=False)
                 self.log.f("smupdate", "Reddit Response: " + str(response))
             except praw.exceptions.APIException as e:
-                await self.client.send_message(message.channel,
-                                               "The post did not send, " +
+                await self.client.send_message(message.author, message.channel, "The post did not send, " +
                                                "this key has been " +
                                                "ratelimited. Please wait for" +
                                                " about 8-10 minutes before " +
-                                               "posting again")
+                                               "posting again", )
             else:
-                await self.client.send_message(message.channel,
-                                               "Submitted post to " +
+                await self.client.send_message(message.author, message.channel, "Submitted post to " +
                                                self.config.get("reddit")
-                                               ["targetSR"])
+                                               ["targetSR"], )
                 await asyncio.sleep(2)
 
         if "1" in sendto.content:
             status = self.t.PostUpdate(mcontent.clean_content)
-            await self.client.send_message(message.channel, "Submitted tweet")
+            await self.client.send_message(message.author, message.channel, "Submitted tweet", )
             await asyncio.sleep(2)
 
         if "2" in sendto.content:
@@ -1433,14 +1641,12 @@ class Commands:
             postpage = facebook.GraphAPI(page_access_token)
 
             if postpage is None:
-                await self.client.send_message(message.channel,
-                                               "Invalid page id for " +
-                                               "facebook, will not post")
+                await self.client.send_message(message.author, message.channel, "Invalid page id for " +
+                                               "facebook, will not post", )
             else:
                 status = postpage.put_wall_post(mcontent.clean_content)
-                await self.client.send_message(message.channel,
-                                               "Posted to facebook under " +
-                                               " page: " + page["name"])
+                await self.client.send_message(message.author, message.channel, "Posted to facebook under " +
+                                               " page: " + page["name"], )
                 self.log.f("smupdate", "Facebook Response: " + str(status))
                 await asyncio.sleep(2)
 
@@ -1451,10 +1657,9 @@ class Commands:
                                 title=mtitle.content,
                                 body=mcontent.clean_content)
 
-            await self.client.send_message(message.channel,
-                                           "Posted to tumblr: " +
+            await self.client.send_message(message.author, message.channel, "Posted to tumblr: " +
                                            self.config.get("tumblr")
-                                           ["targetBlog"])
+                                           ["targetBlog"], )
 
         return "Done posting"
 
@@ -1464,14 +1669,14 @@ class Commands:
         >blacklist <tag>
         """
 
-        args = self.cleanInput(message.content)
-        if not self.level2(message.author) and self.hasRole(message.author,
+        args = self.clean_input(message.content)
+        if not self.level2(message.author) and self.check_user_has_role(message.author,
                                                             "mod"):
             return "You need level 2 or the `mod` role"
         if len(args) < 1:
             return "Tag someone ya goof"
         else:
-            mem = self.getMember(message, args[0])
+            mem = self.get_member(message, args[0])
             if mem is None:
                 return "Couldnt find user with ID: " + args[0]
 
@@ -1488,15 +1693,14 @@ class Commands:
         >calm <link to add to calm>
         """
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         gal = self.config.get("calmGallery")
         if gal is None:
             return "Sadly, calm hasn't been set up correctly"
         if self.level4(message.author) and args[0] != '':
-            await self.client.send_message(message.channel,
-                                           "You will be held accountable for" +
+            await self.client.send_message(message.author, message.channel, "You will be held accountable for" +
                                            " whatever is posted in here." +
-                                           " Just a heads up ^_^ ")
+                                           " Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                        message.author.id,
                        "content": args[0].strip()})
@@ -1510,15 +1714,14 @@ class Commands:
         >comfypixel <link to add to comfypixel>
         """
 
-        args = self.cleanInput(message.content)
+        args = self.clean_input(message.content)
         gal = self.config.get("comfyGallery")
         if gal is None:
             return "Sadly, comfypixel hasn't been set up correctly"
         if self.level4(message.author) and args[0] != '':
-            await self.client.send_message(message.channel,
-                                           "You will be held accountable " +
+            await self.client.send_message(message.author, message.channel, "You will be held accountable " +
                                            "for whatever is posted in here." +
-                                           " Just a heads up ^_^ ")
+                                           " Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                         message.author.id,
                         "content": args[0].strip()})
@@ -1539,188 +1742,87 @@ class Commands:
 
     async def askpatch(self, message):
         """
-        >Gives access to the askpetal database
-        >askpetal <instruction> | <extra sometimes required info>
+        >Gives access to the askpatch database
+        >askpatch <submit/approve/ignore> | <extra sometimes required info>
         """
 
-        # Like I said ealier in checkUpdate(), ask patch is really only
+        # Like I said earlier in check_pa_updates(), ask patch is really only
         # designed to work with discord.gg/patchgaming. If you want to dig
         # around in here and change things, feel free.
-        # (mySql Schema in checkUpdate() )
+        # (mySql Schema in check_pa_updates() )
 
-        if message.server.id != "126236346686636032":
+        if message.channel.id != self.config.get("motdModChannel"):
+            self.log.f("ap", str(message.server.id) + " != " + self.config.get("motdModChannel"))
             return "Sorry, you are not permitted to use this"
-        args = self.cleanInput(message.content)
+
+        args = self.clean_input(message.content)
         print(str(args))
         if args[0] == "submit":
-            conn = _mysql.connect(self.config.get("mysql")["hostname"],
-                                  self.config.get("mysql")["username"],
-                                  self.config.get("mysql")["password"],
-                                  self.config.get("mysql")["database"])
-            conn.autocommit(True)
-            add_question = ("INSERT INTO questions (author, id, content, " +
-                            "used) VALUES (\"{}\", \"{}\", \"{}\", false)"
-                            .format(message.author.name,
-                                    message.author.id,
-                                    " ".join(args[1:])))
-            get_entry = "SELECT MAX(entryid) from questions;"
-            await self.client.send_message(message.channel,
-                                           "Your message will be added to " +
-                                           "the database. Is this correct? " +
-                                           "(type yes if yes)\n" +
-                                           " ".join(args[1:]))
+            response = self.db.submit_motd(message.author.id, " ".join(args[1:]))
+            if response is None:
+                return "Unable to add to database, ask your bot owner as to why"
 
-            res = await self.client.wait_for_message(author=message.author,
-                                                     channel=message.channel,
-                                                     timeout=20)
-            if res is None:
-                return "Timed out without response"
-            else:
-                if res.content == "yes":
-                    conn.query(add_question)
-                    conn.query(get_entry)
-                    r = conn.store_result()
-                    entryid = r.fetch_row()[0][0]
-                    entryid = str(entryid).lstrip("('").rstrip("',)")
-                    chan = self.client.get_channel("313614587285078016")
-                    newEmbed = discord.Embed(title="Entry " + str(entryid),
-                                             description="New question from "
-                                             + message.author.name,
-                                             colour=0x8738f9)
-                    newEmbed.set_author(name=self.client.user.name,
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon-" +
-                                                 "Question-Mark-Icon.jpg")
-                    newEmbed.add_field(name="Question",
-                                       value=" ".join(args[1:]))
-                    conn.close()
+            newEmbed = discord.Embed(title="Entry " + str(response["num"]),
+                                     description="New question from "
+                                                 + message.author.name,
+                                     colour=0x8738f)
+            newEmbed.add_field(name="content", value=response["content"])
 
-                    await self.client.embed(chan, newEmbed)
-                else:
-                    return "Okie dokie, try again if you like"
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, embedded=newEmbed)
+
             return "Question added to database"
 
         elif args[0] == "approve":
-            if message.channel.id != "313614587285078016":
+            if message.channel.id != self.config.get("motdModChannel"):
                 return "You can't use that here"
-            else:
-                if len(args) < 2:
-                    return "You need to specify an entry"
-                else:
-                    conn = _mysql.connect(self.config.get("mysql")["hostname"],
-                                          self.config.get("mysql")["username"],
-                                          self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["database"])
-                    conn.autocommit(True)
-                    find_entry = ("SELECT entryid, author, content, used," +
-                                  " approved FROM questions WHERE entryid=" +
-                                  args[1])
-                    approve_entry = ("UPDATE questions SET approved = true" +
-                                     " WHERE entryid=" + args[1])
-                    conn.query(find_entry)
-                    r = conn.store_result()
-                    entry = r.fetch_row()[0]
-                    if not entry:
-                        return "Could not find any row with"
 
-                    entryid = entry[0]
-                    # author = entry[1].decode("utf-8")
-                    content = entry[2].decode("utf-8")
-                    # used = entry[3]
-                    approved = entry[4]
-                    if approved == "1":
-                        newEmbed = discord.Embed(title="Already Approved " +
-                                                       str(entryid),
-                                                 description=content,
-                                                 colour=0xFFA500)
-                        newEmbed.set_author(name="AskPatch",
-                                            icon_url="http://images.clipart" +
-                                                     ".panda.com/question-" +
-                                                     "mark-icon-Question-" +
-                                                     "Mark-Icon.jpg")
-                        chan = self.client.get_channel("313614587285078016")
-                        await self.client.embed(chan, newEmbed)
-                        return ("Entry has already been approved, " +
-                                "use reject to remove it from the queue")
+            if len(args) < 2:
+                return "You need to specify an entry"
 
-                    conn.query(approve_entry)
-                    conn.close()
+            if not self.check_is_numeric(args[1]):
+                return "Entry must be an integer"
 
-                    newEmbed = discord.Embed(title="Approved " + str(entryid),
-                                             description=content,
-                                             colour=0x00FF00)
-                    newEmbed.set_author(name="AskPatch",
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon" +
-                                                 "-Question-Mark-Icon.jpg")
-                    newEmbed.add_field(name="Has been Approved",
-                                       value="True")
-                    chan = self.client.get_channel("313614587285078016")
-                    await self.client.embed(chan, newEmbed)
+            result = self.db.update_motd(int(args[1]))
+            if result is None:
+                return "No entries exist with id number: " + args[1]
 
-        elif args[0] == "ignore":
-            if message.channel.id != "313614587285078016":
+
+
+            newEmbed = discord.Embed(title="Approved " + str(result["num"]),
+                                     description=result["content"],
+                                     colour=0x00FF00)
+
+
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, newEmbed)
+
+        elif args[0] == "reject":
+            if message.channel.id != self.config.get("motdModChannel"):
                 return "You can't use that here"
-            else:
-                if len(args) < 2:
-                    return "You need to specify an entry"
-                else:
-                    conn = _mysql.connect(self.config.get("mysql")["hostname"],
-                                          self.config.get("mysql")["username"],
-                                          self.config.get("mysql")["password"],
-                                          self.config.get("mysql")["database"])
-                    conn.autocommit(True)
-                    find_entry = ("SELECT entryid, author, content, used," +
-                                  " approved FROM questions WHERE entryid=" +
-                                  args[1])
-                    approve_entry = ("UPDATE questions SET approved = false " +
-                                     "WHERE entryid=" + args[1])
-                    conn.query(find_entry)
-                    r = conn.store_result()
-                    entry = r.fetch_row()
-                    if not entry:
-                        return "Could not find any row with"
-                    else:
-                        entry = entry[0]
 
-                    entryid = entry[0]
-                    # author = entry[1].decode("utf-8")
-                    content = entry[2].decode("utf-8")
-                    # used = entry[3]
-                    approved = entry[4]
-                    if approved == "0":
-                        newEmbed = discord.Embed(title="Rejected " +
-                                                       str(entryid),
-                                                 description=content,
-                                                 colour=0xFFA500)
-                        newEmbed.set_author(name="AskPatch",
-                                            icon_url="http://images." +
-                                                     "clipartpanda.com/ " +
-                                                     "question-mark-icon-" +
-                                                     "Question-Mark-Icon.jpg")
-                        chan = self.client.get_channel("313614587285078016")
-                        await self.client.embed(chan, newEmbed)
-                        return ("Entry has already been rejected or has not " +
-                                "been approved yet, use approve to add it to" +
-                                " the queue")
+            if len(args) < 2:
+                return "You need to specify an entry"
 
-                    conn.query(approve_entry)
-                    conn.close()
+            if not self.check_is_numeric(args[1]):
+                return "Entry must be an integer"
 
-                    newEmbed = discord.Embed(title=" " + str(entryid),
-                                             description=content,
-                                             colour=0xFF0000)
-                    newEmbed.set_author(name="AskPatch",
-                                        icon_url="http://images.clipartpanda" +
-                                                 ".com/question-mark-icon-" +
-                                                 "Question-Mark-Icon.jpg")
-                    newEmbed.add_field(name="Rejected", value="True")
-                    chan = self.client.get_channel("313614587285078016")
-                    await self.client.embed(chan, newEmbed)
-                    return "Entry has been removed from the queue"
+            result = self.db.update_motd(int(args[1]), approve=False)
+            if result is None:
+                return "No entries exist with id number: " + args[1]
+
+
+
+            newEmbed = discord.Embed(title="Rejected" + str(result["num"]),
+                                     description=result["content"],
+                                     colour=0xFFA500)
+
+
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, newEmbed)
+
         elif args[0] == 'list':
-            return ("Patch Asks info can be found at " +
-                    " http://drunkencode.net/askpatch")
+            return ("Patch Asks info is currently disabled")
 
     async def paforce(self, message):
         """
@@ -1728,13 +1830,14 @@ class Commands:
         >paforce
         """
         if self.level2(message.author):
-            await self.checkUpdate()
+            response = await self.check_pa_updates(force=True)
 
             self.log.f("pa", message.author.name + " with ID: " +
                        message.author.id +
                        " used the force!")
             await self.client.delete_message(message)
-            return
+            if response is not None:
+                return response
         else:
             return "You may not use this command"
 
@@ -1765,7 +1868,7 @@ class Commands:
                  "squirell", "moose", "sheep", "ferret", "stoat", "cow",
                  "noperope", "kitten", "puppy", "snail", "turtle", "tortoise",
                  "zebra", "lion", "elephant", "sloth", "drop bear", "octopus",
-                 "turkey", "pelican", "GraterDog", "lesserDog", "seahorse"]
+                 "turkey", "pelican", "GreaterDog", "lesserDog", "seahorse"]
 
         beta = ["Apple", "Apricots", "Avocado", "Banana", "Cherries",
                 "Cherimoya", "Blackberry", "Raspberry",  "Coconut",
@@ -1780,7 +1883,7 @@ class Commands:
 
         anondb = self.config.get("anon")
 
-        if (message.author.id in self.activeSads
+        if (message.author.id in self.active_sad
            or message.author.id in self.activeHelpers):
             return "You're already in a call..."
 
@@ -1789,14 +1892,14 @@ class Commands:
 
         server = self.client.get_server(anondb["server"])
         if not message.channel.is_private:
-            args = self.cleanInput(message.content)
+            args = self.clean_input(message.content)
             if len(args) == 0:
                 return "For private chat only, unless adding users"
             if not self.level2(message.author):
                 return "You cannot use this"
 
 
-            m = self.getMember(message, args[0])
+            m = self.get_member(message, args[0])
             try:
                 anondb = self.config.get("anon")["help"]
                 anonserver = self.client.get_server(self.config
@@ -1821,13 +1924,13 @@ class Commands:
                                    " removed " + m.name + " from anon list")
                 return "Removed " + m.mention + " from anon list!"
 
-        await self.client.send_message(message.channel, "One moment while I " +
-                                                   "connect you to a listener")
-        self.activeSads.append(message.author.id)
+        await self.client.send_message(message.author, message.channel, "One moment while I " +
+                                       "connect you to a listener", )
+        self.active_sad.append(message.author.id)
 
         await asyncio.sleep(1)
-        x = await self.client.send_message(message.channel, "Your name is: "
-                                                            + name1)
+        x = await self.client.send_message(message.author, message.channel, "Your name is: "
+                                           + name1, )
 
         availableHelpers = []
         for z in anondb["help"]:
@@ -1840,13 +1943,12 @@ class Commands:
 
         saduser = message.author
         if len(availableHelpers) == 0:
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return ("All helpers are currently assisting others right now, " +
                     " please try again later")
-        await self.client.send_message(message.channel,
-                                       "There are currently: " +
+        await self.client.send_message(message.author, message.channel, "There are currently: " +
                                        str(len(availableHelpers)) +
-                                       " available helpers.")
+                                       " available helpers.", )
         self.log.info(str(anondb["help"]))
 
         helpid = availableHelpers[randint(0, len(availableHelpers)-1)]
@@ -1854,51 +1956,47 @@ class Commands:
         helpuser = discord.utils.get(server.members, id=helpid)
         if helpuser is None:
             self.log.warn(helpid + " is an invalid id for anon")
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return "Found invalid user, try again"
         self.activeHelpers.append(helpid)
-        m = await self.client.send_message(helpuser, "Hello, there is someone " +
-                                                "who wants to chat " +
-                                                "anonymously.\n " +
-                                                "Type accept to begin")
+        m = await self.client.send_message(message.author, helpuser, "Hello, there is someone " +
+                                           "who wants to chat " +
+                                           "anonymously.\n " +
+                                           "Type accept to begin", )
         n = await self.client.wait_for_message(channel=m.channel,
                                                author=helpuser,
                                                content="accept", timeout=15)
         if n is None:
-            await self.client.send_message(helpuser, "Timed out...")
+            await self.client.send_message(message.author, helpuser, "Timed out...", )
             del self.activeHelpers[self.activeHelpers.index(helpid)]
-            del self.activeSads[self.activeSads.index(message.author.id)]
+            del self.active_sad[self.active_sad.index(message.author.id)]
             return "Sorry, the user didnt respond"
-        await self.client.send_message(helpuser,
-                                       "The chat will automatically dis" +
+        await self.client.send_message(message.author, helpuser, "The chat will automatically dis" +
                                        "connect if either user is idle " +
                                        "for more than 5 minutes" +
-                                       "\n(or type !end)" )
-        await self.client.send_message(saduser,
-                                       "The chat will automatically dis" +
+                                       "\n(or type !end)", )
+        await self.client.send_message(message.author, saduser, "The chat will automatically dis" +
                                        "connect if either user is idle " +
                                        "for more than 5 minutes" +
-                                       "\n(or type !end)" )
+                                       "\n(or type !end)", )
 
-        await self.client.send_message(helpuser, "Connected! Your name is: " +
-                                            name2 + ".\n Type a message.")
+        await self.client.send_message(message.author, helpuser, "Connected! Your name is: " +
+                                       name2 + ".\n Type a message.", )
 
-        await self.client.send_message(helpuser,
-                                       "*Just a small note, while this is " +
+        await self.client.send_message(message.author, helpuser, "*Just a small note, while this is " +
                                        "designed to be completely anon, " +
                                        "petal still keeps a hidden record of" +
                                        " your userID corresponding to your " +
                                        "fake name. Only admins can see this " +
-                                       "and we will not view it unless abuse "+
-                                       " is reported from either party*")
-        await self.client.send_message(saduser,
-                                       "*Just a small note, while this is " +
+                                       "and we will not view it unless abuse " +
+                                       " is reported from either party*", )
+        await self.client.send_message(message.author, saduser, "*Just a small note, while this is " +
                                        "designed to be completely anon, " +
                                        "petal still keeps a hidden record of" +
                                        " your userID corresponding to your " +
                                        "fake name. Only admins can see this " +
-                                       "and we will not view it unless abuse "+
-                                       " is reported from either party*")
+                                       "and we will not view it unless abuse " +
+                                       " is reported from either party*", )
 
         self.log.f("anon", name1 + " is " + saduser.name + " " + saduser.id)
         self.log.f("anon", name2 + " is " + helpuser.name + " " + helpuser.id)
@@ -1906,24 +2004,24 @@ class Commands:
         self.sc = x.channel
         while True:
 
-            m = await self.client.wait_for_message(check=self.anonCheck,
+            m = await self.client.wait_for_message(check=self.check_anon_message,
                                                    timeout=300)
             if m is None:
-                await self.client.send_message(helpuser, "Chat timed out...")
-                del self.activeHelpers[activeHelpers.index(helpid)]
-                del self.activeSads[self.activeSads.index(message.author.id)]
+                await self.client.send_message(message.author, helpuser, "Chat timed out...", )
+                del self.activeHelpers[self.activeHelpers.index(helpid)]
+                del self.active_sad[self.active_sad.index(message.author.id)]
                 return "Chat timed out..."
             if m.content == "!end":
-                await self.client.send_message(helpuser, "Chat ended")
+                await self.client.send_message(message.author, helpuser, "Chat ended", )
                 del self.activeHelpers[self.activeHelpers.index(helpid)]
-                del self.activeSads[self.activeSads.index(message.author.id)]
+                del self.active_sad[self.active_sad.index(message.author.id)]
                 return "Chat ended"
             if m.channel == self.sc:
-                await self.client.send_message(self.hc, "**"+ name1 + "**: " +
-                                                        m.content)
+                await self.client.send_message(message.author, self.hc, "**" + name1 + "**: " +
+                                               m.content, )
             else:
-                await self.client.send_message(self.sc, "**"+ name2 + "**: " +
-                                                        m.content)
+                await self.client.send_message(message.author, self.sc, "**" + name2 + "**: " +
+                                               m.content, )
 
     async def support(self, message):
         """
@@ -1934,10 +2032,10 @@ class Commands:
             self.log.err("supportChannel not found")
             return "SupportChannel not configured in settings."
 
-        if message.author.id in self.supportdict:
-            if time.time() - self.supportdict[message.author.id] < 300:
+        if message.author.id in self.support_dict:
+            if time.time() - self.support_dict[message.author.id] < 300:
                 tval = 500 - round(time.time()
-                                   - self.supportdict[message.author.id], 2)
+                                   - self.support_dict[message.author.id], 2)
                 em = discord.Embed(title="Spam prevention",
                                    description="You are doing that too much",
                                    colour=0x0acdff)
@@ -1948,34 +2046,761 @@ class Commands:
                         + " emergency line (911, 999, etc)")
 
             else:
-                self.supportdict[message.author.id] = time.time()
+                self.support_dict[message.author.id] = time.time()
         else:
-            self.supportdict[message.author.id] = time.time()
-        args = self.cleanInput(message.content)
+            self.support_dict[message.author.id] = time.time()
+        args = self.clean_input(message.content)
+        if message.channel.is_private:
+            await self.client.send_message(message.author, self.client.get_channel(
+                self.config.get("supportChannel")), "@here, " + message.author.mention +
+                                                    " (mobile friendly: " + message.author.name
+                                                    + ") asked for support in PMs")
+            return (message.author.mention +
+                    " do not worry, your request has been sent to the " +
+                    "listener server and someone should be with you shortly")
 
         if len(args) == 0:
-            await self.client.send_message(
-                  self.client.get_channel(
-                   self.config.get("supportChannel")), "@here, " +
-                                                       message.author.mention +
-                                                       " (mobile friendly: " +
-                                                       message.author.name +
-                                                       ") has requested " +
-                                                       "listener support in " +
-                                                       message.channel.name +
-                                                       " (" + message.server
-                                                       .name + ")" +
-                                                       "\n (They gave no " +
-                                                       "message)")
+            await self.client.send_message(message.author, self.client.get_channel(
+                self.config.get("supportChannel")), "@here, " +
+                                                    message.author.mention +
+                                                    " (mobile friendly: " +
+                                                    message.author.name +
+                                                    ") has requested " +
+                                                    "listener support in " +
+                                                    message.channel.name +
+                                                    " (" + message.server
+                                                    .name + ")" +
+                                                    "\n (They gave no " +
+                                                    "message)", )
 
         else:
-            await self.client.send_message(
-                  self.client.get_channel(self.config.get("supportChannel")),
-                  "@here, " + message.author.mention + " (mobile friendly: " +
-                  message.author.name + ") has requested listener support " +
-                  "in " + message.channel.name + " (" + message.server.name +
-                  ")." + "\n Message: `" + ' '.join(args) + "`")
+            await self.client.send_message(message.author, self.client.get_channel(self.config.get("supportChannel")),
+                                           "@here, " + message.author.mention + " (mobile friendly: " +
+                                           message.author.name + ") has requested listener support " +
+                                           "in " + message.channel.name + " (" + message.server.name +
+                                           ")." + "\n Message: `" + ' '.join(args) + "`", )
 
             return (message.author.mention +
                     " do not worry, your request has been sent to the " +
                     "listener server and someone should be with you shortly")
+
+    async def statsfornerds(self, message):
+        """
+        Displays stats for nerds
+        !statsfornerds
+        """
+        truedelta = int(self.config.stats['pingScore'] /
+                        self.config.stats['pingCount'])
+
+        em = discord.Embed(title="Stats",
+                           description="*for nerds*",
+                           colour=0x0acdff)
+        em.add_field(name="Version", value=version)
+        em.add_field(name="Uptime", value=self.get_uptime())
+        em.add_field(name="Void Count", value=str(self.db.void.count()))
+        em.add_field(name="Servers", value=str(len(self.client.servers)))
+        em.add_field(name="Total Number of Commands run",
+                     value=str(self.config.get("stats")["comCount"]))
+        em.add_field(name="Average Ping", value=str(truedelta))
+        mc = 0
+        for x in self.client.get_all_members():
+            mc += 1
+        em.add_field(name="Total Members",
+                     value=str(mc))
+        role = discord.utils.get(self.client.get_server(
+                                 self.config.get("mainServer")).roles,
+                                 name=self.config.get("mainRole"))
+        c = 0
+        if role is not None:
+            for m in self.client.get_all_members():
+
+                if role in m.roles:
+                    c += 1
+            em.add_field(name="Total Validated Members", value=str(c))
+
+        await self.client.embed(message.channel, em)
+
+    async def wiki(self, message):
+        """
+        Retrieves information about a query from wikipedia
+        !wiki <query>
+        """
+        query = message.content.lstrip(self.config.prefix + "wiki")
+        self.log.f("wiki", "Query string: " + query)
+        response = Pidgeon(query, version=version).get_summary()
+        if response[0] == 0:
+            return response[1]
+        else:
+            if "may refer to:" in response[1]["content"]:
+                em = discord.Embed( color=0xffcc33)
+                if "may refer to:" in response[1]["content"]:
+                    em.add_field(name="Developer Note",
+                                 value="It looks like this entry may have multiple results, "
+                                       "try and refine your search for better accuracy")
+
+            else:
+                em = discord.Embed(title=response[1]["title"], color=0xf8f9fa,
+                               description= response[1]["content"])
+
+
+            await self.client.embed(message.channel, em)
+            return "Full article: <http://en.wikipedia.org/?curid=" + str(response[1]["id"]) + ">"
+
+    async def xkcd(self, message):
+        """
+        Gets an xkcd. Random if number isn't specified
+        !xkcd <optional: number>
+        """
+        args = self.clean_input(message.content)
+        target_number = 0
+        try:
+            indexresp = json.loads(requests.get("http://xkcd.com/info.0.json").content.decode())
+        except requests.exceptions.ConnectionError:
+            return "XKCD did not return a valid response. It may be down."
+        except ValueError as e:
+            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+
+        if args[0] != '':
+            try:
+                target_number = int(args[0])
+
+            except ValueError:
+                return "You must enter a **number** for a custom xkcd"
+            else:
+                if int(target_number) == 404:
+                    return "Don't be that guy"
+
+        else:
+            number = indexresp["num"]
+            target_number = randint(0, number)
+            while target_number == 404:
+                target_number = randint(0, number)
+
+        try:
+            if target_number != 0:
+                resp = json.loads(requests.get("http://xkcd.com/{0}/info.0.json".format(target_number)).content.decode())
+            else:
+                resp = json.loads(requests.get("http://xkcd.com/info.0.json").content.decode())
+            number = resp["num"]
+
+        except requests.exceptions.ConnectionError:
+            return "XKCD did not return a valid response. It may be down."
+        except ValueError as e:
+            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+
+        embed = discord.Embed(title= str(resp["num"]) + ". " + resp["safe_title"],
+                              description="*" + resp["alt"] + "*",
+                              color=0x96A8C8)
+        embed.add_field(name="Date Published", value=resp["year"] + "-" + resp["month"] + "-" + resp["day"])
+
+        await self.client.embed(message.channel, embed)
+        return "link: " + resp["img"]
+
+    async def lpromote(self, message, user=None):
+
+        if user is None:
+            await self.client.send_message(message.author, message.channel, "Who would you like to promote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.get_member(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        cb = self.config.get("choppingBlock")
+
+        if user.id in cb:
+            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+                if message.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][message.author.id] = 1
+                    return "You have voted to promote, " + user.name
+                else:
+                    return "You already voted..."
+            else:
+                return "The time to vote on this user has expired. Please run " + self.config.prefix\
+                       + "lvalidate to add them to the roster"
+        else:
+            if self.check_user_has_role(user, "Helping Hands"):
+                return "This user is already a Helping Hands..."
+            now = datetime.utcnow() + timedelta(days=2)
+            cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id,
+                           "timeout": now}
+            return "A vote to promote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
+                                                                                                 user.discriminator)\
+                   + "\nYou man cancel this vote by running " + self.config.prefix \
+                   + "lcancel (not to be confused with smash bros)"
+
+    async def ldemote(self, message, user=None):
+        if user is None:
+            await self.client.send_message(message.author, message.channel, "Who would you like to demote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.get_member(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        cb = self.config.get("choppingBlock")
+        if user.id in cb:
+            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+                if message.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][message.author.id] = -1
+                    return "You have voted to demote, " + user.name
+                else:
+                    return "You already voted..."
+            else:
+                return "The time to vote on this user has expired. Please run " + self.config.prefix \
+                       + "lvalidate to add them to the roster"
+        else:
+            if not self.check_user_has_role(user, "Helping Hands"):
+                return "This user is not a member of Helping Hands. I cannot demote them"
+            now = datetime.utcnow() + timedelta(days=2)
+            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now}
+            return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
+                                                                                                user.discriminator) \
+                   + "\nYou may cancel this vote by running " + self.config.prefix \
+                   + "lcancel (not to be confused with smash bros)"
+
+    async def lvote(self, message):
+        """
+        ITs back boooyyyysssss!!!!
+        !lvote
+        """
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.check_user_has_role(message.author, "Listener"):
+            return "You must be a Listener to vote on Helping Hands"
+        args = self.clean_input(message.content)
+        user = None
+        if args[0] != '':
+            user = self.get_member(message, args[0])
+            if user is None:
+                return "No member with that id..."
+
+        while 1:
+            await self.client.send_message(message.author, message.channel, "Are we calling to promote or demote?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout = 20)
+
+            if response is None:
+                return "You didn't reply so I timed out..."
+            response = response.content
+            if response.lower() in ['promote', 'p']:
+                response = await self.lpromote(message, user)
+                self.config.save()
+                return response
+            elif response.lower() in ['demote', 'd']:
+                response = await self.ldemote(message, user)
+                self.config.save()
+                return response
+            else:
+                await self.client.send_message(message.author, message.channel, "Type promote or type demote [pd]")
+                await asyncio.sleep(1)
+
+    async def lcancel(self, message):
+        """
+        Cancels all lvotes you started. Does not validate them.
+        !lcancel
+        """
+        cb = self.config.get("choppingBlock")
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.check_user_has_role(message.author, "Listener"):
+            return "You are not a Listener You cannot use this feature"
+        if cb is None:
+            return "lvotes are disabled in config, why are you even running this command...?"
+
+        temp = {}
+        for entry in cb:
+            try:
+                if cb["started_by"] == message.author.id:
+                    temp[entry] = cb[entry]
+            except KeyError as e:
+                temp[entry] = cb[entry]
+
+        for e in temp:
+            print("Deleted: " + str(self.config.doc["choppingBlock"][e]))
+            del self.config.doc["choppingBlock"][e]
+
+        self.config.save()
+        return "Deleted all lvotes if you had started any"
+
+    async def lvalidate(self, message, user=None):
+        """
+        Ends a vote and promotes/demotes user. Can be used prematurely
+        !lvalidate <optional: tagged user>
+        """
+
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+        if not self.check_user_has_role(message.author, "Listener"):
+            return "You are not a Listener You cannot use this feature"
+        if user is None:
+            await self.client.send_message(message.author, message.channel, "Which user would you like to validate?")
+            response = await self.client.wait_for_message(channel=message.channel, author=message.author, timeout=60)
+            response = response.content
+            user = self.get_member(message, response.strip())
+            if response is None:
+                return "Timed out after 1 minute..."
+
+            if user is None:
+                return "No user found for that name, try again"
+
+        if user.id not in cb:
+
+            return "That user is not in the list, therefore I can't do anything. Here's a cat though.\n" + await self.cat(message)
+
+        else:
+            votelist = cb[user.id]["votes"]
+            if len(votelist) < 2 :
+                return "Not enough votes to pass, cancel the poll or wait longer. You may cancel with " \
+                       + self.config.prefix + "lcancel"
+
+            score = 0
+            for entry in votelist:
+                score += votelist[entry]
+
+            if len(votelist) == 2 and score not in [-2, 2]:
+                return "Not enough votes to promote/demote. Sorry, maybe discuss more. Or if this is an error," \
+                       " let a manager/admin know"
+
+            elif len(votelist) == 2 and score in [-2, 2]:
+                if score == -2:
+                    await self.client.remove_roles(user,
+                                                   discord.utils.get(message.server.roles,
+                                                                     name="Helping Hands"))
+                    try:
+                        await self.client.send_message(message.author, user,
+                                                       "Following a vote by the listeners: "
+                                                       "you have been demoted for the time being.")
+                        del self.config.doc["choppingBlock"][user.id]
+                        self.config.save()
+                    except:
+                        return "User could not be PM'd but they are a member of Helping Hands no more"
+                    else:
+                        return user.name + " has been removed from Helping Hands"
+                else:
+                    cb[user.id]["pending"] = True
+                    cb[user.id]["server_id"] = message.server.id
+                    cb[user.id]["channel_id"] = message.channel.id
+
+                    try:
+                        mop= await self.client.send_message(message.author, user,
+                                                       "Following a vote by the listeners: you have been chosen "
+                                                       "to be a Helping Hands! Reply !Laccept or !Lreject")
+
+                    except:
+                        return "User could not be PM'd but they are a now able to become a member of Helping Hands." \
+                               "\nLet them know to type !Laccept or !Lreject in PMs in leaf"
+                    else:
+                        return user.name + " has been made a member of Helping Hands." \
+                                           "\nThey must accept the invite by following the instruction I just sent them"
+
+            else:
+                avg = float(score / len(votelist))
+                if -0.85 < avg < 0.85:
+                    return "You need 85% of votes to pass current score:" + str(abs(avg * 100.00))
+
+                elif avg < -0.85:
+                    await self.client.remove_roles(user,
+                                                   discord.utils.get(message.server.roles,
+                                                                     name="Helping Hands"))
+                    try:
+                        await self.client.send_message(message.author, user,
+                                                       "Following a vote by your fellow Helping Handss,"
+                                                       " you have been demoted for the time being.")
+
+                        del self.config.doc["choppingBlock"][user.id]
+                        self.config.save()
+
+                    except:
+                        return "User could not be PM'd but they are a Helping Hands no more"
+                    else:
+                        return user.name + " has been removed from Helping Hands"
+
+                elif avg > 0.85:
+                    cb[user.id]["pending"] = True
+                    try:
+                        await self.client.send_message(message.author, user,
+                                                       "Following a vote by your fellow members you have been chosen "
+                                                       "to be a Helping Hands! Type !Laccept in any channel. "
+                                                       "Or !Lreject if you wanna not become a Helping Hands")
+                    except:
+                        return "User could not be PM'd but they are a now able to become a Helping Hands." \
+                               "\nLet them know to type !Laccept in a channel"
+                    else:
+                        return user.name + " has been made a Helping Hands!\nThey must accept" \
+                                           " the invite by following the instruction I just sent them"
+
+    async def laccept(self, message):
+        """
+        If you were voted to be a Helping Hands, running this command will accept the offer. Otherwise, run !Lreject
+        !laccept
+        """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+        if not message.channel.is_private:
+            return "You must reply only in PMs with petal. Not in a channel"
+        if message.author.id in cb:
+            if "pending" in cb[message.author.id]:
+                svr = self.client.get_server(cb[message.author.id]["server_id"])
+                if svr is None:
+                    return "Error fetching server with ID: " + cb[message.author.id]["server_id"] + " ask who promoted you to do it manually"
+                member = svr.get_member(message.author.id)
+                await self.client.add_roles(member,
+                                               discord.utils.get(svr.roles,
+                                                                 name="Helping Hands"))
+
+                chan = svr.get_channel(cb[message.author.id]["channel_id"])
+                del self.config.doc["choppingBlock"][message.author.id]
+                self.config.save()
+                if chan is None:
+                   return "You will need to tell them you have accepted as I could not notify them"
+                else:
+                    await self.client.send_message(message.author, chan, "Just letting y'all know that " + member.name + " has accepted their role")
+
+                return "Welcome!"
+            else:
+                return "You don't have a pending invite to join the Helping Hands at this time"
+
+    async def lreject(self, message):
+        """
+        If you were voted to be a Helping Hands, running this command will reject the offer.
+        !lreject
+        """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if message.author.id in cb:
+            if "pending" in cb[message.author.id]:
+
+                    svr = self.client.get_server(cb[message.author.id]["server_id"])
+                    if svr is not None:
+                        chan = svr.get_channel(cb[message.author.id]["channel_id"])
+                    else:
+                        chan = None
+                    if chan is None:
+                        return "You will need to tell them you have accepted as I could not notify them"
+                    else:
+                        await self.client.send_message(message.author, chan,
+                                                       "Just letting y'all know that " + message.author.name +
+                                                       " has rejected their role")
+                    del self.config.doc["choppingBlock"][message.author.id]
+                    self.config.save()
+                    return "You have rejected to join the helping hands. If this was on accident, let a listener know"
+            else:
+                return "You don't have a pending invite to join the Helping Handss at this time"
+
+    async def lshow(self, message):
+        """
+       If you were voted to be a Helping Hands, running this command will reject the offer.
+       !lreject
+       """
+        cb = self.config.get("choppingBlock")
+
+        if "choppingBlock" not in self.config.doc:
+            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
+
+        if not self.check_user_has_role(message.author, "Listener"):
+            return "You are not a Listener. You cannot use this feature"
+
+        msg = ""
+        for entry in cb:
+            mem = self.get_member(message, entry)
+            if mem is None:
+                continue
+            starter = self.get_member(message, cb[entry]["started_by"])
+            if starter is None:
+                continue
+            msg += "\n------\nVote started by: "  + mem.name+ "\#" + mem.discriminator \
+                   + "\nstarted by: " + starter.name + "#" + starter.discriminator + "\n------\n"
+
+        return "Heres what votes are goin on: \n" + msg
+
+
+    async def setosu(self, message):
+        """
+        Sets a users preferred osu account
+        !setosu <name>
+        """
+        args = self.clean_input(message.content)
+        if args[0] == "":
+            osu = message.author.name
+        else:
+            osu = args[0]
+
+        if not self.db.useDB:
+            return "Database is not enabled, so you can't save an osu name.\n" \
+                   "You can still use !osu <osu name> though"
+
+
+        self.db.update_member(message.author, {"osu": osu})
+
+        return "You have set: " + osu + " as your preferred OSU account. " \
+                                        "You can now run, !osu and it " \
+                                        "will use this name automatically!"
+
+    async def alias(self, message):
+        """
+        Returns a list of all previous names a user has had
+        !alias <tag/id>
+        """
+        args = self.clean_input(message.content)
+        if args[0] == "":
+            member = message.author
+        else:
+            member = self.get_member(message, args[0])
+
+        if member is None:
+            return "Couldn't find that member in the server\n\nJust a note, " \
+                   "I may have record of them, but it's iso's policy to not " \
+                   "display userinfo without consent. If you are staff and" \
+                   " have a justified reason for this request. Please " \
+                   "ask whomever hosts this bot to manually look up the" \
+                   " records in their database"
+
+        if not self.db.useDB:
+            return "Database is not configured correctly (or at all). " \
+                   "Contact your bot developer and tell them if you think" \
+                   " this is an error"
+
+        self.db.add_member(member)
+
+        alias = self.db.get_attribute(member, "aliases")
+        if len(alias) == 0:
+            return "`This member has no aliases`"
+        else:
+            await self.client.send_message(message.author, message.channel,
+                                           "__Aliases for "
+                                           + member.id
+                                           + "__")
+            msg = ""
+
+            for a in alias:
+                msg += "**" + a + "**\n"
+
+            return msg
+
+    async def dumpvoid(self, message):
+        """
+        Owner reserved function
+        This will dump every single void post in your PMs. It takes ~ 1.2-1.7 seconds per post so please wait
+        """
+        if not self.level0(message.author):
+            return "You must be the bot owner to perform this"
+        for i in self.db.void.find():
+            try:
+                msg = "Number **" + str(i["number"]) + "**\n Author: " + i["author"] + "\nTime Uploaded: " + str(i["time"]) + "\nContent: "+ i["content"]
+            except KeyError:
+                print(str(i) + " missing key")
+                continue
+            else:
+                try:
+                    await self.client.send_message(message.author, message.channel, msg)
+                except discord.errors.HTTPException:
+                    self.log.err("Possible empty message or overflow in void, printing here instead...")
+                    self.log.info(msg)
+
+            await asyncio.sleep(1)
+
+    async def journal(self, message):
+        """
+        Volatile journal System. Allows users to write an entry that anyone can read later.
+        !journal <entry> or !journal <user>
+        """
+        args = self.clean_input(message.content)
+        if args[0] == "":
+            entry = self.db.get_attribute(message.author, "journal")
+            if entry is None:
+                return "*You peek into your own journal...*\n\n" + "But find nothing."
+            return "*You peek into your own journal...*\n\nYou find:\n\n" + entry["content"]
+
+        mem = self.get_member(message, args[0])
+        if mem is not None:
+            entry = self.db.get_attribute(mem, "journal")
+            if entry is None:
+                return "*You peek into {}'s journal...*\n\n".format(mem.name) + "But find nothing"
+            return "*You peek into {}'s journal...*\n\nYou find:\n\n".format(mem.name) + entry["content"]
+        entry = self.db.update_member(message.author,
+                                      data={"journal": {"content": args[0], "time": str(datetime.utcnow())}})
+
+        return "Your journal has been updated. Anyone can read it with " + message.author.mention
+
+    async def retweet(self, message):
+        """
+        >rt
+        Retweets on behalf of the twitter account linked to this
+        """
+
+        if not self.check_user_has_role(message.author, self.config.get("socialMediaRole")):
+            return "You must be a part of the social media team to retweet a status on the bot's behalf"
+
+        args = self.clean_input(message.content)
+
+        if args[0] == '':
+            return "You cant retweet nothing, silly :P"
+
+        if not self.check_is_numeric(args[0]):
+            return "Retweet ID must only be numbers"
+
+        try:
+            response = self.t.PostRetweet(int(args[0]), trim_user=True)
+            self.log.f("TWEET", message.author.name + " posted a retweet!")
+            print(str(response.json()))
+        except Exception as e:
+            print(str(e))
+        else:
+            return "Retweeted sucessfully :)"
+
+    async def animalcrossing(self, message):
+        """
+        This is more or less an easter egg.
+        All responses will end in an animal crossing styled ending.
+        >animalcrossing
+        """
+        if not self.db.useDB:
+            return "Sorry, datbase is not enabled..."
+
+        if self.db.get_attribute(message.author, "ac") is None:
+            self.db.update_member(message.author, {"ac":True}, 2)
+            return "Enabled Animal Crossing Endings..."
+        elif self.db.get_attribute(message.author, "ac"):
+            self.db.update_member(message.author, {"ac":False}, 2)
+            return "Disabled Animal Crossing Endings..."
+        else:
+            self.db.update_member(message.author, {"ac":True}, 2)
+            return "Re-Enabled Animal Crossing Endings..."
+
+    def get_ac(self):
+        l = list(self.db.ac.find())
+        return l[random.randint(0, len(l) - 1)]["ending"]
+
+
+    async def bugger(self, message):
+        """
+        Report a bug by adding it to the Trello board.
+        >bugger <your report here>
+        """
+        if self.config.get("trello") is None:
+            return "Sorry the bot owner has not enabled trello bug reports"
+        try:
+            url = "https://api.trello.com/1/lists/{}/cards".format(self.config.get("trello")["list_id"])
+            params = {"key": self.config.get("trello")["app_key"],
+                      "token": self.config.get("trello")["token"]}
+            response = requests.request("GET", url, params=params)
+
+        except KeyError as e:
+            return "The trello keys are misconfigured, check your config file"
+
+
+        if response is None:
+            return "Could not get cards for the list ID provided. Talk to your bot owner."
+        r = response.json()
+        nums = []
+        for card in r:
+            if self.check_is_numeric(card["name"]):
+                nums.append(int(card["name"]))
+
+        top = max(nums) + 1
+
+
+        m = " ".join(message.content.split()[1:])
+
+        url = "https://api.trello.com/1/cards"
+
+        params = {"name": str(top).zfill(3),
+                  "desc": m + "\n\n\n\n\nSubmitted by: {}\nTimestamp: {}\nServer: {}\nChannel: {}".format(message.author.name + "(" + message.author.id + ")", str(datetime.utcnow()), message.server.name + "(" + message.server.id + ")", message.channel.name + "(" + message.channel.id + ")"),
+                  "pos": "bottom",
+                  "idList": self.config.get("trello")["list_id"],
+                  "username": self.config.get("trello")["username"],
+                  "key": self.config.get("trello")["app_key"],
+                  "token": self.config.get("trello")["token"]}
+
+        response = requests.request("POST", url, params=params)
+
+        if response is None:
+            return "Could not create bug report. Talk to your bot owner."
+
+        #print(str(response.text))
+        return "Created bug report with ID: " + str(top)
+
+    async def tz(self, message):
+        """
+        >tz [0-23] or "now for UTC" | location or number adjustment (e.g. -6)
+        TimeZone Converter
+        """
+
+        args = self.clean_input(message.content)
+
+
+        input_time = args[0]
+        conversion = args[1]
+
+        print(str(args))
+
+        if input_time.lower() == "now":
+            input_time = "UTC"
+        parsed = None
+        input_p = None
+        for timezone in pytz.all_timezones:
+            if conversion.lower() in str(timezone).lower():
+                parsed = pytz.timezone(timezone)
+                break
+
+        for timezone in pytz.all_timezones:
+            if input_time.lower() in str(timezone).lower():
+                input_p = pytz.timezone(timezone)
+                break
+
+        if parsed is None:
+            return "Unable to parse a pytz timezone from: " + conversion
+
+        if input_p is None:
+            return "Unable to parse a pytz timezone from: " + input_time
+
+
+        localnow = input_p.localize(datetime.utcnow()).strftime('%z')
+        now = parsed.localize(datetime.utcnow()).strftime('%z')
+        print(str(int(localnow)))
+        print(str(int(now)))
+        localnow = datetime.utcnow() + timedelta(hours=int(localnow) / 100)
+        now = datetime.utcnow() + timedelta(hours=int(now) / 100)
+
+
+
+
+
+
+
+
+        self.db.update_member(message.author, {"tz": parsed.zone})
+        em = discord.Embed(title="TimeZone Info for " + parsed.zone, color=0x00acff)
+        em.add_field(name="Petal's UTC Time", value=str(datetime.utcnow())[:-7])
+        em.add_field(name="Input Time(" + input_p.zone + ")", value=str(localnow)[:-7], inline=False)
+        em.add_field(name="Converted(" + parsed.zone + ")", value=str(now)[:-7], inline=False)
+
+        await self.client.embed(message.channel, em)
+        return None
+
+
+
+
+
+
+
+
+
+
+
+

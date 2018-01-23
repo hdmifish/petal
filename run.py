@@ -3,10 +3,17 @@ from petal import Petal
 
 import traceback
 import os
+import sys
+print("DETECTED ARGS: " + str(sys.argv))
+if "--dev-mode" in sys.argv:
+    print("ALERT: Using Developer Mode!")
+    bot = Petal(devmode=True)
+else:
+    bot = Petal(devmode=False)
 
 os.system('')
 
-bot = Petal()
+
 
 try:
     bot.run()

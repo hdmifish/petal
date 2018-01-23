@@ -115,21 +115,4 @@ class Config(object):
         else:
             return self
 
-    def getVoid(self):
-        v = self.get("void")
-        if len(v) == 0:
-            return "The void is empty"
-        else:
-            return v[randint(0, len(v) - 1)]["content"]
 
-    def saveVoid(self, content, name, id):
-        v = self.get("void")
-        for e in v:
-            if e["content"] == content:
-                return None
-
-        v.append({"content": content,
-                  "author": name + " " + id,
-                  "number": len(v),
-                  "time": str(datetime.utcnow())})
-        return len(v)

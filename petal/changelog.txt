@@ -1,0 +1,17 @@
+This is an un-formatted change log offering slightly more insight and dev notes than the commit history.
+
+[v0.4.3 Development]
+This is the current version as writing this changelog. Nothing really of worth here besides a mental note of previous improvements.
+- !mute now uses the API and Role style muting versus just role
+- MOTD/Patch Asks is now on MongoDB versus a local storage.
+- Removed Herobrine
+
+[v0.4.4 Development]
+After losing my mind over normalized and localized time zones in python, I decided to be lazy and just do arithmetic conversions
+You would not believe how long that took versus how long it should have took. Also, the void system had a slight naming glitch.
+My fault for using common names.
+
+- Added !tz <source> | <dest> conversion
+- !void bug fix
+- Added this here changelog.
+

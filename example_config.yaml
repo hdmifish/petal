@@ -24,7 +24,7 @@ unbanInterval: 1800
 
 # Used for askpatch, don't worry about this one
 motdInterval: 86400
-
+motdChannel: 3164
 # Prefix for petal to listen to
 prefix: '!'
 blacklist:
@@ -56,6 +56,8 @@ socialMediaRole: social_media
 welcomeMessage: 'null'
 logChannel: '00000000000'
 modChannel: '00000000000'
+mainServer: '00000000000'
+mainRole: Member
 mysql:
   channelid: '00000000000'
   hostname: localhost   #this can also be an ip if you're using a remote DB
@@ -76,6 +78,20 @@ trackChannel:
     and said they need help
   #you can format this with user {user.name/id/discriminator} and {channel.name/id}
 
+# servers in list are excluded from edit/delete messages in the dump channel
+# ignoreServers:
+# - '00000000000000'
+
+
+# Patch specific feature
+# choppingBlock:
+#  '00000000000':
+#    votes:
+#      '000000': 1
+#    listener: false
+#    timeout: 2017-10-20 19:06:52.142635
+# Patch specific feature
+
 karaokeChannel: '0000000'
 #you can generally ignore this line
 # X-Post support
@@ -84,6 +100,16 @@ xPostList:
 - '00000000000'
 - '00000000000'
 - '00000000000'
+
+# handy motd persistence helper
+lastRun: 2017-10-20 19:06:52.142635
+
+
+anon:
+  server: '95342850102796288'
+  help:
+  - '0000000000000'
+
 
 # Permission Levels
 #       A big change from the old leaf setup is permission Levels
