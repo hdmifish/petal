@@ -30,3 +30,5 @@ I can finally start working on cleaning up sections and adding features that peo
 - Subscription system now works
 - Optimizations and bug fixes
 - Lost sleep....
+
+[v0.5.0.1] Bug fixes and making the subscription system work better. Not much to say here.

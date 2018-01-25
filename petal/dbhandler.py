@@ -16,6 +16,9 @@ def m2id(mem):
     """
     if isinstance(mem, discord.Member) or isinstance(mem, discord.User):
         mid = mem.id
+    elif isinstance(mem, discord.Channel) or isinstance(mem, discord.Server):
+        print(mem.name)
+        mid = None
     else:
         mid = mem
     return mid

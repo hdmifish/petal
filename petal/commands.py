@@ -19,7 +19,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 
 from random import randint
-version = "0.5.0"
+version = "0.5.0.1"
 
 
 
@@ -225,6 +225,7 @@ class Commands:
     # TODO: Convert to Mongo
     def get_event_subscription(self, post):
 
+        print(post)
         postdata = post.lower().split(' ')
 
         subs = list(self.db.subs.find({}))
@@ -232,8 +233,13 @@ class Commands:
             self.log.f("event", "Subscription list empty. Ignoring...")
             return None, None
         # print(str(postdata))
+        self.log.f("subs", "Searching for explicit tags")
+        for item in subs:
+            if "[{}]".format(item["code"]) in post:
+                return item["code"], item["name"]
         for item in subs:
             # print(item["name"] + item["code"])
+
             if item["code"].lower() in postdata:
                 return item["code"], item["name"]
             for word in item["name"].split(' '):
@@ -982,14 +988,16 @@ class Commands:
         if msg2 is None:
             return "Event post timed out"
 
-
+        posted = []
         for i in toPost:
-            await self.client.send_message(message.author, i, msgstr, )
+            posted.append(await self.client.send_message(message.author, i, msgstr ))
             await asyncio.sleep(2)
 
         await self.client.send_message(message.author, message.channel, "Messages have been posted", )
 
         subkey, friendly = self.get_event_subscription(msgstr)
+
+
 
         if subkey is None:
             await self.client.send_message(message.author, message.channel,
@@ -1008,14 +1016,33 @@ class Commands:
             if n is None:
                 return "Timed out..."
 
+
             if n.content == "yes":
+
                 embed.add_field(name="Subscription Key:",
                                 value=friendly + "({})".format(subkey),
                                 inline=False)
                 count = await self.notify_subscribers(message, subkey, friendly)
+                todelete = "[{}]".format(subkey)
+                ecount = 0
+                for post in posted:
+                    content = post.content
+                #    print(content)
+                #    print(todelete)
+                    if todelete in content:
+                       # print("replacing")
+                        content = content.replace(todelete, '')
+                       # print("replaced: " + content)
+                        await self.client.edit_message(post, content)
+                        ecount += 1
+
+                if ecount >= 1:
+                    tail = " and edited [{}] out of the announcements".format(subkey)
+                else:
+                    tail = ""
                 if count == 1:
-                    return "Notified 1 Person of the event"
-                return "Notified " + str(count) + " people of the event"
+                    return "Notified 1 Person of the event" + tail
+                return "Notified " + str(count) + " people of the event" + tail
     # =========REDEFINITIONS============ #
 
     async def cat(self, message):
@@ -2861,8 +2888,8 @@ class Commands:
 
         localnow = input_p.localize(datetime.utcnow()).strftime('%z')
         now = parsed.localize(datetime.utcnow()).strftime('%z')
-        #print(str(int(localnow)))
-        #print(str(int(now)))
+        # print(str(int(localnow)))
+        # print(str(int(now)))
         localnow = datetime.utcnow() + timedelta(hours=int(localnow) / 100)
         now = datetime.utcnow() + timedelta(hours=int(now) / 100)
 

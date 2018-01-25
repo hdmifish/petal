@@ -271,12 +271,6 @@ commands:
     perm: '0'
     com: "it's a no from me,  but just in case you're having a bad day: https://i.imgur.com/SMu3O65.gifv"
 
-void:
-- content: '*A small voice whispers, asking for you to add to the void*'
-  author: leroy
-  num: 0
-  time: 0
-
 calmGallery:
 - author: isometricramen
   content: http://i.imgur.com/olVyCIh.gif

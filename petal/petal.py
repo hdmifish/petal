@@ -153,7 +153,7 @@ class Petal(discord.Client):
             message = "[DEV]  " + str(message) + "  [DEV]"
         if author is not None:
             if self.db.get_member(author) is not None:
-                if self.db.get_attribute(author, "ac") is not None:
+                if self.db.get_attribute(author, "ac", verbose=False) is not None:
                     if self.db.get_attribute(author, "ac"):
                         message += ", " + self.commands.get_ac()
         try:
@@ -216,7 +216,7 @@ class Petal(discord.Client):
 
         await self.embed(self.get_channel(self.config.logChannel), user_embed)
         if response != "":
-            await self.send_message(self.get_channel(self.config.logChannel), response, )
+            await self.send_message(self.get_channel(self.config.logChannel), response )
 
         if (datetime.utcnow() - member.created_at).days <= 6:
             await self.send_message(self.get_channel(self.config.logChannel), "This member's account "
