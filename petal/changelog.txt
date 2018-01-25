@@ -15,3 +15,18 @@ My fault for using common names.
 - !void bug fix
 - Added this here changelog.
 
+[v0.5.0]
+This has been a thorn in my side for so long. The members system that used a huge json file to hold all the information is now gone.
+The module is gone. Everything is databased now.
+
+--6 hours later--
+*out of breath, pale,  and sweaty* You ever remember that you forgot to make something and then you realize it can be system breaking and you're just glad nobody noticed?
+Yeah....
+
+I can finally start working on cleaning up sections and adding features that people ask for.
+- Removed members.py, this may present bugs along the way.
+- Converted everything from mySQL to mongoDB
+- Lost sleep
+- Subscription system now works
+- Optimizations and bug fixes
+- Lost sleep....

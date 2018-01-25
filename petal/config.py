@@ -81,7 +81,7 @@ class Config(object):
                 return self.doc[field]
             except KeyError:
                 log.err(field + " is not found in config")
-        return None
+                return None
 
     def save(self, vb=False):
         if vb:

@@ -103,6 +103,8 @@ class Octopus(object):
         if "error" in response:
             self.log.err("OSU Error: " + response["error"])
             return None
+        else:
+            self.log.ready("OSU support enabled")
 
     def get_user(self, userid, mode=0):
         response = requests.get("https://osu.ppy.sh/api/get_user?k=" +
@@ -133,6 +135,8 @@ class Giraffe(object):
                          " imgur")
 
             return None
+        else:
+            self.log.ready("imgur support enabled")
         self.key = API_KEY
 
     def get_image(self, imageID):

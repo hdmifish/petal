@@ -1,34 +1,25 @@
 import asyncio
 import json
-
 import discord
 import random
-# import urllib.request as urllib2
-# import re
-
-
-# import os
 import praw
 import requests
 import twitter
 import facebook
 import pytumblr
-# import _mysql (deprecated in favor of the python package)
-
-# FIXME: replace pymysql with mongo functionality
-import pymysql
 import time
 import pytz
-# from cleverbot import Cleverbot
 import petal
 from datetime import datetime, timedelta
+
+from .dbhandler import m2id
 from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .dbhandler import DBHandler
+
 from random import randint
-version = "0.4.4 Development"
+version = "0.5.0"
 
 
 
@@ -43,16 +34,17 @@ class Commands:
         self.client = client
         self.config = client.config
         self.db = client.db
-        # self.cb = Cleverbot('discordBot-petal')
+
         self.log = Peacock()
         self.startup = datetime.utcnow()
         self.activeHelpers = []
-        self.activeSad = []
-        self.log.info("Command module init start")
+        self.active_sad = []
+        self.log.info("Loading Command module...")
         self.support_dict = {}
         self.osuKey = self.config.get("osu")
         if self.osuKey is not None:
             self.o = Octopus(self.osuKey)
+
         else:
             self.log.warn("No OSU! key found.")
 
@@ -74,6 +66,8 @@ class Commands:
                               "This will disable reddit functionality.")
                 self.r = None
                 return
+            else:
+                self.log.ready("Reddit support enabled!")
         else:
             self.log.warn("No Reddit keys found")
 
@@ -104,9 +98,10 @@ class Commands:
                                                 tumble["consumerSecret"],
                                                 tumble["oauthToken"],
                                                 tumble["oauthTokenSecret"])
+            self.log.ready("Tumblr support Enabled!")
         else:
             self.log.warn("No Tumblr keys found.")
-
+        self.log.ready("Command Module Loaded!")
     def level0(self, author):
         # this supercedes all other levels so, use it carefully
         return author.id == str(self.config.owner)
@@ -181,7 +176,7 @@ class Commands:
     def validate_channel(chanlist, msg):
         for i in range(len(msg.content)):
             try:
-                print(msg.content[i])
+               # print(msg.content[i])
                 chanlist[int(msg.content[int(i)])]
             except AttributeError:
                 return False
@@ -201,9 +196,12 @@ class Commands:
     def remove_prefix(self, input):
         return input[len(input.split()[0]):]
 
-    @staticmethod
-    def get_member(message, member):
-        return discord.utils.get(message.server.members,
+
+    def get_member(self, message, member):
+        if isinstance(message, discord.Server):
+            return message.get_member(m2id(member))
+        else:
+            return discord.utils.get(message.server.members,
                                  id=member.lstrip("<@!").rstrip('>'))
     @staticmethod
     def get_member_name(server, member):
@@ -226,36 +224,28 @@ class Commands:
 
     # TODO: Convert to Mongo
     def get_event_subscription(self, post):
-        # EVENTS SCHEMA
-        # 2 Tables:
-        # CREATE TABLE subKeys(code VARCHAR(20), friendly VARCHAR(20));
-        # CREATE TABLE users(name VARCHAR(20), id VARCHAR(20),
-        #                    code VARCHAR(20));
-        try:
-            conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                   self.config.get("mysql")["username"],
-                                   self.config.get("mysql")["password"],
-                                   self.config.get("mysql")["eventdatabase"])
-        except Exception as e :
-            self.log.err("SQL Error, " + str(e))
-            return None, None
-        else:
-            cursor = conn.cursor()
-        find_entry = ("SELECT * FROM subKeys")
-        cursor.execute(find_entry)
-        data = cursor.fetchall()
 
-        if len(data) == 0:
-            self.log.f("event", "Database is empty for keys!" +
-                                " Skipping further validation")
-            return None, None
-        postdata = post.lower().split()
+        postdata = post.lower().split(' ')
 
-        for row in data:
-            for i in row[1].split():
-                if i.lower() in postdata:
-                    return row[0] , row[1]
-        conn.close()
+        subs = list(self.db.subs.find({}))
+        if len(subs) == 0:
+            self.log.f("event", "Subscription list empty. Ignoring...")
+            return None, None
+        # print(str(postdata))
+        for item in subs:
+            # print(item["name"] + item["code"])
+            if item["code"].lower() in postdata:
+                return item["code"], item["name"]
+            for word in item["name"].split(' '):
+                # print(word)
+
+                if word.lower() in ["and", "of", "the", "or", "with", "to", "from", "by", "on", "or"]:
+                    continue
+
+                if word.lower() in postdata:
+                    return item["code"], item["name"]
+
+
         self.log.f("event", "could not find sub key in post")
         return None, None
 
@@ -283,8 +273,44 @@ class Commands:
     # for your own personal uses if you like. You will need a mongoDB instance and be familiar with pyMongo
     # I personally prefer the free cloud.mongodb.com instances they have available.
 
-    async def notify_subscribers(self, message, key):
-            return
+    async def notify_subscribers(self, message, key, friendly):
+
+            mcount = self.db.members.count({"subscriptions": {"$exists": True}})
+            if  mcount > 1000:
+                sentiment = "This may take a while, I have to check " + str(mcount) + " members!"
+            elif mcount > 500:
+                sentiment = "This will only take a bit."
+            else:
+                sentiment = "This shouldn't take long."
+
+            await self.client.send_message(message.author, message.channel, "Notifying subscribers..." + sentiment)
+            count = 0
+            members = list(self.db.members.find({"subscriptions": {"$exists": True}}))
+            for member in members:
+                try:
+                    if self.db.get_attribute(member["uid"], "subscriptions", verbose=False) is None:
+                        continue
+
+                except KeyError:
+                    continue
+
+                if key in member["subscriptions"]:
+                    try:
+                        m = self.client.get_server(self.client.get_main_server()).get_member(member["uid"])
+                        await self.client.send_message(message.author, m, "Hey, an event you are subscribed to: (" + friendly + ") has been announced in " + m.server.name + "!")
+                        self.log.f("subs", "Notified " + m.name + " of the " + friendly + " event posted by " + message.author.name)
+                        await asyncio.sleep(1)
+
+                    except Exception as e:
+                        self.log.f("subs", "Unable to notify " + member["name"] + " because: "+  str(e))
+                        continue
+
+                    else:
+                        count += 1
+
+
+
+            return count
 
     async def check_pa_updates(self, force=False):
             if force:
@@ -381,17 +407,16 @@ class Commands:
         Syntax: `>choose foo | bar`
         """
         args = self.clean_input(message.content)
-        response = ("From what you gave me, I believe `{}` " +
-                    "is the best choice".format(args[random.randint(0,
-                                                len(args) - 1)]))
+        response = ("From what you gave me, I believe `{}` is the best choice".format(args[random.randint(0, len(args) - 1)]))
         return response
 
-    async def cleverbot(self, message):
-        """
-        Sends your message to cleverbot
-        Syntax: `>(your message)`
-        """
-        return self.cb.ask(self.remove_prefix(message.content))
+    # async def cleverbot(self, message):
+    #    """
+    #    Sends your message to cleverbot
+    #    Syntax: `>(your message)`
+    #    """
+
+    #   return self.cb.ask(self.remove_prefix(message.content))
 
     async def osu(self, message):
         """
@@ -741,74 +766,135 @@ class Commands:
         else:
             return ob.link
 
+    async def subscribe(self, message):
+        """
+        Subscribe to an event (found in >subs list)
+        >subscribe <event code>
+        """
+        args = self.clean_input(message.content)
+        if args[0] == '':
+            return "Sorry mate, I cant do much with that. Make sure you put a subscription key (`" + self.config.prefix + "subs list`)"
+
+        sub = self.db.subs.find_one({"code":args[0].upper()})
+        if sub is None:
+            return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
+
+        self.db.update_member(message.author, {"subscriptions":args[0].upper()})
+        return "Alright, You're all set to receive notifications when there is an event involving: " + sub["name"]
+
+    async def unsubscribe(self, message):
+        """
+        Unsubscribe from an event. If it doesnt exist, that's ok. We'll figure it out together.
+        >unsubscribe <key>
+        """
+        args = self.clean_input(message.content)
+        if args[0] == '':
+            return "Sorry mate, I cant do much with that. Make sure you put a subscription key (`" + self.config.prefix + "subs list`)"
+
+        sub = self.db.subs.find_one({"code":args[0].upper()})
+        sublist = self.db.get_attribute(message.author, "subscriptions")
+
+        if sublist is None:
+            return "You haven't subscribed to anything, silly. That's ok, it was probably a mistake. You can subscribe with the " + self.config.prefix + "subscribe command"
+
+        if sub is None:
+            if args[0].upper() in sublist:
+                del sublist[sublist.index(args[0].upper())]
+                self.db.members.update_one({"uid": message.author.id}, {"$set": {"subscriptions": sublist}})
+            else:
+                return "You don't have anything in your subscription list that matches: " + args[0].upper()
+        else:
+            if args[0].upper() in sublist:
+                del sublist[sublist.index(args[0].upper())]
+                self.db.members.update_one({"uid": message.author.id}, {
+                    "$set": {"subscriptions": sublist}})
+                return "Successfully un-subscribed from: " + sub["name"]
+            else:
+                return "You are not subscribed to: " + sub["name"] + " [{}]".format(sub["code"])
+
+    async def mysubs(self, message):
+        """
+        Shows what events you are subscribed to
+        >mysubs
+        """
+        if self.db.get_attribute(message.author, "subscriptions") is None:
+            return "You aren't subscribed to anything. Gotta do that first, my dude."
+
+        subs = list(self.db.subs.find())
+
+        mysub = self.db.get_attribute(message.author, "subscriptions")
+
+        msg = "You are subscribed to {} game(s).\n```\n".format(str(len(mysub)))
+        if len(mysub) == 0:
+            return "You aren't subscribed to anything. Try and use the " + self.config.prefix + "subscribe command"
+        else:
+            for sub in subs:
+                if sub["code"] in mysub:
+                    msg += sub["name"] + " [" + sub["code"] + "]\n"
+                if len(msg) > 1900:
+                    await self.send_message(message.author, message.channel, msg  + "\n```")
+                    msg = "```\n"
+        return msg + "\n```"
+
+
+
     async def subs(self, message):
         """
         Add or Remove subscription keys (requires level 3)
         >subs <add/remove/list> | <name of game> | <game key>
         """
-        if not self.level3(message.author):
-            return "You must have level 3 or above to use this"
+
 
         args = self.clean_input(message.content)
         if args[0] == '':
-            return ("Type, add remove or list after " +  self.config.prefix +
-                    "args")
+            return ("Type, add, del,  or list after " +  self.config.prefix +
+                    "subs")
+
         if args[0].lower() == "add":
+            if not self.level3(message.author):
+                return "You must have level 3 or above to use this"
             if len(args) < 3:
                 return ("Format is: " + self.config.prefix
-                        + "subs <game name> | <game code (4 digit)>")
+                        + "subs add | <game name> | <game code (4 digit)>")
 
-            check_duplicate = ("SELECT * FROM subKeys WHERE friendly=\""
-                              + args[1].lower() + "\";")
-            self.log.f("subs", check_duplicate)
-            conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                  self.config.get("mysql")["username"],
-                                  self.config.get("mysql")["password"],
-                                  self.config.get("mysql")["eventdatabase"])
-            cursor = conn.cursor()
-            cursor.execute(check_duplicate)
 
-            data = cursor.fetchall()
-            if len(data) > 0:
-                for row in data:
-                    if row[1].lower() == args[1].lower():
-                        conn.close()
-                        return (row[2] + " Already corresponds to a key: " +
-                                row[1])
+            if self.db.subs.find_one({"name": args[1]}) is not None:
+                return "That sub already exists. Delete it first to replace it"
+            code = self.db.subs.find_one({"code": args[2].upper()})
+            if code is not None:
+                return "That code is in use for: " + code["name"]
+            self.db.subs.insert_one({"name": args[1], "code": args[2].upper()})
 
-            try:
-                insert_code = ("INSERT INTO subKeys VALUE (\"" + args[2].upper() + "\",\"" +
-                               args[1] + "\");")
-                self.log.f("subs", insert_code)
-                cursor.execute(insert_code)
-                conn.commit()
-            except:
-                self.log.err("An SQL error occurred")
-                conn.rollback()
-            finally:
-                conn.close()
-
-            return "Added " + args[1] + " with key: " + args[2]
+            return "Added " + args[1] + " with key: " + args[2].upper()
 
         elif args[0].lower() == "list":
 
-            conn = pymysql.connect(self.config.get("mysql")["hostname"],
-                                  self.config.get("mysql")["username"],
-                                  self.config.get("mysql")["password"],
-                                  self.config.get("mysql")["eventdatabase"])
-            cursor = conn.cursor()
-            get_all = ("SELECT * FROM subKeys")
-            cursor.execute(get_all)
-            data = cursor.fetchall()
+            data = list(self.db.subs.find({}))
             if len(data) == 0:
                 return "No entries found..."
+            else:
+                codelist = "```\n"
+                for entry in data:
+                    codelist += entry["name"] + " [{}]".format(entry["code"]) + '\n'
+                    if len(codelist) > 1800:
+                        await self.client.send_message(message.channel, codelist + "\n```")
+                        codelist = "```\n"
+                return codelist + "\n```"
 
-            codelist =""
-            for row in data:
-                codelist += row[0] + " - " + row[1] + "\n"
-            conn.close()
-            return codelist
+        elif args[0].lower() == "del":
+            if not self.level3(message.author):
+                return "You must have level 3 or above to use this"
+            if len(args) < 2:
+                return ("Format is: " + self.config.prefix
+                        + "subs del | <game code (4 digit)>")
 
+            item = self.db.subs.find_one({"code": args[1].upper()})
+            if item is None:
+                return "No sub found with code: " + args[1].upper()
+
+            else:
+                self.db.subs.delete_one({"code": args[1].upper()})
+                return "Deleted " + item["name"] + " [{}]".format(item["code"])
 
     async def event(self, message):
         """
@@ -883,28 +969,6 @@ class Commands:
 
         embed.add_field(name="Channels",
                         value="\n".join(channames))
-        subkey, friendly = self.get_event_subscription(msgstr)
-        if subkey is None:
-            await self.client.send_message(message.author, message.channel, "I was unable to auto-detect " +
-                                           "any game titles in your post " +
-                                           "subscribers will not be notified", )
-        else:
-            tempm = await self.client.send_message(message.author, message.channel, "auto-detect found: **" +
-                                                   friendly + "** Is this " +
-                                                   "correct?[yes/no]", )
-            n = await self.client.wait_for_message(channel=tempm.channel,
-                                                   author=message.author,
-                                                   check=self.check_yes_no,
-                                                   timeout=15)
-            if n is None:
-                return "Timed out..."
-
-
-            if n.content == "yes":
-                embed.add_field(name="Subscription Key:",
-                                value=friendly + "({})".format(subkey),
-                                inline=False)
-                await self.notify_subscribers(message, subkey)
 
         await self.client.embed(message.channel, embed)
         await self.client.send_message(message.author, message.channel, "If this is ok, type confirm. " +
@@ -918,12 +982,40 @@ class Commands:
         if msg2 is None:
             return "Event post timed out"
 
+
         for i in toPost:
             await self.client.send_message(message.author, i, msgstr, )
             await asyncio.sleep(2)
 
         await self.client.send_message(message.author, message.channel, "Messages have been posted", )
 
+        subkey, friendly = self.get_event_subscription(msgstr)
+
+        if subkey is None:
+            await self.client.send_message(message.author, message.channel,
+                                           "I was unable to auto-detect " +
+                                           "any game titles in your post. " +
+                                           "No subscribers will not be notified for this event." )
+        else:
+            tempm = await self.client.send_message(message.author,
+                                                   message.channel,
+                                                   "I auto-detected a possible game in your announcement: **" +
+                                                   friendly + "**. Would you like to notify subscribers?[yes/no]")
+            n = await self.client.wait_for_message(channel=tempm.channel,
+                                                   author=message.author,
+                                                   check=self.check_yes_no,
+                                                   timeout=20)
+            if n is None:
+                return "Timed out..."
+
+            if n.content == "yes":
+                embed.add_field(name="Subscription Key:",
+                                value=friendly + "({})".format(subkey),
+                                inline=False)
+                count = await self.notify_subscribers(message, subkey, friendly)
+                if count == 1:
+                    return "Notified 1 Person of the event"
+                return "Notified " + str(count) + " people of the event"
     # =========REDEFINITIONS============ #
 
     async def cat(self, message):
@@ -1236,15 +1328,9 @@ class Commands:
         else:
             try:
                 petal.logLock = True
-                self.client.members.addMember(userToBan)
-                if await self.client.members.tempBan(userToBan,
-                                                     message.author,
-                                                     msg.content,
-                                                     int(msg2.content)):
-                    return "Successfully temp banned user"
-                else:
-                    return "Unable to tempban user, are they already banned?"
-
+                timex = time.time() + timedelta(hours=int(msg2.content.strip())).total_seconds()
+                self.db.update_member(userToBan, {"banned": True, "bannedFrom": userToBan.server.id, "banExpires": str(timex).split('.')[0] })
+                await self.client.ban(userToBan)
             except discord.errors.Forbidden as ex:
                 return "It seems I don't have perms to ban this user"
             else:
@@ -1269,7 +1355,7 @@ class Commands:
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id +
-                        ") was successfully banned")
+                        ") was successfully temp-banned\n\nThey will be unbanned on " + str(datetime.utcnow() + timedelta(days=int(msg2.content)))[:-7])
 
     async def warn(self, message):
         """
@@ -1452,10 +1538,10 @@ class Commands:
         else:
             if numDelete > 200 or numDelete < 0:
                 return "That is an invalid number of messages to delete"
-        await self.client.send_message(message.author, message.channel, "You are about to delete {} messages " +
+        await self.client.send_message(message.author, message.channel, "You are about to delete {} messages ".format(str(numDelete + 3)) +
                                        "(including these confirmations) in " +
                                        "this channel. Type: confirm if this " +
-                                       "is correct.".format(str(numDelete + 3)), )
+                                       "is correct." )
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  content="confirm",
                                                  author=message.author,
@@ -1756,7 +1842,7 @@ class Commands:
             return "Sorry, you are not permitted to use this"
 
         args = self.clean_input(message.content)
-        print(str(args))
+
         if args[0] == "submit":
             response = self.db.submit_motd(message.author.id, " ".join(args[1:]))
             if response is None:
@@ -1822,7 +1908,8 @@ class Commands:
             await self.client.embed(chan, newEmbed)
 
         elif args[0] == 'list':
-            return ("Patch Asks info is currently disabled")
+            count = self.db.motd.count({"approved": True, "used": False})
+            return "Patch Asks list is not a thing, scroll up in the channel to see whats up\n" + str(count) + " available in the queue."
 
     async def paforce(self, message):
         """
@@ -1893,13 +1980,15 @@ class Commands:
         server = self.client.get_server(anondb["server"])
         if not message.channel.is_private:
             args = self.clean_input(message.content)
-            if len(args) == 0:
+            if args[0] == '':
                 return "For private chat only, unless adding users"
             if not self.level2(message.author):
                 return "You cannot use this"
 
 
             m = self.get_member(message, args[0])
+            if m is None:
+                return  args[0] + " is not a member"
             try:
                 anondb = self.config.get("anon")["help"]
                 anonserver = self.client.get_server(self.config
@@ -2050,15 +2139,15 @@ class Commands:
         else:
             self.support_dict[message.author.id] = time.time()
         args = self.clean_input(message.content)
-        if message.channel.is_private:
-            await self.client.send_message(message.author, self.client.get_channel(
-                self.config.get("supportChannel")), "@here, " + message.author.mention +
-                                                    " (mobile friendly: " + message.author.name
-                                                    + ") asked for support in PMs")
-            return (message.author.mention +
-                    " do not worry, your request has been sent to the " +
-                    "listener server and someone should be with you shortly")
 
+        if message.channel.is_private:
+            if await self.client.send_message(message.author, self.client.get_channel( self.config.get("supportChannel")), "@here, " + message.author.mention + " (mobile friendly: " + message.author.name+ ") asked for support in PMs") is not None:
+                return (message.author.mention +
+                        " do not worry, your request has been sent to the " +
+                        "listener server and someone should be with you shortly")
+            
+            return "I'm having a bit of trouble posting in the listener server, please ask them directly"
+        
         if len(args) == 0:
             await self.client.send_message(message.author, self.client.get_channel(
                 self.config.get("supportChannel")), "@here, " +
@@ -2132,7 +2221,7 @@ class Commands:
             return response[1]
         else:
             if "may refer to:" in response[1]["content"]:
-                em = discord.Embed( color=0xffcc33)
+                em = discord.Embed(color=0xffcc33)
                 if "may refer to:" in response[1]["content"]:
                     em.add_field(name="Developer Note",
                                  value="It looks like this entry may have multiple results, "
@@ -2747,7 +2836,7 @@ class Commands:
         input_time = args[0]
         conversion = args[1]
 
-        print(str(args))
+        # print(str(args))
 
         if input_time.lower() == "now":
             input_time = "UTC"
@@ -2772,16 +2861,10 @@ class Commands:
 
         localnow = input_p.localize(datetime.utcnow()).strftime('%z')
         now = parsed.localize(datetime.utcnow()).strftime('%z')
-        print(str(int(localnow)))
-        print(str(int(now)))
+        #print(str(int(localnow)))
+        #print(str(int(now)))
         localnow = datetime.utcnow() + timedelta(hours=int(localnow) / 100)
         now = datetime.utcnow() + timedelta(hours=int(now) / 100)
-
-
-
-
-
-
 
 
         self.db.update_member(message.author, {"tz": parsed.zone})

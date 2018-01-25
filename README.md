@@ -1,49 +1,17 @@
 << UPDATE 12/09. Added the welcome/role gate command. If you don't understand regex, just type in a phrase. Just note your members will have to type the message exactly>>
 
 # Petal
-A simple, customizable, discord bot written in python.
+A friendly, practical, discord bot.
 
 ## Getting Started
-Small note, I am working on an installer for both windows and ubuntu as well as raspbian.
+This bot is designed for hosting on Ubuntu and has not been tested on other platforms. It is possible to get it working on windows but some features may produce unexpected results
 
-#### Windows Installer:
-Go ahead and open [petal installer](https://raw.githubusercontent.com/hdmifish/petal/master/petal-installer.ps1) in a seperate tab. (CTRL CLICK)
-
-Press CTRL+A to select all, then copy (CTRL+C) the contents into your favorite text editor. 
-Then save to your user directory `C:\users\<you>` as `petal-installer.ps1` 
-
-
-Now launch Powershell as Administrator
-
-Type: `cd ~`
-
-Note: By Default, windows locks down running powershell scripts. However, for one time use, run the following command:
-`Set-ExecutionPolicy RemoteSigned`  
-
-Then press `Y`
-
-Finally, do ./petal-installer.ps1 in powershell and follow the instructions. 
-
-If you get a permissions error make sure you launched powershell as administrator. Also you can run `Set-ExecutionPolicy Unrestricted`
-Just make sure you set it back later or just close powershell when you are done. 
-
-
-
-For the Git install: 
-
-Follow the windows options, use CMD not MinTTY and add git to command line. 
-
-If you would like to offer suggestions or have questions, feel free to make an issue.
-### Linux Install:
-
-##### Scroll down if you are new to linux
-(read this section if you know what you're doing)
 ##### Requirements:
 `pip3.5 install --upgrade -r requirements.txt`
 - A discord application key (register [here](https://discordapp.com/developers/applications/me))
 
 ##### If you are new to linux, but have it ready to go:
-(we are going to assume you are using ubuntu 14.04+ Further support coming later)
+(we are going to assume you are using ubuntu 14.04 or higher)
 
 ##### Step 1: Get everything up to date
 This prevents problems later on
@@ -58,7 +26,7 @@ This prevents problems later on
 
 **If a version number is displayed, skip the next step**
 
-##### Step 3: Download and Install pip3.5
+##### Step 3: Download and Install pip for python 3.5+
 In your home directory `cd ~` run the following:
 `sudo wget https://bootstrap.pypa.io/get-pip.py`
 then run:
@@ -66,16 +34,10 @@ then run:
 finally, verify the install:
 `python3.5 -m pip --version`
 
-##### Step 4: Install discord.py and Petal requirements:
-
-Petal needs to be able to communicate with discord. Therefore, we need the API wrapper from [Rapptz](https://github.com/Rapptz/discord.py).
-
-Copy and run this long command:
-`sudo -H pip3.5 install -U discord.py cleverbot colorama requests python-magic ruamel.yaml praw`
-
 **Note**: If for some reason you get a __command not found__ error, replace `pip3.5` with `python3.5 -m pip`
+If you still get an error after that, make sure you built pip with python3.5 or higher. Sometimes it will even run as `pip` instead of `pip3.5`
 
-##### Step 5: Install git and Petal:
+##### Step 4: Install git and Petal:
 To get this updated project and future updates, we need to link it with github.
 
 Recent versions of ubuntu come shipped with git. However, if yours did not, try running the following:
@@ -107,12 +69,16 @@ Your bot has to have an account just like you do. In order to do this, you need 
 6. Click *Create Application*
 7. Click *Create Bot Account*
 
+Add this bot to your server by following [these steps](https://github.com/jagrosh/MusicBot/wiki/Adding-Your-Bot-To-Your-Server)
+(I don't know who jagrosh is, but his steps work well. So shoutout to them)
+
 After this we need to add the token to the config.yaml page in petal
 
-**Note:** Do not share your token with others, they can controll your bot and you will be responsible for anything they do with it.
+**Note:** Do not share your token with others, they can control your bot and you will be responsible for anything they do with it.
 
-##### Step 8: Edit config.yaml
-If you are on a GUI version of linux, pop open your favorite text editor and edit the config.yaml file there.
+##### Step 8: Edit example_config.yaml
+If you are on a GUI version of linux, pop open your favorite text editor and edit the example_config.yaml file there.
+(Otherwise, vim/nano works fine)
 The config file is documented to show what information goes where.
 
 First, copy your token in (make sure it's in single quotes).

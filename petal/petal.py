@@ -7,11 +7,12 @@ written by isometricramen
 import discord
 import re
 import asyncio
+import calendar
+import time
 from datetime import datetime
 from .grasslands import Peacock
 from .config import Config
 from .commands import Commands
-from .members import Members
 from .dbhandler import DBHandler
 # from random import randint
 log = Peacock()
@@ -32,7 +33,7 @@ class Petal(discord.Client):
         self.config = Config()
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
-        self.members = Members(self)
+
 
         self.dev_mode = devmode
         log.info("Configuration object initalized")
@@ -67,15 +68,16 @@ class Petal(discord.Client):
         if len(self.servers) == 0:
             log.err("This client is not a member of any servers")
             exit(404)
+        return self.config.get("mainServer")
 
     async def save_loop(self):
         if self.dev_mode:
             return
         interval = self.config.get("autosaveInterval")
         while True:
-            self.members.save()
             self.config.save()
             await asyncio.sleep(interval)
+
 
     async def ask_patch_loop(self):
         if self.dev_mode:
@@ -90,33 +92,33 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def ban_loop(self):
-        if self.dev_mode:
-            return
+        # if self.dev_mode:
+        #     return
+        mainserver = self.get_server(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
+        log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
+        await asyncio.sleep(interval)
         while True:
-            for mem in self.members.doc:
-                if len(self.members.doc[mem]["tempBan"]) > 0:
-                    for case in self.members.doc[mem]["tempBan"]:
-                        if self.members.doc[mem]["tempBan"][case]["active"]:
-                            if (datetime.utcnow() <
-                                datetime.strptime(self.members.doc[mem]
-                                                  ["tempBan"][case]
-                                                  ["expires"].strip(),
-                                                  "%Y-%m-%d %H:%M:%S.%f")):
-                                self.members.doc[mem]["isBanned"] = False
-                                self.members.doc[mem]["tempBan"][case]["active"] = False
-                                svr = self.get_server(
-                                      self.members.doc[mem]["tempBan"][case]
-                                                      ["server"])
-                                bans = svr.get_bans()
-                                for banned in bans:
-                                    if banned.id == mem:
-                                        await self.unban(svr, banned)
-                                        log.member(banned.name + " " +
-                                                   banned.id + " was unbanned")
-                                self.members.save()
+            epoch = int(time.time())
+            log.f("BANS", "Now Timestamp: " + str(epoch))
+
+            banlist = await self.get_bans(mainserver)
+
+            for m in banlist:
+                ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
+                if ban_expiry is None:
+                    continue
+                elif int(ban_expiry) <= int(epoch):
+                    await self.unban(mainserver, m)
+                    log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
+                else:
+                    log.f("BANS", m.name + " ({}) has {} seconds left".format(m.id, str((int(ban_expiry) - int(epoch)))))
+                await asyncio.sleep(0.5)
 
             await asyncio.sleep(interval)
+
+
+
 
     async def on_ready(self):
         """
@@ -124,21 +126,21 @@ class Petal(discord.Client):
         """
         log.ready("Running discord.py version: " + discord.__version__)
         log.ready("Connected to Discord!")
-        log.info("Logged in as {0.name}.{0.discriminator} ({0.id})"
+        log.info("Logged in as {0.name}#{0.discriminator} ({0.id})"
                  .format(self.user))
         log.info("Prefix: " + self.config.prefix)
         log.info("SelfBot: " + ['true', 'false'][self.config.useToken])
 
         self.loop.create_task(self.save_loop())
         log.ready("Autosave coroutine running...")
-        # self.loop.create_task(self.banloop())
+        self.loop.create_task(self.ban_loop())
         log.ready("Auto-unban coroutine running...")
-        if self.config.get("mysql") is not None:
+        if self.config.get("dbconf") is not None:
             self.loop.create_task(self.ask_patch_loop())
             log.ready("MOTD system running...")
             pass
         else:
-            log.warn("No mysql configuration in config.yaml,"
+            log.warn("No dbconf configuration in config.yaml,"
                      + "motd features are disabled")
 
         return
@@ -148,15 +150,17 @@ class Petal(discord.Client):
         Overload on the send_message function
         """
         if self.dev_mode:
-            message = "[DEV]" + message + "[DEV]"
+            message = "[DEV]  " + str(message) + "  [DEV]"
         if author is not None:
             if self.db.get_member(author) is not None:
                 if self.db.get_attribute(author, "ac") is not None:
                     if self.db.get_attribute(author, "ac"):
                         message += ", " + self.commands.get_ac()
-
-        return await super().send_message(channel, message)
-
+        try:
+            return await super().send_message(channel, message)
+        except discord.errors.Forbidden:
+            log.err("A message: " + message + " was unabled to be sent in channel: " + channel.name)
+            return None
     async def embed(self, channel,  embedded):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
@@ -182,17 +186,14 @@ class Petal(discord.Client):
         self.db.update_member(member, {"aliases": [member.name],
                                        "servers": [member.server.id]})
 
-        if self.members.addMember(discord.utils.get(member.server.members,
-                                  id=member.id)):
+        if self.db.add_member(member):
             user_embed = discord.Embed(title="User Joined",
                                       description="A new user joined: "
                                       + member.server.name, colour=0x00FF00)
         else:
-            if len(self.members.getMember(member.id)["aliases"]) != 0:
-
+            if len(self.db.get_attribute(member, "aliases")) != 0:
                 user_embed = discord.Embed(title="User ReJoined",
-                                          description=self.members.
-                                          getMember(member.id)["aliases"][-1]
+                                          description=self.db.get_attribute(member, "aliases")[-1]
                                           + " rejoined " + member.server.name
                                           + " as " + member.name,
                                           colour=0x00FF00)
@@ -428,9 +429,8 @@ class Petal(discord.Client):
                                    "last_message_channel": message.channel.id,
                                    "last_active": message.timestamp,
                                    "last_message": message.timestamp}, type=1)
-            self.members.addMember(discord.utils.get(message.server.members,
-                                                     id=message.author.id))
-            self.members.getMember(message.author.id)["messageCount"] += 1
+
+            self.db.update_member(message.author, {"message_count": self.db.get_attribute(message.author, "message_count") + 1})
 
         if message.author == self.user:
             return
@@ -504,7 +504,7 @@ class Petal(discord.Client):
             methodToCall = getattr(self.commands, com.split()[0])
             if methodToCall.__doc__ is None:
                 log.warn("All commands require a docstring to not be " +
-                         "ignored. If you dont know what caused this, " +
+                         "ignored. If you don't know what caused this, " +
                          "it's safe to ignore the warning.")
                 return
             log.com("[{0}] [{1}] [{1.id}] [{2}] ".format(message.channel,

@@ -27,7 +27,7 @@ def ts(dt):
     :param dt: datetime object
     :return: seconds since epoch
     """
-    if isinstance(dt, bool):
+    if not isinstance(dt, datetime):
         return dt
     try:
         dt = dt.replace(tzinfo=pytz.utc)
@@ -71,6 +71,7 @@ class DBHandler(object):
         self.motd = self.db['motd']
         self.void = self.db["void"]
         self.ac = self.db["ac"]
+        self.subs = self.db["subs"]
 
         log.f("DBHandler", "Database system ready")
 
@@ -85,18 +86,19 @@ class DBHandler(object):
             return True
         return False
 
-    def add_member(self, member):
+    def add_member(self, member, verbose=False):
         if not self.useDB:
             return False
         if self.member_exists(member):
-            log.f("DBhandler", "Member already exists in database, "
-                               "use update_member to update them")
+            if verbose:
+                log.f("DBhandler", "Member already exists in database, "
+                                   "use update_member to update them")
             return False
+
         else:
 
             data = {"name": member.name,
                     "uid": member.id,
-                    "server_date": ts(member.joined_at),
                     "discord_date": ts(member.created_at),
                     "local_date": ts(datetime.utcnow()),
                     "joins": [ts(member.joined_at)],
@@ -107,20 +109,24 @@ class DBHandler(object):
                     "avatar_url": member.avatar_url,
                     "location": "Brisbane, Australia",
                     "osu": "",
+                    "banned": False,
                     "subreddit": "aww",
                     "message_count": 0,
                     "last_active": ts(datetime.utcnow()),
                     "last_message": 0,
                     "last_message_channel": '0',
                     "strikes": [],
+                    "subscriptions": [],
                     "commands_count": 0}
+            if isinstance(member, discord.Member):
+                data["server_date"] = ts(member.joined_at)
 
             if member.display_name != member.name:
                 data["aliases"].append(member.display_name)
 
             pid = self.members.insert_one(data).inserted_id
-
-            log.f("DBhandler", "New member added to DB! (_id: " + str(pid) + ")")
+            if verbose:
+                log.f("DBhandler", "New member added to DB! (_id: " + str(pid) + ")")
             return True
 
     def get_member(self, member):
@@ -136,24 +142,27 @@ class DBHandler(object):
             return r
         return None
 
-    def get_attribute(self, member, key):
+    def get_attribute(self, member, key, verbose=True):
         """
         Retrieves a specific field from a stored member object
         :param member: discord.Member or str id of member
         :param key: field to return
+        :param verbose:
         :return: member[key] or None if none
         """
         if not self.useDB:
             return False
         mem = self.get_member(member)
         if mem is None:
-            log.f("DBHandler",  m2id(member) + " not found in db")
+            if verbose:
+                log.f("DBHandler",   member.name + m2id(member) + " not found in db")
             return None
 
         if key in mem:
             return mem[key]
         else:
-            log.f("DBHandler", m2id(member) + " has no field: " + key)
+            if verbose:
+                log.f("DBHandler", m2id(member) + " has no field: " + key)
             return None
 
     def update_member(self, member, data=None, type=0):
