@@ -104,7 +104,6 @@ class DBHandler(object):
                     "uid": member.id,
                     "discord_date": ts(member.created_at),
                     "local_date": ts(datetime.utcnow()),
-                    "joins": [ts(member.joined_at)],
                     "aliases": [],
                     "servers": [member.server.id],
                     "discriminator": member.discriminator,
@@ -123,7 +122,7 @@ class DBHandler(object):
                     "commands_count": 0}
             if isinstance(member, discord.Member):
                 data["server_date"] = ts(member.joined_at)
-
+                data["joins"] =  [ ts(member.joined_at) ]
             if member.display_name != member.name:
                 data["aliases"].append(member.display_name)
 
