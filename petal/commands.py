@@ -1704,7 +1704,7 @@ class Commands:
             return "The process timed out, you need content to post"
 
         if "1" in sendto.content:
-            if len(mcontent.content) > 140:
+            if len(mcontent.content) > 280:
                 return "This post is too long for twitter"
 
         await self.client.send_message(message.author, message.channel, "Your post is ready. Please type: " +
@@ -2904,6 +2904,20 @@ class Commands:
         return None
 
 
+    async def avatar(self, message):
+        """
+        returns users avatar
+        >avatar <tag>
+        """
+        tag = message.content.lstrip(self.config.prefix + "avatar").strip()
+        if tag == "":
+           mem = message.author
+        else:       
+           mem = self.get_member(message, tag)
+        if mem is None:
+            return "No member with tag: " + tag
+        else:
+            return mem.avatar_url
 
 
 
