@@ -76,9 +76,9 @@ class Commands:
             self.t = twitter.Api(consumer_key=tweet["consumerKey"],
                                  consumer_secret=tweet["consumerSecret"],
                                  access_token_key=tweet["accessToken"],
-                                 access_token_secret=tweet["accessTokenSecret"]
+                                 access_token_secret=tweet["accessTokenSecret"],tweet_mode='extended'
                                  )
-            # tweet test
+            # tweet te  
             if "id" not in str(self.t.VerifyCredentials()):
                 self.log.warn("Your Twitter authentication is invalid, " +
                               " Twitter posting will not work")
