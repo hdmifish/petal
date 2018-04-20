@@ -441,6 +441,8 @@ class Petal(discord.Client):
             return
 
         for word in message.content.split():
+            if message.channel.id in self.config.get("ignoreChannels"):
+                break
             if word in self.config.wordFilter:
                 embed = discord.Embed(title="Word Filter Hit",
                                       description="At least one filtered " +
