@@ -19,7 +19,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 
 from random import randint
-version = "0.5.0.3"
+version = "0.5.0.4"
 
 
 
@@ -1205,12 +1205,27 @@ class Commands:
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.get_member(message,
-                                    self.clean_input(message.content)[0])
-        if userToBan is None:
-            return "Could not get user with that id"
-
         else:
+
+
+            userToBan = self.get_member(message,
+                                        self.clean_input(message.content)[0])
+
+            await self.client.send_message(message.author, message.channel, "You are about to kick: " +
+                                           userToBan.name +
+                                           ". If this is correct, type `yes`", )
+            confmsg = await self.client.wait_for_message(channel=message.channel,
+                                                     author=message.author,
+                                                     timeout=10)
+            if confmsg is None:
+                return "Timed out... user was not kicked"
+            else:
+                if confmsg.content != "yes":
+                    return userToBan.name + " was not kicked. What changed your mind? "
+
+            userToBan = self.get_member(message,
+                                        self.clean_input(message.content)[0])
+
             try:
                 petal.logLock = True
                 await self.client.kick(userToBan)
@@ -1237,7 +1252,7 @@ class Commands:
 
                 await self.client.embed(self.client.get_channel(
                                         self.config.modChannel), logEmbed)
-                await self.client.send_message(message.author, message.channel, "Cleaning up...", )
+                #await self.client.send_message(message.author, message.channel, "Cleaning up...", )
                 await self.client.send_typing(message.channel)
                 await asyncio.sleep(4)
                 petal.lockLog = False
@@ -2360,7 +2375,7 @@ class Commands:
                 return "This user is already a Helping Hands..."
             now = datetime.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id,
-                           "timeout": now}
+                           "timeout": now, "server_id": user.server.id}
             return "A vote to promote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
                                                                                                  user.discriminator)\
                    + "\nYou man cancel this vote by running " + self.config.prefix \
@@ -2393,7 +2408,7 @@ class Commands:
             if not self.check_user_has_role(user, "Helping Hands"):
                 return "This user is not a member of Helping Hands. I cannot demote them"
             now = datetime.utcnow() + timedelta(days=2)
-            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now}
+            cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now, "server_id": user.server.id}
             return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
                                                                                                 user.discriminator) \
                    + "\nYou may cancel this vote by running " + self.config.prefix \
@@ -2513,7 +2528,7 @@ class Commands:
                     try:
                         await self.client.send_message(message.author, user,
                                                        "Following a vote by the listeners: "
-                                                       "you have been demoted for the time being.")
+                                                       "you have been removed from helping hands for now")
                         del self.config.doc["choppingBlock"][user.id]
                         self.config.save()
                     except:
@@ -2657,7 +2672,7 @@ class Commands:
             starter = self.get_member(message, cb[entry]["started_by"])
             if starter is None:
                 continue
-            msg += "\n------\nVote started by: "  + mem.name+ "\#" + mem.discriminator \
+            msg += "\n------\nVote started for: "  + mem.name+ "\#" + mem.discriminator \
                    + "\nstarted by: " + starter.name + "#" + starter.discriminator + "\n------\n"
 
         return "Heres what votes are goin on: \n" + msg

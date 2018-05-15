@@ -42,3 +42,11 @@ Specifically the bug fixes. Theres a couple of really annoying ones. No wories t
 [v0.5.0.3]
 Updated the readme to make hosting petal a lot easier for new people who want to use it
 Changed config.yaml to config.yml . 3-character file extensions are superior.
+
+[v0.5.0.4] (5/15/18)
+Started to add date-stamps so people actually interested in reading these wouldn't have to compare it to commit logs :)
+I fixed the laccept bug in which I was not adding all necessary keys to a chopping block object on creation.
+Additionally, I fixed confirmation messages for kick and ban to be more user friendly.
+
+Most importantly I just got a warning on my phone that a small summer hailstorm is 20 minutes out which is my exact drive time on my motorcycle to my apartment.
+So I am going to leave it at that. Notes on my survival coming on the next commit : )

@@ -75,6 +75,7 @@ class DBHandler(object):
         self.void = self.db["void"]
         self.ac = self.db["ac"]
         self.subs = self.db["subs"]
+        self.emoji = self.db["emoji"]
 
         log.f("DBHandler", "Database system ready")
 
