@@ -41,7 +41,7 @@ def ts(dt):
 
 class DBHandler(object):
     """
-    Handle connections between leaf and the database. If config.yaml has
+    Handle connections between leaf and the database. If config.yml has
     Databasing turned off, functionality will be solely
     to let the user know it is off.
 
@@ -49,7 +49,7 @@ class DBHandler(object):
     def __init__(self, config):
         if config.get("dbconf") is None:
             log.f("DBHandler", "Could not find database config entry "
-                               "in config.yaml. "
+                               "in config.yml. "
                                "Certain features will be disabled")
             self.useDB = False
             return
@@ -310,5 +310,3 @@ class DBHandler(object):
                                  upsert=False)
 
         return self.motd.find_one({"num": num})
-
-

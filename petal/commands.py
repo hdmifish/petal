@@ -19,7 +19,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 
 from random import randint
-version = "0.5.0.1"
+version = "0.5.0.3"
 
 
 
@@ -78,7 +78,7 @@ class Commands:
                                  access_token_key=tweet["accessToken"],
                                  access_token_secret=tweet["accessTokenSecret"],tweet_mode='extended'
                                  )
-            # tweet te  
+            # tweet te
             if "id" not in str(self.t.VerifyCredentials()):
                 self.log.warn("Your Twitter authentication is invalid, " +
                               " Twitter posting will not work")
@@ -1810,9 +1810,9 @@ class Commands:
         gal = self.config.get("calmGallery")
         if gal is None:
             return "Sadly, calm hasn't been set up correctly"
-        if self.level4(message.author) and args[0] != '':
+        if args[0] != '':
             await self.client.send_message(message.author, message.channel, "You will be held accountable for" +
-                                           " whatever is posted in here." +
+                                           " whatever you post in here." +
                                            " Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                        message.author.id,
@@ -1831,10 +1831,28 @@ class Commands:
         gal = self.config.get("comfyGallery")
         if gal is None:
             return "Sadly, comfypixel hasn't been set up correctly"
-        if self.level4(message.author) and args[0] != '':
+        if args[0] != '':
             await self.client.send_message(message.author, message.channel, "You will be held accountable " +
                                            "for whatever is posted in here." +
                                            " Just a heads up ^_^ ", )
+            gal.append({"author": message.author.name + " " +
+                        message.author.id,
+                        "content": args[0].strip()})
+            self.config.save()
+        else:
+            return gal[random.randint(0, len(gal)-1)]["content"]
+    async def aww(self, message):
+        """
+        Brings up a random image from the cute gallery. Or adds it
+        >aww <link to add to comfypixel>
+        """
+
+        args = self.clean_input(message.content)
+        gal = self.config.get("cuteGallery")
+        if gal is None:
+            return "Sadly, aww hasn't been set up correctly"
+        if args[0] != '':
+            await self.client.send_message(message.author, message.channel, "You will be held accountable " +                                           "for whatever is posted in here.  Just a heads up ^_^ ", )
             gal.append({"author": message.author.name + " " +
                         message.author.id,
                         "content": args[0].strip()})
@@ -1957,7 +1975,7 @@ class Commands:
 
     async def forcesave(self, message):
         """
-        Owner only, forces save to config.yaml
+        Owner only, forces save to config.yml
         >save
         """
         if self.level0(message.author):
@@ -2021,7 +2039,7 @@ class Commands:
                 anonserver = self.client.get_server(self.config
                                                         .get("anon")["server"])
             except KeyError:
-                return "Anon is misconfigured, check config.yaml"
+                return "Anon is misconfigured, check config.yml"
 
             if discord.utils.get(anonserver.members, id=m.id) is None:
                 return "User must be a member of " + anonserver.name
@@ -2172,9 +2190,9 @@ class Commands:
                 return (message.author.mention +
                         " do not worry, your request has been sent to the " +
                         "listener server and someone should be with you shortly")
-            
+
             return "I'm having a bit of trouble posting in the listener server, please ask them directly"
-        
+
         if len(args) == 0:
             await self.client.send_message(message.author, self.client.get_channel(
                 self.config.get("supportChannel")), "@here, " +
@@ -2772,14 +2790,14 @@ class Commands:
 
         try:
             response = self.t.PostRetweet(int(args[0]), trim_user=True)
-            
+
             self.log.f("TWEET", message.author.name + " posted a retweet!")
             status = response.AsDict()
 #            print("Stats: " + str(status))
 #            if str(status) == "[{'code': 327, 'message': 'You have already retweeted this Tweet.'}]":
 #                return "We've already retweeted this tweet"
             user = self.t.GetUser(user_id=status['user_mentions'][0]['id']).AsDict()
-            
+
             embed = discord.Embed(title="Re-tweeted from: " + status['user_mentions'][0]['name'], description=status['retweeted_status']['text'],colour=0x1da1f2)
 #            print(user['profile_image_url'])
             embed.set_author(name=user['screen_name'], icon_url=user["profile_image_url"])
@@ -2932,19 +2950,9 @@ class Commands:
         tag = message.content.lstrip(self.config.prefix + "avatar").strip()
         if tag == "":
            mem = message.author
-        else:       
+        else:
            mem = self.get_member(message, tag)
         if mem is None:
             return "No member with tag: " + tag
         else:
             return mem.avatar_url
-
-
-
-
-
-
-
-
-
-

@@ -8,10 +8,10 @@ log = Peacock()
 class Config(object):
     def __init__(self):
         try:
-            with open('config.yaml', 'r') as fp:
+            with open('config.yml', 'r') as fp:
                 self.doc = yaml.load(fp, Loader=yaml.RoundTripLoader)
         except IOError as e:
-            log.err("Could not open config.yaml: " + str(e))
+            log.err("Could not open config.yml: " + str(e))
             exit()
         except Exception as e:
             log.err("An unexcpected exception of type: "
@@ -23,7 +23,7 @@ class Config(object):
                 self.token = self.doc["token"]
                 self.useToken = not self.doc["selfbot"]
             else:
-                log.err("Token missing in config.yaml")
+                log.err("Token missing in config.yml")
                 exit(404)
         # Defining constants below
         try:
@@ -56,7 +56,7 @@ class Config(object):
             log.f("config", "Loaded word filter")
             self.tc = self.get("trackChannel")
             if self.tc is None:
-                log.warn("trackChannel object not found in config.yaml. " +
+                log.warn("trackChannel object not found in config.yml. " +
                          "That functionality is disabled")
 
             # self.lockLog = False  //deprecated
@@ -87,12 +87,12 @@ class Config(object):
         if vb:
             log.info("Saving...")
         try:
-            with open('config.yaml', 'w') as fp:
+            with open('config.yml', 'w') as fp:
                 yaml.dump(self.doc, fp, Dumper=yaml.RoundTripDumper)
         except PermissionError:
-            log.err("No write access to config.yaml")
+            log.err("No write access to config.yml")
         except IOError as e:
-            log.err("Could not open config.yaml: " + str(e))
+            log.err("Could not open config.yml: " + str(e))
         except Exception as e:
             log.err("An unexcpected exception of type: "
                     + type(e).__name__
@@ -104,15 +104,13 @@ class Config(object):
 
     def load(self, vb=False):
         try:
-            with open('config.yaml', 'r') as fp:
+            with open('config.yml', 'r') as fp:
                 self.doc = yaml.load(fp, Loader=yaml.RoundTripLoader)
         except IOError as e:
-            log.err("Could not open config.yaml: " + str(e))
+            log.err("Could not open config.yml: " + str(e))
         except Exception as e:
             log.err("An unexcpected exception of type: "
                     + type(e).__name__
                     + "has occurred: " + str(e))
         else:
             return self
-
-

@@ -32,13 +32,13 @@ I can finally start working on cleaning up sections and adding features that peo
 - Lost sleep....
 
 [v0.5.0.1] Bug fixes and making the subscription system work better. Not much to say here.
-[v0.5.0.2]  
+
+[v0.5.0.2]
 ITS BEEN A LONG LONG LONG LONG LONG LONG LONG LONG LONG LONG LONG LONG TIME.....                                                                                                   since I've felt fine.
 
 Hi everyone, depressive episodes and all have left me in such a state that I have not been really up to doing anything besides sleeping and work-related projects. That being said, it's time for some new petal updates.
 Specifically the bug fixes. Theres a couple of really annoying ones. No wories though. Theres been a couple little patches here and there, but nothing commitable as they were mainly patch-centric. So this update is a marker for tthose.
 
-
-
-
-
+[v0.5.0.3]
+Updated the readme to make hosting petal a lot easier for new people who want to use it
+Changed config.yaml to config.yml . 3-character file extensions are superior.

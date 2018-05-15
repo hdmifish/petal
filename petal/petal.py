@@ -140,7 +140,7 @@ class Petal(discord.Client):
             log.ready("MOTD system running...")
             pass
         else:
-            log.warn("No dbconf configuration in config.yaml,"
+            log.warn("No dbconf configuration in config.yml,"
                      + "motd features are disabled")
 
         return
