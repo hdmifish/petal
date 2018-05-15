@@ -2,7 +2,7 @@
 A friendly, practical, discord bot.
 
 ## Returning Users
-I keep an expanded changelog with every commit. If you need more than the short commit message to see what was changed.
+I keep an expanded changelog with every commit. If you need more than the short commit message to see what was changed, that would be a good place to look.
 
 **Warning:** includes stream of consciousness content that may confuse or annoy the reader
 
