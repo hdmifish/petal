@@ -271,6 +271,10 @@ commands:
     perm: '0'
     com: "it's a no from me,  but just in case you're having a bad day: https://i.imgur.com/SMu3O65.gifv"
 
+cuteGallery:
+- author: isometricramen
+  content: https://i.imgur.com/MU2dD8E.jpg
+
 calmGallery:
 - author: isometricramen
   content: http://i.imgur.com/olVyCIh.gif

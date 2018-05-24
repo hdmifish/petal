@@ -48,5 +48,11 @@ Started to add date-stamps so people actually interested in reading these wouldn
 I fixed the laccept bug in which I was not adding all necessary keys to a chopping block object on creation.
 Additionally, I fixed confirmation messages for kick and ban to be more user friendly.
 
-Most importantly I just got a warning on my phone that a small summer hailstorm is 20 minutes out which is my exact drive time on my motorcycle to my apartment.
+Most importantly, I just got a warning on my phone that a small summer hailstorm is 20 minutes out which is my exact drive time on my motorcycle to my apartment.
 So I am going to leave it at that. Notes on my survival coming on the next commit : )
+
+[v0.5.0.5] (5/24/18)
+After 9 days of hiding out from the insane southern midwest weather during the spring tornado season, I have brought an update. The patch gaming events team, specifically my good friend Galahir, have been pushing and pushing for me to get this update out.
+Well, it is finally here.
+The subscription system has now been modified to work much more efficiently thanks to a suggestion by Numerion. I probably should have paid attention in Dr. Panda's database class when we were going over normal forms and efficiency.
+Thanks to all 3 of y'all for your patience with me.

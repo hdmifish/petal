@@ -19,7 +19,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 
 from random import randint
-version = "0.5.0.4"
+version = "0.5.0.5"
 
 
 
@@ -252,7 +252,7 @@ class Commands:
                     return item["code"], item["name"]
 
 
-        self.log.f("event", "could not find sub key in post")
+        self.log.f("event", "could not find subscription key in your announcement")
         return None, None
 
 
@@ -279,44 +279,35 @@ class Commands:
     # for your own personal uses if you like. You will need a mongoDB instance and be familiar with pyMongo
     # I personally prefer the free cloud.mongodb.com instances they have available.
 
-    async def notify_subscribers(self, message, key, friendly):
-
-            mcount = self.db.members.count({"subscriptions": {"$exists": True}})
-            if  mcount > 1000:
-                sentiment = "This may take a while, I have to check " + str(mcount) + " members!"
-            elif mcount > 500:
-                sentiment = "This will only take a bit."
+    async def notify_subscribers(self, message, key):
+        await self.client.send_message(message.author, message.channel, "Notifying subscribers...")
+        sub = self.db.subs.find_one({"code": key})
+        if sub is None:
+            return "Error, could not find that subscription anymore. Which shouldn't ever happen. Ask isometricramen about it."
+        status = "```\n"
+        total = len(sub["members"])
+        if len(sub["members"]) == 0:
+            return "Nobody is subscribed to this game. "
+        count = 0
+        for member in sub["members"]:
+            mem = self.get_member(message, member)
+            if mem is None:
+                status += mem + " is missing\n"
+            try:
+                await self.client.send_message(None, mem, "Hello! Hope your day/evening/night/morning is going well\n\nI was just popping in here to let you know that an event for `{}` has been announced.".format(sub["name"])  +
+                                                                "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same server in which you subscribed originally.".format(self.config.prefix, sub["code"]))
+            except discord.errors.ClientException:
+                status += mem.name + " blocked PMs\n"
             else:
-                sentiment = "This shouldn't take long."
-
-            await self.client.send_message(message.author, message.channel, "Notifying subscribers..." + sentiment)
-            count = 0
-            members = list(self.db.members.find({"subscriptions": {"$exists": True}}))
-            for member in members:
-                try:
-                    if self.db.get_attribute(member["uid"], "subscriptions", verbose=False) is None:
-                        continue
-
-                except KeyError:
-                    continue
-
-                if key in member["subscriptions"]:
-                    try:
-                        m = self.client.get_server(self.client.get_main_server()).get_member(member["uid"])
-                        await self.client.send_message(message.author, m, "Hey, an event you are subscribed to: (" + friendly + ") has been announced in " + m.server.name + "!")
-                        self.log.f("subs", "Notified " + m.name + " of the " + friendly + " event posted by " + message.author.name)
-                        await asyncio.sleep(1)
-
-                    except Exception as e:
-                        self.log.f("subs", "Unable to notify " + member["name"] + " because: "+  str(e))
-                        continue
-
-                    else:
-                        count += 1
-
-
-
-            return count
+                status += mem.name + " PMed\n"
+                count += 1
+            if len(status) > 1900:
+                await self.client.send_message(None, message.channel, status + "```")
+                await asyncio.sleep(0.5)
+                status = "```\n"
+        if len(status) > 0:
+            await self.client.send_message(None, message.channel, status + "```")
+        return str(count) + " out of " + str(total) + " subscribed members were notified. "
 
     async def check_pa_updates(self, force=False):
             if force:
@@ -779,13 +770,16 @@ class Commands:
         """
         args = self.clean_input(message.content)
         if args[0] == '':
-            return "Sorry mate, I cant do much with that. Make sure you put a subscription key (`" + self.config.prefix + "subs list`)"
+            return "Sorry mate, I can't do much with that. Make sure you put a subscription key (`" + self.config.prefix + "subs list`)"
 
-        sub = self.db.subs.find_one({"code":args[0].upper()})
+        sub = self.db.subs.find_one({"code": args[0].upper()})
+
         if sub is None:
             return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
-
-        self.db.update_member(message.author, {"subscriptions":args[0].upper()})
+        sub["members"].append(message.author.id)
+        self.db.subs.update({"_id": sub["_id"]}, {"$set": {"members" : sub["members"]}})
+        self.log.f("subs", "Added: " + message.author.name + " ({})".format(message.author.id))
+        #self.db.update_member(message.author, {"subscriptions": args[0].upper()})
         return "Alright, You're all set to receive notifications when there is an event involving: " + sub["name"]
 
     async def unsubscribe(self, message):
@@ -798,49 +792,23 @@ class Commands:
             return "Sorry mate, I cant do much with that. Make sure you put a subscription key (`" + self.config.prefix + "subs list`)"
 
         sub = self.db.subs.find_one({"code":args[0].upper()})
-        sublist = self.db.get_attribute(message.author, "subscriptions")
-
-        if sublist is None:
-            return "You haven't subscribed to anything, silly. That's ok, it was probably a mistake. You can subscribe with the " + self.config.prefix + "subscribe command"
-
         if sub is None:
-            if args[0].upper() in sublist:
-                del sublist[sublist.index(args[0].upper())]
-                self.db.members.update_one({"uid": message.author.id}, {"$set": {"subscriptions": sublist}})
-            else:
-                return "You don't have anything in your subscription list that matches: " + args[0].upper()
+            return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
+
+        if message.author.id not in sub["members"]:
+            return "It seems you are not subscribed to `{}`".format(sub["name"])
         else:
-            if args[0].upper() in sublist:
-                del sublist[sublist.index(args[0].upper())]
-                self.db.members.update_one({"uid": message.author.id}, {
-                    "$set": {"subscriptions": sublist}})
-                return "Successfully un-subscribed from: " + sub["name"]
-            else:
-                return "You are not subscribed to: " + sub["name"] + " [{}]".format(sub["code"])
+            sub["members"].remove(message.author.id)
+            self.db.subs.update({"_id": sub["_id"]}, {"$set": {"members": sub["members"]}})
+            self.log.f("subs", "Removed: " + message.author.name + " ({})".format(message.author.id))
+            return "You have been sucessfully unsubscribed from " + sub["name"] + ".\nYou will no longer receive notfications from me for this game unless you re-subscribe"
 
     async def mysubs(self, message):
         """
         Shows what events you are subscribed to
         >mysubs
         """
-        if self.db.get_attribute(message.author, "subscriptions") is None:
-            return "You aren't subscribed to anything. Gotta do that first, my dude."
-
-        subs = list(self.db.subs.find())
-
-        mysub = self.db.get_attribute(message.author, "subscriptions")
-
-        msg = "You are subscribed to {} game(s).\n```\n".format(str(len(mysub)))
-        if len(mysub) == 0:
-            return "You aren't subscribed to anything. Try and use the " + self.config.prefix + "subscribe command"
-        else:
-            for sub in subs:
-                if sub["code"] in mysub:
-                    msg += sub["name"] + " [" + sub["code"] + "]\n"
-                if len(msg) > 1900:
-                    await self.send_message(message.author, message.channel, msg  + "\n```")
-                    msg = "```\n"
-        return msg + "\n```"
+        return "Disabled for now"
 
 
 
@@ -849,8 +817,6 @@ class Commands:
         Add or Remove subscription keys (requires level 3)
         >subs <add/remove/list> | <name of game> | <game key>
         """
-
-
         args = self.clean_input(message.content)
         if args[0] == '':
             return ("Type, add, del,  or list after " +  self.config.prefix +
@@ -863,13 +829,13 @@ class Commands:
                 return ("Format is: " + self.config.prefix
                         + "subs add | <game name> | <game code (4 digit)>")
 
-
             if self.db.subs.find_one({"name": args[1]}) is not None:
                 return "That sub already exists. Delete it first to replace it"
             code = self.db.subs.find_one({"code": args[2].upper()})
+
             if code is not None:
                 return "That code is in use for: " + code["name"]
-            self.db.subs.insert_one({"name": args[1], "code": args[2].upper()})
+            self.db.subs.insert_one({"name": args[1], "code": args[2].upper(), "members": []})
 
             return "Added " + args[1] + " with key: " + args[2].upper()
 
@@ -1018,11 +984,7 @@ class Commands:
 
 
             if n.content == "yes":
-
-                embed.add_field(name="Subscription Key:",
-                                value=friendly + "({})".format(subkey),
-                                inline=False)
-                count = await self.notify_subscribers(message, subkey, friendly)
+                response = await self.notify_subscribers(message, subkey)
                 todelete = "[{}]".format(subkey)
                 ecount = 0
                 for post in posted:
@@ -1034,15 +996,9 @@ class Commands:
                         content = content.replace(todelete, '')
                        # print("replaced: " + content)
                         await self.client.edit_message(post, content)
-                        ecount += 1
 
-                if ecount >= 1:
-                    tail = " and edited [{}] out of the announcements".format(subkey)
-                else:
-                    tail = ""
-                if count == 1:
-                    return "Notified 1 Person of the event" + tail
-                return "Notified " + str(count) + " people of the event" + tail
+
+                return response
     # =========REDEFINITIONS============ #
 
     async def cat(self, message):

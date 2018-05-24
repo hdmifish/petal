@@ -155,12 +155,13 @@ class Petal(discord.Client):
             if self.db.get_member(author) is not None:
                 if self.db.get_attribute(author, "ac", verbose=False) is not None:
                     if self.db.get_attribute(author, "ac"):
-                        message += ", " + self.commands.get_ac()
+                        message += " , " + self.commands.get_ac()
         try:
             return await super().send_message(channel, message)
         except discord.errors.Forbidden:
-            log.err("A message: " + message + " was unabled to be sent in channel: " + channel.name)
+            log.err("A message: " + message + " was unable to be sent in channel: " + channel.name)
             return None
+
     async def embed(self, channel,  embedded):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
