@@ -76,7 +76,7 @@ class DBHandler(object):
         self.ac = self.db["ac"]
         self.subs = self.db["subs"]
         self.emoji = self.db["emoji"]
-
+        self.dinos = self.db["dinos"]
         log.f("DBHandler", "Database system ready")
 
     def member_exists(self, member):

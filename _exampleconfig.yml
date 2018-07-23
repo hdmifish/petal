@@ -73,7 +73,7 @@ roleGrant:
 
 # This role allows users to post to social media with the [update] command
 socialMediaRole: social_media
-
+mc_channel: '0000000000000'
 #Message to PM users when they join the Server
 #set to "null" to disable
 

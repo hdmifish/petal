@@ -279,8 +279,8 @@ class Commands:
     # for your own personal uses if you like. You will need a mongoDB instance and be familiar with pyMongo
     # I personally prefer the free cloud.mongodb.com instances they have available.
 
-    async def notify_subscribers(self, message, key):
-        await self.client.send_message(message.author, message.channel, "Notifying subscribers...")
+    async def notify_subscribers(self, source_channel, target_message, key):
+        await self.client.send_message(None, source_channel, "Notifying subscribers...")
         sub = self.db.subs.find_one({"code": key})
         if sub is None:
             return "Error, could not find that subscription anymore. Which shouldn't ever happen. Ask isometricramen about it."
@@ -290,23 +290,24 @@ class Commands:
             return "Nobody is subscribed to this game. "
         count = 0
         for member in sub["members"]:
-            mem = self.get_member(message, member)
+            mem = self.get_member(target_message, member)
             if mem is None:
-                status += mem + " is missing\n"
-            try:
-                await self.client.send_message(None, mem, "Hello! Hope your day/evening/night/morning is going well\n\nI was just popping in here to let you know that an event for `{}` has been announced.".format(sub["name"])  +
-                                                                "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same server in which you subscribed originally.".format(self.config.prefix, sub["code"]))
-            except discord.errors.ClientException:
-                status += mem.name + " blocked PMs\n"
+                status += member + " is missing\n"
             else:
-                status += mem.name + " PMed\n"
-                count += 1
+                try:
+                    await self.client.send_message(None, mem, "Hello! Hope your day/evening/night/morning is going well\n\nI was just popping in here to let you know that an event for `{}` has been announced.".format(sub["name"])  +
+                                                                    "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same server in which you subscribed originally.".format(self.config.prefix, sub["code"]))
+                except discord.errors.ClientException:
+                    status += member + " blocked PMs\n"
+                else:
+                    status += mem.name + " PMed\n"
+                    count += 1
             if len(status) > 1900:
-                await self.client.send_message(None, message.channel, status + "```")
+                await self.client.send_message(None, source_channel, status + "```")
                 await asyncio.sleep(0.5)
                 status = "```\n"
         if len(status) > 0:
-            await self.client.send_message(None, message.channel, status + "```")
+            await self.client.send_message(None, source_channel, status + "```")
         return str(count) + " out of " + str(total) + " subscribed members were notified. "
 
     async def check_pa_updates(self, force=False):
@@ -984,7 +985,7 @@ class Commands:
 
 
             if n.content == "yes":
-                response = await self.notify_subscribers(message, subkey)
+                response = await self.notify_subscribers(message.channel, posted[0], subkey)
                 todelete = "[{}]".format(subkey)
                 ecount = 0
                 for post in posted:
@@ -1297,6 +1298,9 @@ class Commands:
         Temporarily bans a user
         >tempban <user tag/id>
         """
+        if not self.check_user_has_role(message.author, "mod"):
+            return "you do not have sufficient perms"
+
         logChannel = message.server.get_channel(self.config.get("logChannel"))
         if logChannel is None:
             return ("I'm sorry, you must have logging enabled to" +
@@ -2927,3 +2931,32 @@ class Commands:
             return "No member with tag: " + tag
         else:
             return mem.avatar_url
+
+    async def dino(self, message):
+        """
+        enters you into the drawing to win JWE
+        !dino your_dino_fact
+        """
+        if not message.channel.is_private:
+            return "you gotta use this in PMs 0,,0"
+        if self.db.dinos.find_one({"id":message.author.id}) is not None:
+            return "Hey, thanks for another fact. but you can only vote once"
+        else:
+            self.db.dinos.insert_one({"id":message.author.id, "name":message.author.name, "timestamp":str(datetime.utcnow()),"fact":message.content})
+            return "Thanks! you are now entered in the giveaway"
+
+
+    async def wlme(self, message):
+        """
+        Messages the MC mods (if applicable)
+        !wlme your_minecraft_username
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+
+        await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
+        return "Your message has been received by the MC staff and you should be whitelisted shortly"
