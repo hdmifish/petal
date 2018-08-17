@@ -1330,7 +1330,7 @@ class Commands:
         else:
             try:
                 petal.logLock = True
-                timex = time.time() + timedelta(hours=int(msg2.content.strip())).total_seconds()
+                timex = time.time() + timedelta(days=int(msg2.content.strip())).total_seconds()
                 self.db.update_member(userToBan, {"banned": True, "bannedFrom": userToBan.server.id, "banExpires": str(timex).split('.')[0] })
                 await self.client.ban(userToBan)
             except discord.errors.Forbidden as ex:
