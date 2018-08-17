@@ -56,3 +56,7 @@ After 9 days of hiding out from the insane southern midwest weather during the s
 Well, it is finally here.
 The subscription system has now been modified to work much more efficiently thanks to a suggestion by Numerion. I probably should have paid attention in Dr. Panda's database class when we were going over normal forms and efficiency.
 Thanks to all 3 of y'all for your patience with me.
+
+[v0.5.0.6] (8/16/18)
+Petal has been doing very well. Except for the teensy weensy problem of some commands not sticking. So I have added better logging to grasslands.py in an attempt to figure out what's wrong.
+Asynchronous prints are a pain.

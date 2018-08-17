@@ -17,49 +17,49 @@ class Peacock(object):
 
     def log(self, message):
         print(Fore.WHITE + "[LOG] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii') + Fore.RESET)
+              message.encode('ascii', 'ignore').decode('ascii') + Fore.RESET, flush=True)
         return
 
     def warn(self, message):
         print(Fore.YELLOW + "[WARN] " + self.timestamp() +
               " " + message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
         return
 
     def err(self, message):
         print(Fore.RED + "[ERROR] " + self.timestamp() + " " +
               message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def info(self, message):
         print(Fore.CYAN + "[INFO] " + self.timestamp() + " " +
               message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def com(self, message):
         print(Fore.BLUE + "[COMMAND] " + self.timestamp() + " " +
               message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def member(self, message):
         print(Fore.CYAN + "[MEMBER] " + self.timestamp() + " " +
               message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def debug(self, message):
         print(Fore.MAGENTA + "[DEBUG] " + self.timestamp() + " " +
               message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def ready(self, message):
         print(Fore.GREEN + "[READY] " + self.timestamp() + " " +
               message.encode("ascii", "ignore").decode('ascii')
-              + Fore.RESET)
+              + Fore.RESET, flush=True)
 
     def f(self, func="basic", message=""):
         print(Fore.MAGENTA + "[FUNC/{}] ".format(func.upper())
               + self.timestamp() + " " +
-              message.encode("ascii", "ignore").decode('ascii') + Fore.RESET)
+              message.encode("ascii", "ignore").decode('ascii') + Fore.RESET, flush=True)
 
 
 class Octopus(object):

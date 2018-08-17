@@ -105,10 +105,12 @@ class Petal(discord.Client):
             banlist = await self.get_bans(mainserver)
 
             for m in banlist:
+                log.info("UNBANS", m.name + "({})".format(m.id))
                 ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
                 if ban_expiry is None:
                     continue
                 elif int(ban_expiry) <= int(epoch):
+                    log.info(str(ban_expiry) + " compared to " + str(epoch))
                     await self.unban(mainserver, m)
                     log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
                 else:
@@ -158,6 +160,9 @@ class Petal(discord.Client):
                         message += " , " + self.commands.get_ac()
         try:
             return await super().send_message(channel, message)
+        except discord.errors.InvalidArgument:
+            log.err("A message: " + message + " was unable to be sent in " + channel)
+            return None
         except discord.errors.Forbidden:
             log.err("A message: " + message + " was unable to be sent in channel: " + channel.name)
             return None
