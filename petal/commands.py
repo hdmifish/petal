@@ -18,6 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
+from .mcname import WLRequest
 
 from random import randint
 version = "0.5.0.8"
@@ -2972,3 +2973,17 @@ class Commands:
 
         await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
         return "Your message has been received by the MC staff and you should be whitelisted shortly"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
