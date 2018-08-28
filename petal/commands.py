@@ -2973,17 +2973,3 @@ class Commands:
 
         await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
         return "Your message has been received by the MC staff and you should be whitelisted shortly"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
