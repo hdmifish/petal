@@ -11,7 +11,7 @@ import requests
 class Peacock(object):
     def __init__(self, painter=None):
         init()
-        
+
     def timestamp(self):
         return "[{}]".format(str(dt.utcnow())[:-7])
 
