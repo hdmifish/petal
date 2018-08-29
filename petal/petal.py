@@ -105,12 +105,13 @@ class Petal(discord.Client):
             banlist = await self.get_bans(mainserver)
 
             for m in banlist:
-                log.info("UNBANS", m.name + "({})".format(m.id))
+                #log.f("UNBANS", m.name + "({})".format(m.id))
                 ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
                 if ban_expiry is None:
                     continue
                 elif int(ban_expiry) <= int(epoch):
-                    log.info(str(ban_expiry) + " compared to " + str(epoch))
+                    log.f(str(ban_expiry) + " compared to " + str(epoch))
+                    print(flush=True)
                     await self.unban(mainserver, m)
                     log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
                 else:
@@ -147,7 +148,7 @@ class Petal(discord.Client):
         await self.change_presence(game=discord.Game(name="with iso"))
         return
 
-    async def send_message(self, author=None, channel=None, message=None, timeout=0, **kwargs):
+    async def send_message(self, channel, author=None, message=None, timeout=0, **kwargs):
         """
         Overload on the send_message function
         """
