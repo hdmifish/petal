@@ -10,6 +10,7 @@ import pytumblr
 import time
 import pytz
 import petal
+from urllib.parse import urlencode
 from datetime import datetime, timedelta
 
 from .dbhandler import m2id
@@ -19,7 +20,7 @@ from .grasslands import Peacock
 from .grasslands import Pidgeon
 
 from random import randint
-version = "0.5.0.5"
+version = "0.5.0.8"
 
 
 
@@ -160,7 +161,11 @@ class Commands:
                 return True
         else:
             return True
-
+    def generate_post_process_URI(mod, reason, message, target):
+        if self.config.get("modURI") is None:
+            return "*no modURI in config, so post processing will be skipped*"
+        return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))
+         
     def get_uptime(self):
         delta = datetime.utcnow() - self.startup
         delta = delta.total_seconds()
@@ -1237,6 +1242,7 @@ class Commands:
         msg = await self.client.wait_for_message(channel=message.channel,
                                                  author=message.author,
                                                  timeout=30)
+        reason = msg
         if msg is None:
             return "Timed out while waiting for input"
 
@@ -1290,9 +1296,15 @@ class Commands:
                 await self.client.send_message(message.author, message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
-                return (userToBan.name + " (ID: " + userToBan.id
-                        + ") was successfully banned")
-
+                response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id
+                        + ") was successfully banned\n\n")
+                try:
+                    # Post-processing webhook for ban command
+                    return generate_post_process_URI(msg.author.name + msg.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
+                except Exception as e:
+                    log.err("Could not generate post_process_message for ban" + str(e))                    
+                    return "Error occurred trying to generate webhook URI"
+                  
     async def tempban(self, message):
         """
         Temporarily bans a user

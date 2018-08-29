@@ -1,6 +1,6 @@
 #!/usr/bin/python3.5
 from petal import Petal
-
+import subprocess
 import traceback
 import os, ctypes
 import sys
@@ -18,9 +18,7 @@ if "-u" in sys.argv or "--update" in sys.argv:
     else:
         print("Checking for updates before running...")
         try:
-            with open("requirements.txt", "r") as fp:
-                for line in fp.readlines():
-                    pip.main(['install', '--upgrade', line.strip()])
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
         except Exception as e:
             print("Exception: " + str(e))
         else:

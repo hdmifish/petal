@@ -60,3 +60,7 @@ Thanks to all 3 of y'all for your patience with me.
 [v0.5.0.6] (8/16/18)
 Petal has been doing very well. Except for the teensy weensy problem of some commands not sticking. So I have added better logging to grasslands.py in an attempt to figure out what's wrong.
 Asynchronous prints are a pain.
+[v0.5.0.8] (8/29/18)
+Pip 10.0 broke embedded pip so I converted the autoupdater to subprocess as suggested by the docs. This should be more thread-friendly anyway. 
+As well, DAV made a critical commit of removing 8 spaces from grasslands.py which should make things significantly faster. 
+Finally, added the generate_post_process_URI command, in order to allow people to process their own ban output. Honestly, this is more of a Patch Gaming thing. But, it felt necessary to include it in the update. Documentation may come later if people ask me about it. 
