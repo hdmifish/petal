@@ -27,7 +27,16 @@ edit player:
 save json database
 """
 
-def writeLocalDB(player, dbIn): # read db; update db from ephemeral player; write db to file
+def breakUID(str0): # Break apart Mojang UUID with dashes
+    str1 = str0[0:8]
+    str2 = str0[8:12]
+    str3 = str0[12:16]
+    str4 = str0[16:20]
+    str5 = str0[20:32]
+    str99 = str1 + "-" + str2 + "-" + str3 + "-" + str4 + "-" + str5
+    return str99
+
+def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to file
     
     return -9
 
@@ -37,20 +46,29 @@ def createLocalDB(player0): # use the ephemeral player as the first entry in a n
 
 def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist database
     uid = userdat["id"]
+    uidF = breakUID(uid)
     uname = userdat["name"]
     #print(uname + " has uuid " + uid)
     eph = { # Create dict: Ephemeral player profile, to be merged into dbRead
         "uname" : uname, # Minecraft username; append to dbase usernames
-        "uid_mc" : uid, # Minecraft UID; use to locate or create dbase entry
+        "uid_mc" : uidF, # Minecraft UID; use to locate or create dbase entry
         "uid_dis" : submitter, # Discord UID; attach to mc uid if not present
         "approved" : []
         }
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
-        print(dbRead)
     except OSError: # TODO: file does not exist: create the file
+        dbRead = createLocalDB(userdat)
         return -9 # TODO: remove this when the file creation is implemented
-    return 0
+    #playerIndex = dbRead.index(next(filter(lambda n: n.get('uuid') == uid, dbRead)))
+    plr = next((item for item in dbRead if item["uuid"] == uidF), False)
+    if plr == False: # Player is not whitelisted -- Create entry
+        print("plr = False")
+        return dbRead, -99
+    else: # Player is whitelisted -- Update entry with any new info
+        playerIndex = dbRead.index(plr)
+        #return -1
+    return dbRead, playerIndex
 
 def idFromName(uname_raw):
     uname_low = uname_raw.lower()
