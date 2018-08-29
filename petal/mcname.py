@@ -16,15 +16,6 @@ ERROR CODES:
 -8: Malevolent error: user supplied erroneous name
 -9: Malevolent error: incomplete function (fault of developer)
 """
-class Player:
-    def __init__(self, discord_id, uuid, uname):
-        self.discord_uuid = discord_id # discord uuid
-        self.minecraft_uuid = uuid # minecraft/mojang uuid
-        self.minecraft_name = uname # minecraft username (added to list of known aliases)
-        self.approved = [] # list of discord uuids who approved the whitelisting
-
-    def approve(self, sponsor):
-        self.approved.append(sponsor)
 
 """
 TODO:
@@ -48,8 +39,15 @@ def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist 
     uid = userdat["id"]
     uname = userdat["name"]
     #print(uname + " has uuid " + uid)
+    eph = { # Create dict: Ephemeral player profile, to be merged into dbRead
+        "uname" : uname, # Minecraft username; append to dbase usernames
+        "uid_mc" : uid, # Minecraft UID; use to locate or create dbase entry
+        "uid_dis" : submitter, # Discord UID; attach to mc uid if not present
+        "approved" : []
+        }
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
+        print(dbRead)
     except OSError: # TODO: file does not exist: create the file
         return -9 # TODO: remove this when the file creation is implemented
     return 0
