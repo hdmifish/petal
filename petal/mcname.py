@@ -17,16 +17,6 @@ ERROR CODES:
 -9: Malevolent error: incomplete function (fault of developer)
 """
 
-"""
-TODO:
-load json database
-find player in json database
-edit player:
-	add discord id
-	add mc name
-save json database
-"""
-
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
     str2 = str0[8:12]
@@ -38,7 +28,20 @@ def breakUID(str0): # Break apart Mojang UUID with dashes
 
 def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to file
     
-    return -9
+    pIndex = next((item for item in dbIn if item["uuid"] == player["uid_mc"]), False) # DBase index of player (integer 0+)
+    ret = -2
+    if pIndex == False: # Player is not in the database -- Create entry
+        pIndex = len(dbIn) # Where the new player is about to be
+        dbIn.append({})
+        dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': [], 'discord': player["uid_dis"], 'approved': player["approved"]}
+        ret = 0
+    else:
+        pIndex = dbIn.index(pIndex)
+    if player["uname"] not in dbIn[pIndex]["name"]:
+        dbIn[pIndex]["name"].append(player["uname"])
+    dbIn[pIndex]["discord"] = player["uid_dis"]
+    json.dump(dbIn, open(dbName, 'w'), indent=4)
+    return ret
 
 def createLocalDB(player0): # use the ephemeral player as the first entry in a new file
     
@@ -48,7 +51,6 @@ def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist 
     uid = userdat["id"]
     uidF = breakUID(uid)
     uname = userdat["name"]
-    #print(uname + " has uuid " + uid)
     eph = { # Create dict: Ephemeral player profile, to be merged into dbRead
         "uname" : uname, # Minecraft username; append to dbase usernames
         "uid_mc" : uidF, # Minecraft UID; use to locate or create dbase entry
@@ -58,32 +60,18 @@ def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist 
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
     except OSError: # TODO: file does not exist: create the file
-        dbRead = createLocalDB(userdat)
-        return -9 # TODO: remove this when the file creation is implemented
-    #playerIndex = dbRead.index(next(filter(lambda n: n.get('uuid') == uid, dbRead)))
-    plr = next((item for item in dbRead if item["uuid"] == uidF), False)
-    if plr == False: # Player is not whitelisted -- Create entry
-        print("plr = False")
-        return dbRead, -99
-    else: # Player is whitelisted -- Update entry with any new info
-        playerIndex = dbRead.index(plr)
-        #return -1
-    return dbRead, playerIndex
+        dbRead = [{'uuid': uidF, 'name': [uname]}]
+    writeLocalDB(eph, dbRead)
 
 def idFromName(uname_raw):
     uname_low = uname_raw.lower()
     response = requests.get("https://api.mojang.com/users/profiles/minecraft/{}".format(uname_low))
     return {'code':response.status_code, 'udat':response.json() }
-    #if code == 200:
-        #return json.loads(response.text)
-    #else:
-        #return -1
 
 def WLRequest(nameGiven, discord_id):
     udict = idFromName(nameGiven) # Get the id from the name, or an error
     if udict["code"] == 200: # If this is 200, the second part will contain json data; Try to add it
         verdict = addToLocalDB(udict["udat"], discord_id)
-        return verdict
 # Map response codes to function errors
     #elif udict["code"] == 200:
         #return 
