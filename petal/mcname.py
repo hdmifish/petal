@@ -26,18 +26,20 @@ def breakUID(str0): # Break apart Mojang UUID with dashes
     return str99
 
 def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to file
-    pIndex = next((item for item in dbIn if item["uuid"] == player["uid_mc"]), False) # DBase index of player (integer 0+)
+    pIndex = next((item for item in dbIn if item["uuid"] == player["uid_mc"]), False) # Is the player found in the list?
     ret = -2
     if pIndex == False: # Player is not in the database -- Create entry
         pIndex = len(dbIn) # Where the new player is about to be
         dbIn.append({})
-        dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': [], 'discord': player["uid_dis"], 'approved': player["approved"]}
+        dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': player["uname"], 'altname': [], 'discord': player["uid_dis"], 'approved': player["approved"]}
         dbIn[pIndex]["submitted"] = datetime.datetime.today().strftime('%Y-%m-%d_%0H:%M')
         ret = 0
     else:
-        pIndex = dbIn.index(pIndex)
-    if player["uname"] not in dbIn[pIndex]["name"]:
-        dbIn[pIndex]["name"].append(player["uname"])
+        pIndex = dbIn.index(pIndex) # DBase index of player (integer 0+)
+    if 'altname' not in dbIn[pIndex]:
+        dbIn[pIndex]["altname"] = []
+    if player["uname"] not in dbIn[pIndex]["altname"]:
+        dbIn[pIndex]["altname"].append(player["uname"])
     dbIn[pIndex]["discord"] = player["uid_dis"]
     json.dump(dbIn, open(dbName, 'w'), indent=2)
     return ret
