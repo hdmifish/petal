@@ -1,4 +1,5 @@
 config.yml
 members.json
 playerdb.json
+whitelist.json
 *.pyc
