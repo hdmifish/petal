@@ -2971,5 +2971,23 @@ class Commands:
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
+        submission = message.content[len(self.config.prefix) + 4:] # separated this for simplicity
+        reply = WLRequest(submission, message.author.id) # Send the submission through the new function
+
         await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
-        return "Your message has been received by the MC staff and you should be whitelisted shortly"
+        #return "Your message has been received by the MC staff and you should be whitelisted shortly"
+
+        if reply == 0:
+            return "Your whitelist request has been successfully submitted :D"
+        elif reply == -1:
+            return "No need, you are already whitelisted :D"
+        elif reply == -2:
+            return "That username has already been submitted for whitelisting :o"
+        #elif reply == -:
+            #return "Error (No Description Provided)"
+        elif reply == -8:
+            return "That does not seem to be a valid Minecraft username D:"
+        elif reply == -9:
+            return "Sorry, iso and/or dav left in an unfinished function >:l"
+        else:
+            return "Nondescript Error ({})".format(reply)
