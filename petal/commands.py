@@ -18,6 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
+from .mcname import WLRequest, WLAdd, WLQuery, EXPORT_WHITELIST
 
 from random import randint
 version = "0.5.0.8"
@@ -2970,5 +2971,105 @@ class Commands:
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
-        await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
-        return "Your message has been received by the MC staff and you should be whitelisted shortly"
+        submission = message.content[len(self.config.prefix) + 4:] # separated this for simplicity
+        reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
+
+        if reply == 0:
+            await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
+        #return "Your message has been received by the MC staff and you should be whitelisted shortly"
+
+        if reply == 0:
+            return "Your whitelist request has been successfully submitted :D"
+        elif reply == -1:
+            return "No need, you are already whitelisted :D"
+        elif reply == -2:
+            return "That username has already been submitted for whitelisting :o"
+        #elif reply == -:
+            #return "Error (No Description Provided)"
+        elif reply == -8:
+            return "That does not seem to be a valid Minecraft username D:"
+        elif reply == -9:
+            return "Sorry, iso and/or dav left in an unfinished function >:l"
+        else:
+            return "Nondescript Error ({})".format(reply)
+
+    async def wl(self, message):
+        """
+        Exports the provided ID from the local whitelist database to the whitelist proper
+        !wl ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
+        """
+
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 2:] # separated this for simplicity
+        reply, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
+
+        if reply == 0:
+            return "You have successfully approved `{}` :D".format(submission)
+        elif reply == -2:
+            return "You have already approved `{}` :D".format(submission)
+        #elif reply == -:
+            #return "Error (No Description Provided)"
+        elif reply == -8:
+            return "Cannot find a whitelist request for `{}` D:".format(submission)
+        elif reply == -9:
+            return "Sorry, iso and/or dav left in an unfinished function >:l"
+
+    async def wlquery(self, message):
+        """
+        Takes a string and finds any database entry that references it
+        !wlquery search_term
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 7:] # separated this for simplicity
+        searchres = WLQuery(submission)
+
+        if searchres == []:
+            return "No database entries containing `{}` found".format(submission)
+        else:
+            oput = "Results:\n"
+            for entry in searchres:
+                oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
+                oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
+                oput = oput + "- Discord UUID: `" + entry["discord"] + "`\n"
+                oput = oput + "- Discord Tag: <@" + entry["discord"] + ">\n"
+                oput = oput + "- Submitted at: `" + entry["submitted"] + "`\n"
+                oput = oput + "- Known Usernames:\n"
+                for pname in entry["altname"]:
+                    oput = oput + "  - `" + pname + "`\n"
+            oput = oput + "--------\n"
+            return oput
+
+    async def wlrefresh(self, message):
+        """
+        Takes a string and finds any database entry that references it
+        !wlquery search_term
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
+        refreshReturn = WHITELIST_EXPORT(True)
+
+        return "Whitelist Fully Refreshed."
