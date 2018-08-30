@@ -124,3 +124,17 @@ def WLAdd(idTarget, idSponsor):
             ret = -2
     json.dump(dbRead, open(dbName, 'w'), indent=2)
     return ret, EXPORT_WHITELIST()
+
+def WLQuery(instr):
+    try:
+        dbRead = json.load(open(dbName)) # dbRead is now a python object
+    except OSError: # File does not exist: Pointless to continue
+        return -8
+    res = []
+    for entry in dbRead:
+        for attr in entry:
+            if entry[attr] == instr and entry not in res:
+                res.append(entry)
+        if instr.lower() in (val.lower() for val in entry["altname"]) and entry not in res:
+            res.append(entry)
+    return res
