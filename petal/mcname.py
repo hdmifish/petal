@@ -46,6 +46,7 @@ def breakUID(str0): # Break apart Mojang UUID with dashes
 def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to file
     pIndex = next((item for item in dbIn if item["uuid"] == player["uid_mc"]), False) # Is the player found in the list?
     ret = -2
+
     if pIndex == False: # Player is not in the database -- Create entry
         pIndex = len(dbIn) # Where the new player is about to be
         dbIn.append({})
@@ -54,12 +55,21 @@ def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to f
         ret = 0
     else:
         pIndex = dbIn.index(pIndex) # DBase index of player (integer 0+)
-    if 'altname' not in dbIn[pIndex]:
-        dbIn[pIndex]["altname"] = []
-    if player["uname"] not in dbIn[pIndex]["altname"]:
-        dbIn[pIndex]["altname"].append(player["uname"])
+        if len(dbIn[pIndex]["approved"]) > 0: # If the user is approved, change feedback
+            ret = -1
+
+    # Fetch username history
+    dbIn[pIndex]["altname"] = []
+    namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(player["uid_mc"].replace("-","")))
+
+    if namehist.status_code == 200:
+        for name in namehist.json():
+            dbIn[pIndex]["altname"].append(name["name"])
+
+
     dbIn[pIndex]["discord"] = player["uid_dis"]
     json.dump(dbIn, open(dbName, 'w'), indent=2)
+
     return ret
 
 def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist database
