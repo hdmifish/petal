@@ -3009,7 +3009,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 2:] # separated this for simplicity
-        reply = WLAdd(submission, message.author.id) # Send the submission through the new function
+        reply, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
             return "You have successfully approved `{}` :D".format(submission)

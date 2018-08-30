@@ -3,6 +3,7 @@ import requests
 import datetime
 
 dbName = "playerdb.json" # file in which userdata is stored
+WhitelistFile = "whitelist.json" # The whitelist file itself
 """
 ERROR CODES:
  0: Successful cmmnd: user added to local database to be approved and synced with whitelist
@@ -16,6 +17,23 @@ ERROR CODES:
 -8: Malevolent error: user supplied erroneous name
 -9: Malevolent error: incomplete function (fault of developer)
 """
+
+def EXPORT_WHITELIST():
+    # Export the local database into the whitelist file itself
+    try:
+        dbRead = json.load(open(dbName)) # Load the local database
+        wlFile = json.load(open(WhitelistFile)) # Load current whitelist
+    except OSError: # File does not exist: Pointless to continue
+        return 0
+
+    for applicant in dbRead: # Check everyone who has applied
+        app = next((item for item in wlFile if item["uuid"] == applicant["uuid"]), False) # Is the applicant already whitelisted?
+        if app == False and len(applicant["approved"]) > 0: # Applicant is not whitelisted AND is approved
+            wlFile.append({'uuid': applicant["uuid"], 'name': applicant["name"]})
+
+    json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
+    return 1
+
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
     str2 = str0[8:12]
@@ -105,4 +123,4 @@ def WLAdd(idTarget, idSponsor):
         else: # User has already approved whitelisting
             ret = -2
     json.dump(dbRead, open(dbName, 'w'), indent=2)
-    return ret
+    return ret, EXPORT_WHITELIST()
