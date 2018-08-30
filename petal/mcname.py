@@ -18,7 +18,7 @@ ERROR CODES:
 -9: Malevolent error: incomplete function (fault of developer)
 """
 
-def EXPORT_WHITELIST():
+def EXPORT_WHITELIST(refreshall=None):
     # Export the local database into the whitelist file itself
     try:
         dbRead = json.load(open(dbName)) # Load the local database
@@ -30,6 +30,16 @@ def EXPORT_WHITELIST():
         app = next((item for item in wlFile if item["uuid"] == applicant["uuid"]), False) # Is the applicant already whitelisted?
         if app == False and len(applicant["approved"]) > 0: # Applicant is not whitelisted AND is approved
             wlFile.append({'uuid': applicant["uuid"], 'name': applicant["name"]})
+
+        if refreshall == True: # Fetch username history
+            applicant["altname"] = []
+            namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
+
+            if namehist.status_code == 200:
+                for name in namehist.json():
+                    applicant["altname"].append(name["name"])
+
+            json.dump(dbRead, open(dbName, 'w'), indent=2)
 
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1

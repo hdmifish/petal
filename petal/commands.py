@@ -18,7 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import WLRequest, WLAdd, WLQuery
+from .mcname import WLRequest, WLAdd, WLQuery, EXPORT_WHITELIST
 
 from random import randint
 version = "0.5.0.8"
@@ -3054,3 +3054,22 @@ class Commands:
                     oput = oput + "  - `" + pname + "`\n"
             oput = oput + "--------\n"
             return oput
+
+    async def wlrefresh(self, message):
+        """
+        Takes a string and finds any database entry that references it
+        !wlquery search_term
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
+        refreshReturn = WHITELIST_EXPORT(True)
+
+        return "Whitelist Fully Refreshed."
