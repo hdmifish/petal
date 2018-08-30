@@ -18,7 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import WLRequest, WLAdd
+from .mcname import WLRequest, WLAdd, WLQuery
 
 from random import randint
 version = "0.5.0.8"
@@ -2996,7 +2996,7 @@ class Commands:
     async def wl(self, message):
         """
         Exports the provided ID from the local whitelist database to the whitelist proper
-        !wlme ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
+        !wl ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
         """
 
         mcchan = self.config.get("mc_channel")
@@ -3021,3 +3021,36 @@ class Commands:
             return "Cannot find a whitelist request for `{}` D:".format(submission)
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
+
+    async def wlquery(self, message):
+        """
+        Takes a string and finds any database entry that references it
+        !wlquery search_term
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 7:] # separated this for simplicity
+        searchres = WLQuery(submission)
+
+        if searchres == []:
+            return "No database entries containing `{}` found".format(submission)
+        else:
+            oput = "Results:\n"
+            for entry in searchres:
+                oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
+                oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
+                oput = oput + "- Discord UUID: `" + entry["discord"] + "`\n"
+                oput = oput + "- Discord Tag: <@" + entry["discord"] + ">\n"
+                oput = oput + "- Submitted at: `" + entry["submitted"] + "`\n"
+                oput = oput + "- Known Usernames:\n"
+                for pname in entry["altname"]:
+                    oput = oput + "  - `" + pname + "`\n"
+            oput = oput + "--------\n"
+            return oput
