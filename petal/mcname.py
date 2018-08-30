@@ -58,7 +58,7 @@ def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist 
         dbRead = json.load(open(dbName)) # dbRead is now a python object
     except OSError: # File does not exist: Create the file
         dbRead = [{'uuid': uidF, 'name': [uname]}]
-    return writeLocalDB(eph, dbRead)
+    return writeLocalDB(eph, dbRead), uidF
 
 def idFromName(uname_raw):
     uname_low = uname_raw.lower()
@@ -71,11 +71,11 @@ def idFromName(uname_raw):
 def WLRequest(nameGiven, discord_id):
     udict = idFromName(nameGiven) # Get the id from the name, or an error
     if udict["code"] == 200: # If this is 200, the second part will contain json data; Try to add it
-        verdict = addToLocalDB(udict["udat"], discord_id)
-        return verdict
+        verdict, uid = addToLocalDB(udict["udat"], discord_id)
+        return verdict, uid
 # Map response codes to function errors
     elif udict["code"] == 204:
-        return -8
+        return -8, "x"
     #elif udict["code"] == 200:
         #return 
     else:

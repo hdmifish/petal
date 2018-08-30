@@ -2972,9 +2972,10 @@ class Commands:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
         submission = message.content[len(self.config.prefix) + 4:] # separated this for simplicity
-        reply = WLRequest(submission, message.author.id) # Send the submission through the new function
+        reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
-        await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nID:  " + message.author.id)
+        if reply == 0:
+            await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
         #return "Your message has been received by the MC staff and you should be whitelisted shortly"
 
         if reply == 0:
