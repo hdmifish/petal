@@ -165,7 +165,7 @@ class Commands:
         if self.config.get("modURI") is None:
             return "*no modURI in config, so post processing will be skipped*"
         return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))
-         
+
     def get_uptime(self):
         delta = datetime.utcnow() - self.startup
         delta = delta.total_seconds()
@@ -1296,15 +1296,14 @@ class Commands:
                 await self.client.send_message(message.author, message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
-                response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id
-                        + ") was successfully banned\n\n")
+                response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id + ") was successfully banned\n\n")
                 try:
                     # Post-processing webhook for ban command
-                    return generate_post_process_URI(msg.author.name + msg.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
+                    return generate_post_process_URI(message.author.name + message.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
                 except Exception as e:
-                    log.err("Could not generate post_process_message for ban" + str(e))                    
+                    log.err("Could not generate post_process_message for ban" + str(e))
                     return "Error occurred trying to generate webhook URI"
-                  
+
     async def tempban(self, message):
         """
         Temporarily bans a user

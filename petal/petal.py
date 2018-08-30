@@ -148,7 +148,7 @@ class Petal(discord.Client):
         await self.change_presence(game=discord.Game(name="with iso"))
         return
 
-    async def send_message(self, author=None, channel=None,  message=None, timeout=0, **kwargs):
+    async def send_message(self, author=None, channel=None, message=None,timeout=0, **kwargs):
         """
         Overload on the send_message function
         """
@@ -171,7 +171,7 @@ class Petal(discord.Client):
     async def embed(self, channel,  embedded):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel=channel, embed=embedded)
+        return await super().send_message(channel, embed=embedded)
 
     async def on_member_join(self, member):
         """
@@ -223,10 +223,10 @@ class Petal(discord.Client):
 
         await self.embed(self.get_channel(self.config.logChannel), user_embed)
         if response != "":
-            await self.send_message(self.get_channel(self.config.logChannel), response )
+            await self.send_message(None ,self.get_channel(self.config.logChannel), response )
 
         if (datetime.utcnow() - member.created_at).days <= 6:
-            await self.send_message(self.get_channel(self.config.logChannel), "This member's account "
+            await self.send_message(None, self.get_channel(self.config.logChannel), "This member's account "
                                     + "was created less than 7 days ago!" )
 
         return
@@ -400,7 +400,7 @@ class Petal(discord.Client):
         if (before.voice_channel != trackedChan
            and after.voice_channel == trackedChan):
             try:
-                await self.send_message(after, tc["messageToUser"], )
+                await self.send_message(None, after, tc["messageToUser"], )
             except discord.errors.HTTPException:
                 log.warn("Unable to PM {}".format(before.name))
             else:
@@ -412,12 +412,12 @@ class Petal(discord.Client):
                 else:
                     if msg.content.lower() in ["yes", "confirm", "please",
                                                "yeah", "yep", "mhm"]:
-                        await self.send_message(postChan, tc["messageFormat"]
+                        await self.send_message(None, postChan, tc["messageFormat"]
                                                 .format(user=after,
                                                         channel=after.
                                                         voice_channel), )
                     else:
-                        await self.send_message(channel, "Alright, just to let" +
+                        await self.send_message(None, channel, "Alright, just to let" +
                                                 "you know. If you " +
                                                 "have a spotty " +
                                                 "connection, you may" +
@@ -482,7 +482,7 @@ class Petal(discord.Client):
                     check = re.compile(self.config.get("roleGrant")["regex"])
 
                 if check.match(message.content):
-                    await self.send_message(message.channel, self.config.get("roleGrant")
+                    await self.send_message(None, message.channel, self.config.get("roleGrant")
                     ["response"], )
                     await self.add_roles(message.author,
                                          discord.utils.get(self.mainsvr.roles,
@@ -495,13 +495,13 @@ class Petal(discord.Client):
                     return
 
             except Exception as e:
-                await self.send_message(message.channel, "Something went wrong will granting" +
+                await self.send_message(None, message.channel, "Something went wrong will granting" +
                                         " your role. Pm a member of staff " +
                                         str(e), )
 
         if not self.config.pm and message.channel.is_private:
             if not message.author == self.user:
-                await self.send_message(message.channel, "Petal has been configured by staff" +
+                await self.send_message(None, message.channel, "Petal has been configured by staff" +
                                         " to not respond to PMs right now", )
             return
 
