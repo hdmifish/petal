@@ -1,5 +1,6 @@
 import json
 import requests
+import datetime
 
 dbName = "playerdb.json" # file in which userdata is stored
 """
@@ -31,6 +32,7 @@ def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to f
         pIndex = len(dbIn) # Where the new player is about to be
         dbIn.append({})
         dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': [], 'discord': player["uid_dis"], 'approved': player["approved"]}
+        dbIn[pIndex]["submitted"] = datetime.datetime.today().strftime('%Y-%m-%d_%0H:%M')
         ret = 0
     else:
         pIndex = dbIn.index(pIndex)
