@@ -18,7 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import WLRequest
+from .mcname import WLRequest, WLAdd
 
 from random import randint
 version = "0.5.0.8"
@@ -2992,3 +2992,32 @@ class Commands:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
         else:
             return "Nondescript Error ({})".format(reply)
+
+    async def wl(self, message):
+        """
+        Exports the provided ID from the local whitelist database to the whitelist proper
+        !wlme ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
+        """
+
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 2:] # separated this for simplicity
+        reply = WLAdd(submission, message.author.id) # Send the submission through the new function
+
+        if reply == 0:
+            return "You have successfully approved `{}` :D".format(submission)
+        elif reply == -2:
+            return "You have already approved `{}` :D".format(submission)
+        #elif reply == -:
+            #return "Error (No Description Provided)"
+        elif reply == -8:
+            return "Cannot find a whitelist request for `{}` D:".format(submission)
+        elif reply == -9:
+            return "Sorry, iso and/or dav left in an unfinished function >:l"
