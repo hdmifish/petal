@@ -148,7 +148,7 @@ class Petal(discord.Client):
         await self.change_presence(game=discord.Game(name="with iso"))
         return
 
-    async def send_message(self, channel, author=None, message=None, timeout=0, **kwargs):
+    async def send_message(self, author=None, channel=None,  message=None, timeout=0, **kwargs):
         """
         Overload on the send_message function
         """
@@ -171,7 +171,7 @@ class Petal(discord.Client):
     async def embed(self, channel,  embedded):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel, embed=embedded)
+        return await super().send_message(channel=channel, embed=embedded)
 
     async def on_member_join(self, member):
         """
@@ -181,7 +181,7 @@ class Petal(discord.Client):
         response = ""
         if self.config.get("welcomeMessage") != "null":
             try:
-                await self.send_message(member, self.config.get("welcomeMessage"), )
+                await self.send_message(channel=member, message=self.config.get("welcomeMessage"), )
             except KeyError:
                 response = " and was not PM'd :( "
             else:
@@ -417,7 +417,7 @@ class Petal(discord.Client):
                                                         channel=after.
                                                         voice_channel), )
                     else:
-                        await self.send_message(after, "Alright, just to let" +
+                        await self.send_message(channel, "Alright, just to let" +
                                                 "you know. If you " +
                                                 "have a spotty " +
                                                 "connection, you may" +
