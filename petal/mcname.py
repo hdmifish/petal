@@ -39,7 +39,7 @@ def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to f
     if player["uname"] not in dbIn[pIndex]["name"]:
         dbIn[pIndex]["name"].append(player["uname"])
     dbIn[pIndex]["discord"] = player["uid_dis"]
-    json.dump(dbIn, open(dbName, 'w'), indent=4)
+    json.dump(dbIn, open(dbName, 'w'), indent=2)
     return ret
 
 def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist database
