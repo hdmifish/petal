@@ -6,20 +6,21 @@ dbName = "playerdb.json" # file in which userdata is stored
 WhitelistFile = "whitelist.json" # The whitelist file itself
 """
 ERROR CODES:
- 0: Successful cmmnd: user added to local database to be approved and synced with whitelist
--1: Benevolent error: user already whitelisted
--2: Benevolent error: user already requested whitelisting
+ 0: Successful cmmnd: user added or approved, or request sent
+-1: Benevolent error: duplicate request which has been approved
+-2: Benevolent error: duplicate request or approval
 -3:
 -4:
 -5:
 -6:
--7:
--8: Malevolent error: user supplied erroneous name
+-7: Malevolent error: failed to access dbName or WhitelistFile
+-8: Malevolent error: user supplied invalid name
 -9: Malevolent error: incomplete function (fault of developer)
 """
 
 def EXPORT_WHITELIST(refreshall=None):
     # Export the local database into the whitelist file itself
+    # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
     try:
         dbRead = json.load(open(dbName)) # Load the local database
         wlFile = json.load(open(WhitelistFile)) # Load current whitelist

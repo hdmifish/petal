@@ -166,7 +166,7 @@ class Commands:
         if self.config.get("modURI") is None:
             return "*no modURI in config, so post processing will be skipped*"
         return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))
-         
+
     def get_uptime(self):
         delta = datetime.utcnow() - self.startup
         delta = delta.total_seconds()
@@ -1305,7 +1305,7 @@ class Commands:
                 except Exception as e:
                     log.err("Could not generate post_process_message for ban" + str(e))                    
                     return "Error occurred trying to generate webhook URI"
-                  
+
     async def tempban(self, message):
         """
         Temporarily bans a user
@@ -2975,10 +2975,13 @@ class Commands:
         reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
-            await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
-        #return "Your message has been received by the MC staff and you should be whitelisted shortly"
 
-        if reply == 0:
+            wlreq = await self.client.send_message(channel=mcchan, message="`<request loading...>`")
+
+            await self.client.edit_message(message=wlreq, new_content="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
+
+            #await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
+
             return "Your whitelist request has been successfully submitted :D"
         elif reply == -1:
             return "No need, you are already whitelisted :D"
@@ -3056,7 +3059,8 @@ class Commands:
         if searchres == []:
             return "No database entries containing `{}` found".format(submission)
         else:
-            oput = "Results:\n"
+            qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
+            oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
                 oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
                 oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
@@ -3067,7 +3071,8 @@ class Commands:
                 for pname in entry["altname"]:
                     oput = oput + "  - `" + pname + "`\n"
             oput = oput + "--------\n"
-            return oput
+            await self.client.edit_message(message=qout, new_content=oput)
+            #return oput
 
     async def wlrefresh(self, message):
         """
