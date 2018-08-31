@@ -123,9 +123,12 @@ def WLAdd(idTarget, idSponsor):
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
     except OSError: # File does not exist: Pointless to continue
-        return -8
+        return -7
     # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
     pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
+
+    targetid = -1
+    targetname = "<Error>"
 
     if pIndex == False: # Maybe try the Minecraft name?
         pIndex = next((item for item in dbRead if item["name"].lower() == idTarget.lower()), False)
@@ -136,20 +139,23 @@ def WLAdd(idTarget, idSponsor):
     if pIndex == False: # Fine. Player is not in the database -- Refuse to continue
         ret = -8
     else:
-        pIndex = dbRead.index(pIndex) # DBase index of player (integer 0+)
-        if idSponsor not in dbRead[pIndex]["approved"]: # User approves new whitelisting
-            dbRead[pIndex]["approved"].append(idSponsor)
+        targetid = pIndex["discord"]
+        targetname = pIndex["name"]
+        #pIndex = dbRead.index(pIndex) # DBase index of player (integer 0+) # why?
+        if idSponsor not in pIndex["approved"]: # User approves new whitelisting
+            pIndex["approved"].append(idSponsor)
             ret = 0
         else: # User has already approved whitelisting
             ret = -2
+
     json.dump(dbRead, open(dbName, 'w'), indent=2)
-    return ret, EXPORT_WHITELIST()
+    return ret, targetid, targetname, EXPORT_WHITELIST()
 
 def WLQuery(instr):
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
     except OSError: # File does not exist: Pointless to continue
-        return -8
+        return -7
     res = []
     for entry in dbRead:
         for attr in entry:
