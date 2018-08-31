@@ -129,6 +129,7 @@ def WLAdd(idTarget, idSponsor):
 
     targetid = -1
     targetname = "<Error>"
+    doSend = False
 
     if pIndex == False: # Maybe try the Minecraft name?
         pIndex = next((item for item in dbRead if item["name"].lower() == idTarget.lower()), False)
@@ -145,11 +146,13 @@ def WLAdd(idTarget, idSponsor):
         if idSponsor not in pIndex["approved"]: # User approves new whitelisting
             pIndex["approved"].append(idSponsor)
             ret = 0
+            if len(pIndex["approved"]) == 1: # User is the first approver
+                doSend = True # Send the person a PM
         else: # User has already approved whitelisting
             ret = -2
 
     json.dump(dbRead, open(dbName, 'w'), indent=2)
-    return ret, targetid, targetname, EXPORT_WHITELIST()
+    return ret, doSend, targetid, targetname, EXPORT_WHITELIST()
 
 def WLQuery(instr):
     try:

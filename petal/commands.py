@@ -3011,18 +3011,28 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
-        reply, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
+        reply, doSend, recipientid, mcname, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
-            return "You have successfully approved `{}` :D".format(submission)
+            if doSend == True:
+                recipientobj = discord.Server.get_member(recipientid)
+                try:
+                    await self.client.send_message(recipientobj, user, "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`")
+                except:
+                    return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(mcname, recipientid)
+                else:
+                    return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
+            else:
+                return "You have successfully reapproved `{}` for <@{}> :D".format(mcname, recipientid)
+            #return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
         elif reply == -2:
-            return "You have already approved `{}` :D".format(submission)
+            return "You have already approved `{}` :o".format(mcname)
         #elif reply == -:
             #return "Error (No Description Provided)"
         elif reply == -7:
             return "Could not access the database file D:"
         elif reply == -8:
-            return "Cannot find a whitelist request for `{}` D:".format(submission)
+            return "Cannot find a whitelist request matching `{}` D:".format(submission)
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
