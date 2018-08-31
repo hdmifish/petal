@@ -1,6 +1,7 @@
 import json
 import requests
 import datetime
+from collections import OrderedDict
 
 dbName = "playerdb.json" # file in which userdata is stored
 WhitelistFile = "whitelist.json" # The whitelist file itself
@@ -17,30 +18,38 @@ ERROR CODES:
 -8: Malevolent error: user supplied invalid name
 -9: Malevolent error: incomplete function (fault of developer)
 """
+    # The default profile for a new player being added to the database
+    # (Do not use this)
+PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-0000-0000-000000000000'), ('altname', []), ('discord', '000000000000000000'), ('approved', []), ('submitted', '1970-01-01_00:00'), ('suspended', False)])
 
-def EXPORT_WHITELIST(refreshall=None):
+def EXPORT_WHITELIST(refreshall=False):
     # Export the local database into the whitelist file itself
     # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
     try:
-        dbRead = json.load(open(dbName)) # Load the local database
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # Load the local database
         wlFile = json.load(open(WhitelistFile)) # Load current whitelist
     except OSError: # File does not exist: Pointless to continue
         return 0
+
+    if refreshall == True: # Rebuild Index
+        dbNew = [] # Stage 1
+        for applicant in dbRead:
+            appNew = PLAYERDEFAULT.copy()
+            appNew.update(applicant)
+
+            namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
+
+            if namehist.status_code == 200:
+                appNew.update(altname=[]) # Spy on their dark and shadowy past
+                for name in namehist.json():
+                    appNew["altname"].append(name["name"])
+            dbNew.append(appNew)
+        json.dump(dbNew, open(dbName, 'w'), indent=2)
 
     for applicant in dbRead: # Check everyone who has applied
         app = next((item for item in wlFile if item["uuid"] == applicant["uuid"]), False) # Is the applicant already whitelisted?
         if app == False and len(applicant["approved"]) > 0: # Applicant is not whitelisted AND is approved
             wlFile.append({'uuid': applicant["uuid"], 'name': applicant["name"]})
-
-        if refreshall == True: # Fetch username history
-            applicant["altname"] = []
-            namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
-
-            if namehist.status_code == 200:
-                for name in namehist.json():
-                    applicant["altname"].append(name["name"])
-
-            json.dump(dbRead, open(dbName, 'w'), indent=2)
 
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1
@@ -61,7 +70,7 @@ def writeLocalDB(player, dbIn): # update db from ephemeral player; write db to f
     if pIndex == False: # Player is not in the database -- Create entry
         pIndex = len(dbIn) # Where the new player is about to be
         dbIn.append({})
-        dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': player["uname"], 'altname': [], 'discord': player["uid_dis"], 'approved': player["approved"]}
+        dbIn[pIndex] = {'uuid': player["uid_mc"], 'name': player["uname"], 'altname': [], 'discord': player["uid_dis"], 'approved': player["approved"], 'suspended': player["suspended"]}
         dbIn[pIndex]["submitted"] = datetime.datetime.today().strftime('%Y-%m-%d_%0H:%M')
         ret = 0
     else:
@@ -91,10 +100,11 @@ def addToLocalDB(userdat, submitter): # Add UID and username to local whitelist 
         "uname" : uname, # Minecraft username; append to dbase usernames
         "uid_mc" : uidF, # Minecraft UID; use to locate or create dbase entry
         "uid_dis" : submitter, # Discord UID; attach to mc uid if not present
-        "approved" : []
+        "approved" : [],
+        "suspended" : False
         }
     try:
-        dbRead = json.load(open(dbName)) # dbRead is now a python object
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
     except OSError: # File does not exist: Create the file
         dbRead = [{'uuid': uidF, 'name': [uname]}]
     return writeLocalDB(eph, dbRead), uidF
@@ -122,7 +132,7 @@ def WLRequest(nameGiven, discord_id):
 
 def WLAdd(idTarget, idSponsor):
     try:
-        dbRead = json.load(open(dbName)) # dbRead is now a python object
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
     except OSError: # File does not exist: Pointless to continue
         return -7
     # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
