@@ -3061,6 +3061,12 @@ class Commands:
         else:
             qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
+            if entry["suspended"] == True:
+                oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
+            elif len(entry["Approved"]) > 0:
+                oput = oput + "Status: *`-#- PENDING -#-`*\n"
+            else
+                oput = oput + "Status: __`--- APPROVED ---`__\n"
             for entry in searchres:
                 oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
                 oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
@@ -3089,6 +3095,6 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
-        refreshReturn = WHITELIST_EXPORT(True)
+        refreshReturn = WHITELIST_EXPORT(True, True)
 
         return "Whitelist Fully Refreshed."

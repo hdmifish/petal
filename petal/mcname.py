@@ -25,31 +25,38 @@ PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-000
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     # Export the local database into the whitelist file itself
     # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # Load the local database
-        wlFile = json.load(open(WhitelistFile)) # Load current whitelist
+    try: # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
+        wlFile = json.load(open(WhitelistFile))
+        #wlFile = [] # Uncommenting this will force the whitelist to contain ONLY people in the DB file
+                     # (This will also force the whitelist file to be in the same order as the DB file)
     except OSError: # File does not exist: Pointless to continue
         return 0
 
     if refreshall == True: # Rebuild Index
-        dbNew = [] # Stage 1
-        for applicant in dbRead:
+        dbNew = [] # Stage 1: Make new DB
+        for applicant in dbRead: # Stage 2: Find entries in old DB, import their stuff
             appNew = PLAYERDEFAULT.copy()
             appNew.update(applicant)
 
-            namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
+            if refreshnet == True: # Stage 3, optional: Rebuild username history
+                namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
 
-            if namehist.status_code == 200:
-                appNew.update(altname=[]) # Spy on their dark and shadowy past
-                for name in namehist.json():
-                    appNew["altname"].append(name["name"])
+                if namehist.status_code == 200:
+                    appNew.update(altname=[]) # Spy on their dark and shadowy past
+                    for name in namehist.json():
+                        appNew["altname"].append(name["name"])
+
             dbNew.append(appNew)
         json.dump(dbNew, open(dbName, 'w'), indent=2)
+        dbRead = dbNew
 
     for applicant in dbRead: # Check everyone who has applied
         app = next((item for item in wlFile if item["uuid"] == applicant["uuid"]), False) # Is the applicant already whitelisted?
-        if app == False and len(applicant["approved"]) > 0: # Applicant is not whitelisted AND is approved
+        if app == False and len(applicant["approved"]) > 0 and applicant["suspended"] == False: # Applicant is not whitelisted AND is approved, add them
             wlFile.append({'uuid': applicant["uuid"], 'name': applicant["name"]})
+        elif app != False and applicant["suspended"] == True: #BadPersonAlert, remove them
+            wlFile.remove(app)
 
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1
