@@ -2986,6 +2986,8 @@ class Commands:
             return "That username has already been submitted for whitelisting :o"
         #elif reply == -:
             #return "Error (No Description Provided)"
+        elif reply == -7:
+            return "Could not access the database file D:"
         elif reply == -8:
             return "That does not seem to be a valid Minecraft username D:"
         elif reply == -9:
@@ -3017,6 +3019,8 @@ class Commands:
             return "You have already approved `{}` :D".format(submission)
         #elif reply == -:
             #return "Error (No Description Provided)"
+        elif reply == -7:
+            return "Could not access the database file D:"
         elif reply == -8:
             return "Cannot find a whitelist request for `{}` D:".format(submission)
         elif reply == -9:
