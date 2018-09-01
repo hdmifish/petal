@@ -3095,7 +3095,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
-        await self.client.send_typing(channel=mcchan)
+        await self.client.send_typing(mcchan)
         refreshReturn = WHITELIST_EXPORT(True, True)
 
         return "Whitelist Fully Refreshed."
