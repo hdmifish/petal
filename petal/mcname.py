@@ -7,16 +7,16 @@ dbName = "playerdb.json" # file in which userdata is stored
 WhitelistFile = "whitelist.json" # The whitelist file itself
 """
 ERROR CODES:
- 0: Successful cmmnd: user added or approved, or request sent
--1: Benevolent error: duplicate request which has been approved
--2: Benevolent error: duplicate request or approval
+ 0: Cmnd success: user added or approved, or request sent
+-1: Benign error: duplicate request which has been approved
+-2: Benign error: duplicate request or approval
 -3:
 -4:
 -5:
 -6:
--7: Malevolent error: failed to access dbName or WhitelistFile
--8: Malevolent error: user supplied invalid name
--9: Malevolent error: incomplete function (fault of developer)
+-7: Malign error: failed to access dbName or WhitelistFile
+-8: Malign error: user supplied invalid name
+-9: Malign error: incomplete function (fault of developer)
 """
     # The default profile for a new player being added to the database
     # (Do not use this)
