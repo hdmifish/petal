@@ -18,7 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import WLRequest, WLAdd, WLQuery, EXPORT_WHITELIST
+from .mcname import *
 
 from random import randint
 version = "0.5.0.8"
