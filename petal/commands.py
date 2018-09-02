@@ -3098,3 +3098,62 @@ class Commands:
         refreshReturn = EXPORT_WHITELIST(True, True)
  
         return "Whitelist Fully Refreshed."
+
+    async def wlsuspend(self, message):
+        """
+        Flags a person to be removed from the whitelist
+        !wlsuspend bad_person
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        wordPos = ["true", "on", "yes", "active", "1", "enabled"]
+        wordNeg = ["false", "off", "no", "inactive", "0", "disabled"]
+        submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
+
+        [sub1, sub2] = message.content.split(" ",1) # Separate name of target
+        sub2 = sub2.lower().split(" ") # Split up the rest
+
+        victim = WLQuery(sub1)
+        if victim == -7:
+            return "Could not access database file"
+        if victim == []:
+            return "No results"
+
+        positivity = 0
+        ambivalent = True
+
+        for word in sub2:
+            if word in wordPos:
+                ambivalent = False
+                positivity += 1
+            elif word in wordNeg:
+                ambivalent = False
+                positivity -= 1
+
+        if not ambivalent:
+            if positivity > 0:
+                interp = True
+            elif positivity < 0:
+                interp = False
+            else:
+                return "Could you be more specific about whether you want to enable or disable their suspension?"
+
+        rep, wlwin = WLSuspend(sub1, interp)
+        codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
+                -2 : "No Change: Already suspended", -3 : "No Change: Not suspended",
+                -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure"}
+        wcode = {0 : "Failed to update whitelist", 1 : "Successfully updated whitelist"}
+
+        oput = "WLSuspend Results:\n"
+        for ln in rep:
+            oput = oput + "-- `" + ln["name"] + "`: " + codes[rep["change"]] + "\n"
+        oput = oput + wcode[wlwin]
+
+        return oput
