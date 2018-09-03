@@ -3126,6 +3126,15 @@ class Commands:
         if victim == []:
             return "No results"
 
+        # A far more reasonable argument processor
+        if nsplit[0] == "" or nsplit[0] in wordPos:
+            interp = True
+        elif nsplit[0] in wordNeg:
+            interp = False
+        else:
+            return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
+
+""" unnecessarily overcomplicated (and probably slow) argument processor
         positivity = 0
         ambivalent = True
 
@@ -3144,6 +3153,7 @@ class Commands:
                 interp = False
             else:
                 return "Could you be more specific about whether you want to enable or disable their suspension?"
+"""
 
         rep, wlwin = WLSuspend(sub1, interp)
         codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
