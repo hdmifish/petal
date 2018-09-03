@@ -2,9 +2,11 @@ import json
 import requests
 import datetime
 from collections import OrderedDict
+from .grasslands import Peacock
 
-dbName = "playerdb.json" # file in which userdata is stored
-WhitelistFile = "whitelist.json" # The whitelist file itself
+dbName = "/minecraft/playerdb.json" # file in which userdata is stored
+WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
+log = Peacock()
 """
 ERROR CODES:
  0: Cmnd success: user added or approved, or request sent
@@ -122,6 +124,7 @@ def addToLocalDB(userdat, submitter):
 def idFromName(uname_raw):
     uname_low = uname_raw.lower()
     response = requests.get("https://api.mojang.com/users/profiles/minecraft/{}".format(uname_low))
+    log.f("WLME_RESP", str(response))
     if response.status_code == 200:
         return {'code':response.status_code, 'udat':response.json() }
     else:
@@ -139,9 +142,10 @@ def WLRequest(nameGiven, discord_id):
         return verdict, uid
     # Map response codes to function errors
     elif udict["code"] == 204:
+        log.err("wlrequest failed with 204")
         return -8, "x"
     #elif udict["code"] == 200:
-        #return 
+        #return
     else:
         return "Nondescript API Error ({})".format(udict["code"])
 
@@ -151,7 +155,8 @@ def WLRequest(nameGiven, discord_id):
 def WLAdd(idTarget, idSponsor):
     try:
         dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError: # File does not exist: Pointless to continue
+    except OSError as e: # File does not exist: Pointless to continue
+        log.err("OSError: " + str(e))
         return -7
     # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
     pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
@@ -167,6 +172,7 @@ def WLAdd(idTarget, idSponsor):
         pIndex = next((item for item in dbRead if item["discord"] == idTarget), False)
 
     if pIndex == False: # Fine. Player is not in the database -- Refuse to continue
+        log.f("wlme", "IndexError player not in DB")
         ret = -8
     else:
         targetid = pIndex["discord"]
@@ -189,7 +195,8 @@ def WLAdd(idTarget, idSponsor):
 def WLQuery(instr):
     try:
         dbRead = json.load(open(dbName)) # dbRead is now a python object
-    except OSError: # File does not exist: Pointless to continue
+    except OSError as e: # File does not exist: Pointless to continue
+        log.err("OSError on query " + str(e))
         return -7
     res = []
     for entry in dbRead:

@@ -1297,13 +1297,12 @@ class Commands:
                 await self.client.send_message(message.author, message.channel, "Clearing out messages... ", )
                 await asyncio.sleep(4)
                 petal.logLock = False
-                response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id
-                        + ") was successfully banned\n\n")
+                response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id + ") was successfully banned\n\n")
                 try:
                     # Post-processing webhook for ban command
-                    return generate_post_process_URI(msg.author.name + msg.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
+                    return generate_post_process_URI(message.author.name + message.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
                 except Exception as e:
-                    log.err("Could not generate post_process_message for ban" + str(e))                    
+                    log.err("Could not generate post_process_message for ban" + str(e))
                     return "Error occurred trying to generate webhook URI"
 
     async def tempban(self, message):
@@ -2992,7 +2991,7 @@ class Commands:
         elif reply == -7:
             return "Could not access the database file D:"
         elif reply == -8:
-            return "That does not seem to be a valid Minecraft username D:"
+            return "That does not seem to be a valid Minecraft username D: " + "DEBUG: " + submission
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
         else:
@@ -3094,7 +3093,7 @@ class Commands:
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
 
-        submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
         refreshReturn = WHITELIST_EXPORT(True, True)
 
