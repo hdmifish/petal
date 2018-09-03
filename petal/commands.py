@@ -2971,6 +2971,10 @@ class Commands:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
         submission = message.content[len(self.config.prefix) + 4:].strip() # separated this for simplicity
+
+        if submission == "":
+            return "You need to include your Minecraft username, or I will not be able to find you! Like this: `!wlme Notch` :D"
+
         reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
