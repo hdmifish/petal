@@ -3017,7 +3017,7 @@ class Commands:
 
         if reply == 0:
             if doSend == True:
-                recipientobj = discord.Server.get_member(recipientid)
+                recipientobj = self.client.get_server(self.config.get("mainServer")).get_member(recipientid)
                 try:
                     await self.client.send_message(recipientobj, user, "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`")
                 except:
