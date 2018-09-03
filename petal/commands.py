@@ -3118,7 +3118,7 @@ class Commands:
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
 
         [sub1, sub2] = message.content.split(" ",1) # Separate name of target
-        sub2 = sub2.lower().split(" ") # Split up the rest
+        nsplit = sub2.lower().split(" ") # Split up the rest
 
         victim = WLQuery(sub1)
         if victim == -7:
@@ -3129,7 +3129,7 @@ class Commands:
         positivity = 0
         ambivalent = True
 
-        for word in sub2:
+        for word in nsplit:
             if word in wordPos:
                 ambivalent = False
                 positivity += 1
