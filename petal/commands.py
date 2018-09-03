@@ -3024,7 +3024,8 @@ class Commands:
                 recipientobj = self.client.get_server(self.config.get("mainServer")).get_member(recipientid)
                 try:
                     await self.client.send_message(recipientobj, user, "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`")
-                except:
+                except as e:
+                    log.err("Error on WLAdd PM: " + str(e))
                     return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(mcname, recipientid)
                 else:
                     return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
@@ -3138,7 +3139,7 @@ class Commands:
         else:
             return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
 
-""" unnecessarily overcomplicated (and probably slow) argument processor
+        """ unnecessarily overcomplicated (and probably slow) argument processor
         positivity = 0
         ambivalent = True
 
@@ -3157,7 +3158,7 @@ class Commands:
                 interp = False
             else:
                 return "Could you be more specific about whether you want to enable or disable their suspension?"
-"""
+        """
 
         rep, wlwin = WLSuspend(victim, interp)
         codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
