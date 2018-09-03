@@ -3060,14 +3060,14 @@ class Commands:
         else:
             qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
-            if entry["suspended"] == True:
-                oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
-            elif len(entry["Approved"]) > 0:
-                oput = oput + "Status: *`-#- PENDING -#-`*\n"
-            else
-                oput = oput + "Status: __`--- APPROVED ---`__\n"
             for entry in searchres:
-                oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
+                oput = oput + "**Minecraft Name: `" + entry["name"] + "`**\n"
+                if entry["suspended"] == True:
+                    oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
+                elif len(entry["Approved"]) > 0:
+                    oput = oput + "Status: *`-#- PENDING -#-`*\n"
+                else:
+                    oput = oput + "Status: __`--- APPROVED ---`__\n"
                 oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
                 oput = oput + "- Discord UUID: `" + entry["discord"] + "`\n"
                 oput = oput + "- Discord Tag: <@" + entry["discord"] + ">\n"
