@@ -3113,11 +3113,11 @@ class Commands:
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
 
-        wordPos = ["true", "on", "yes", "active", "1", "enabled"]
-        wordNeg = ["false", "off", "no", "inactive", "0", "disabled"]
+        wordPos = ["true", "on", "yes", "active", "1", "enable"]
+        wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
 
-        [sub1, sub2] = message.content.split(" ",1) # Separate name of target
+        [sub1, sub2] = submission.split(" ",1) # Separate name of target
         nsplit = sub2.lower().split(" ") # Split up the rest
 
         victim = WLQuery(sub1)
