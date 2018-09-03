@@ -3096,7 +3096,7 @@ class Commands:
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
         refreshReturn = EXPORT_WHITELIST(True, True)
- 
+
         return "Whitelist Fully Refreshed."
 
     async def wlsuspend(self, message):
