@@ -2970,7 +2970,7 @@ class Commands:
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
-        submission = message.content[len(self.config.prefix) + 4:] # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 4:].strip() # separated this for simplicity
         reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
@@ -2986,7 +2986,7 @@ class Commands:
         #elif reply == -:
             #return "Error (No Description Provided)"
         elif reply == -8:
-            return "That does not seem to be a valid Minecraft username D:"
+            return "That does not seem to be a valid Minecraft username D: " + "DEBUG: " + submission
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
         else:
@@ -3007,7 +3007,7 @@ class Commands:
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
 
-        submission = message.content[len(self.config.prefix) + 2:] # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
         reply, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
@@ -3035,7 +3035,7 @@ class Commands:
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
 
-        submission = message.content[len(self.config.prefix) + 7:] # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 7:].strip() # separated this for simplicity
         searchres = WLQuery(submission)
 
         if searchres == []:
@@ -3068,7 +3068,7 @@ class Commands:
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
 
-        submission = message.content[len(self.config.prefix) + 9:] # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         refreshReturn = WHITELIST_EXPORT(True)
 
         return "Whitelist Fully Refreshed."
