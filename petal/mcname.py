@@ -200,12 +200,14 @@ def WLQuery(instr):
         log.err("OSError on query " + str(e))
         return -7
     res = []
-    for entry in dbRead:
-        for attr in entry:
-            if entry[attr] == instr and entry not in res:
+    in2 = instr.split(" ")
+    for in3 in in2:
+        for entry in dbRead:
+            for attr in entry:
+                if entry[attr] == in3 and entry not in res:
+                    res.append(entry)
+            if in3.lower() in (val.lower() for val in entry["altname"]) and entry not in res:
                 res.append(entry)
-        if instr.lower() in (val.lower() for val in entry["altname"]) and entry not in res:
-            res.append(entry)
     return res
 
 
