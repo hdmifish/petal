@@ -18,7 +18,7 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import WLRequest, WLAdd, WLQuery, EXPORT_WHITELIST
+from .mcname import *
 
 from random import randint
 version = "0.5.0.8"
@@ -2974,10 +2974,13 @@ class Commands:
         reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
-            await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
-        #return "Your message has been received by the MC staff and you should be whitelisted shortly"
 
-        if reply == 0:
+            wlreq = await self.client.send_message(channel=mcchan, message="`<request loading...>`")
+
+            await self.client.edit_message(message=wlreq, new_content="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
+
+            #await self.client.send_message(channel=mcchan, message="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
+
             return "Your whitelist request has been successfully submitted :D"
         elif reply == -1:
             return "No need, you are already whitelisted :D"
@@ -2985,6 +2988,8 @@ class Commands:
             return "That username has already been submitted for whitelisting :o"
         #elif reply == -:
             #return "Error (No Description Provided)"
+        elif reply == -7:
+            return "Could not access the database file D:"
         elif reply == -8:
             return "That does not seem to be a valid Minecraft username D: " + "DEBUG: " + submission
         elif reply == -9:
@@ -3008,16 +3013,28 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
-        reply, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
+        reply, doSend, recipientid, mcname, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
-            return "You have successfully approved `{}` :D".format(submission)
+            if doSend == True:
+                recipientobj = discord.Server.get_member(recipientid)
+                try:
+                    await self.client.send_message(recipientobj, user, "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`")
+                except:
+                    return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(mcname, recipientid)
+                else:
+                    return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
+            else:
+                return "You have successfully reapproved `{}` for <@{}> :D".format(mcname, recipientid)
+            #return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
         elif reply == -2:
-            return "You have already approved `{}` :D".format(submission)
+            return "You have already approved `{}` :o".format(mcname)
         #elif reply == -:
             #return "Error (No Description Provided)"
+        elif reply == -7:
+            return "Could not access the database file D:"
         elif reply == -8:
-            return "Cannot find a whitelist request for `{}` D:".format(submission)
+            return "Cannot find a whitelist request matching `{}` D:".format(submission)
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
@@ -3041,7 +3058,14 @@ class Commands:
         if searchres == []:
             return "No database entries containing `{}` found".format(submission)
         else:
-            oput = "Results:\n"
+            qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
+            oput = "Results for {} ({}):\n".format(submission, len(searchres))
+            if entry["suspended"] == True:
+                oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
+            elif len(entry["Approved"]) > 0:
+                oput = oput + "Status: *`-#- PENDING -#-`*\n"
+            else
+                oput = oput + "Status: __`--- APPROVED ---`__\n"
             for entry in searchres:
                 oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
                 oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
@@ -3052,7 +3076,8 @@ class Commands:
                 for pname in entry["altname"]:
                     oput = oput + "  - `" + pname + "`\n"
             oput = oput + "--------\n"
-            return oput
+            await self.client.edit_message(message=qout, new_content=oput)
+            #return oput
 
     async def wlrefresh(self, message):
         """
@@ -3069,6 +3094,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
-        refreshReturn = WHITELIST_EXPORT(True)
+        await self.client.send_typing(mcchan)
+        refreshReturn = WHITELIST_EXPORT(True, True)
 
         return "Whitelist Fully Refreshed."
