@@ -11,7 +11,8 @@ import time
 import pytz
 import petal
 from urllib.parse import urlencode
-from datetime import datetime, timedelta
+from datetime import datetime as dt
+from datetime import timedelta
 
 from .dbhandler import m2id
 from .grasslands import Octopus
@@ -21,8 +22,7 @@ from .grasslands import Pidgeon
 from .mcname import *
 
 from random import randint
-version = "0.5.0.8"
-
+version = "0.5.0.9"
 
 
 class Commands:
@@ -38,7 +38,7 @@ class Commands:
         self.db = client.db
 
         self.log = Peacock()
-        self.startup = datetime.utcnow()
+        self.startup = dt.utcnow()
         self.activeHelpers = []
         self.active_sad = []
         self.log.info("Loading Command module...")
@@ -168,7 +168,7 @@ class Commands:
         return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))
 
     def get_uptime(self):
-        delta = datetime.utcnow() - self.startup
+        delta = dt.utcnow() - self.startup
         delta = delta.total_seconds()
 
         d = divmod(delta,86400)  # days
@@ -318,23 +318,23 @@ class Commands:
 
     async def check_pa_updates(self, force=False):
             if force:
-                self.config.doc["lastRun"] = datetime.utcnow()
+                self.config.doc["lastRun"] = dt.utcnow()
                 self.config.save()
 
             else:
                 last_run = self.config.get("lastRun")
                 self.log.f("pa", "Last run at: " + str(last_run))
                 if last_run is None:
-                    last_run = datetime.utcnow()
+                    last_run = dt.utcnow()
                     self.config.doc["lastRun"] = last_run
                     self.config.save()
                 else:
-                    difference = (datetime.utcnow() - datetime.strptime(str(last_run), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
+                    difference = (dt.utcnow() - dt.strptime(str(last_run), '%Y-%m-%d %H:%M:%S.%f')).total_seconds()
                     self.log.f("pa", "Difference: " + str(difference))
                     if difference < 86400:
                         return
                     else:
-                        self.config.doc["lastRun"] = datetime.utcnow()
+                        self.config.doc["lastRun"] = dt.utcnow()
                         self.config.save()
 
 
@@ -1060,7 +1060,7 @@ class Commands:
         Syntax: `>ping`
         """
         msg = await self.client.send_message(message.author, message.channel, "*hugs*", )
-        delta = int((datetime.now() - msg.timestamp).microseconds / 1000)
+        delta = int((dt.now() - msg.timestamp).microseconds / 1000)
         self.config.stats['pingScore'] += delta
         self.config.stats['pingCount'] += 1
 
@@ -1210,7 +1210,7 @@ class Commands:
                 logEmbed.add_field(name="Server",
                                    value=userToBan.server.name)
                 logEmbed.add_field(name="Timestamp",
-                                   value=str(datetime.utcnow())[:-7])
+                                   value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToBan.avatar_url)
 
                 await self.client.embed(self.client.get_channel(
@@ -1287,7 +1287,7 @@ class Commands:
                 logEmbed.add_field(name="Server",
                                    value=userToBan.server.name)
                 logEmbed.add_field(name="Timestamp",
-                                   value=str(datetime.utcnow())[:-7])
+                                   value=str(dt.utcnow())[:-7])
 
                 logEmbed.set_thumbnail(url=userToBan.avatar_url)
 
@@ -1360,7 +1360,7 @@ class Commands:
                                    userToBan.id)
                 logEmbed.add_field(name="Server", value=userToBan.server.name)
                 logEmbed.add_field(name="Timestamp",
-                                   value=str(datetime.utcnow())[:-7])
+                                   value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToBan.avatar_url)
 
                 await self.client.embed(self.client.get_channel(
@@ -1369,7 +1369,7 @@ class Commands:
                 await asyncio.sleep(4)
                 petal.logLock = False
                 return (userToBan.name + " (ID: " + userToBan.id +
-                        ") was successfully temp-banned\n\nThey will be unbanned on " + str(datetime.utcnow() + timedelta(days=int(msg2.content)))[:-7])
+                        ") was successfully temp-banned\n\nThey will be unbanned on " + str(dt.utcnow() + timedelta(days=int(msg2.content)))[:-7])
 
     async def warn(self, message):
         """
@@ -1428,7 +1428,7 @@ class Commands:
                                    "\n" + userToWarn.id)
                 logEmbed.add_field(name="Server", value=userToWarn.server.name)
                 logEmbed.add_field(name="Timestamp",
-                                   value=str(datetime.utcnow())[:-7])
+                                   value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToWarn.avatar_url)
 
                 await self.client.embed(self.client.get_channel(
@@ -1524,7 +1524,7 @@ class Commands:
                 logEmbed.add_field(name="Server",
                                    value=userToWarn.server.name)
                 logEmbed.add_field(name="Timestamp",
-                                   value=str(datetime.utcnow())[:-7])
+                                   value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToWarn.avatar_url)
 
                 await self.client.embed(self.client.get_channel(
@@ -1853,8 +1853,8 @@ class Commands:
         >GMT
         """
 
-        return ("It is " + str(datetime.utcnow())[:-7] +
-                "\n\n Num time: " + str(datetime.utcnow() -
+        return ("It is " + str(dt.utcnow())[:-7] +
+                "\n\n Num time: " + str(dt.utcnow() -
                                         timedelta(hours=12))[:-7] +
                 "\n if this number is weird looking, then its AM)")
 
@@ -2333,7 +2333,7 @@ class Commands:
         cb = self.config.get("choppingBlock")
 
         if user.id in cb:
-            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+            if (cb[user.id]["timeout"] - dt.utcnow()).total_seconds() >= 0:
                 if message.author.id not in cb[user.id]["votes"]:
                     cb[user.id]["votes"][message.author.id] = 1
                     return "You have voted to promote, " + user.name
@@ -2345,7 +2345,7 @@ class Commands:
         else:
             if self.check_user_has_role(user, "Helping Hands"):
                 return "This user is already a Helping Hands..."
-            now = datetime.utcnow() + timedelta(days=2)
+            now = dt.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: 1}, "started_by": message.author.id,
                            "timeout": now, "server_id": user.server.id}
             return "A vote to promote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
@@ -2367,7 +2367,7 @@ class Commands:
 
         cb = self.config.get("choppingBlock")
         if user.id in cb:
-            if (cb[user.id]["timeout"] - datetime.utcnow()).total_seconds() >= 0:
+            if (cb[user.id]["timeout"] - dt.utcnow()).total_seconds() >= 0:
                 if message.author.id not in cb[user.id]["votes"]:
                     cb[user.id]["votes"][message.author.id] = -1
                     return "You have voted to demote, " + user.name
@@ -2379,7 +2379,7 @@ class Commands:
         else:
             if not self.check_user_has_role(user, "Helping Hands"):
                 return "This user is not a member of Helping Hands. I cannot demote them"
-            now = datetime.utcnow() + timedelta(days=2)
+            now = dt.utcnow() + timedelta(days=2)
             cb[user.id] = {"votes": {message.author.id: -1}, "started_by": message.author.id, "timeout": now, "server_id": user.server.id}
             return "A vote to demote {0}#{1} has been started, it will end in 48 hours.".format(user.name,
                                                                                                 user.discriminator) \
@@ -2754,7 +2754,7 @@ class Commands:
                 return "*You peek into {}'s journal...*\n\n".format(mem.name) + "But find nothing"
             return "*You peek into {}'s journal...*\n\nYou find:\n\n".format(mem.name) + entry["content"]
         entry = self.db.update_member(message.author,
-                                      data={"journal": {"content": args[0], "time": str(datetime.utcnow())}})
+                                      data={"journal": {"content": args[0], "time": str(dt.utcnow())}})
 
         return "Your journal has been updated. Anyone can read it with " + message.author.mention
 
@@ -2861,7 +2861,7 @@ class Commands:
         url = "https://api.trello.com/1/cards"
 
         params = {"name": str(top).zfill(3),
-                  "desc": m + "\n\n\n\n\nSubmitted by: {}\nTimestamp: {}\nServer: {}\nChannel: {}".format(message.author.name + "(" + message.author.id + ")", str(datetime.utcnow()), message.server.name + "(" + message.server.id + ")", message.channel.name + "(" + message.channel.id + ")"),
+                  "desc": m + "\n\n\n\n\nSubmitted by: {}\nTimestamp: {}\nServer: {}\nChannel: {}".format(message.author.name + "(" + message.author.id + ")", str(dt.utcnow()), message.server.name + "(" + message.server.id + ")", message.channel.name + "(" + message.channel.id + ")"),
                   "pos": "bottom",
                   "idList": self.config.get("trello")["list_id"],
                   "username": self.config.get("trello")["username"],
@@ -2911,17 +2911,17 @@ class Commands:
             return "Unable to parse a pytz timezone from: " + input_time
 
 
-        localnow = input_p.localize(datetime.utcnow()).strftime('%z')
-        now = parsed.localize(datetime.utcnow()).strftime('%z')
+        localnow = input_p.localize(dt.utcnow()).strftime('%z')
+        now = parsed.localize(dt.utcnow()).strftime('%z')
         # print(str(int(localnow)))
         # print(str(int(now)))
-        localnow = datetime.utcnow() + timedelta(hours=int(localnow) / 100)
-        now = datetime.utcnow() + timedelta(hours=int(now) / 100)
+        localnow = dt.utcnow() + timedelta(hours=int(localnow) / 100)
+        now = dt.utcnow() + timedelta(hours=int(now) / 100)
 
 
         self.db.update_member(message.author, {"tz": parsed.zone})
         em = discord.Embed(title="TimeZone Info for " + parsed.zone, color=0x00acff)
-        em.add_field(name="Petal's UTC Time", value=str(datetime.utcnow())[:-7])
+        em.add_field(name="Petal's UTC Time", value=str(dt.utcnow())[:-7])
         em.add_field(name="Input Time(" + input_p.zone + ")", value=str(localnow)[:-7], inline=False)
         em.add_field(name="Converted(" + parsed.zone + ")", value=str(now)[:-7], inline=False)
 
@@ -2954,7 +2954,7 @@ class Commands:
         if self.db.dinos.find_one({"id":message.author.id}) is not None:
             return "Hey, thanks for another fact. but you can only vote once"
         else:
-            self.db.dinos.insert_one({"id":message.author.id, "name":message.author.name, "timestamp":str(datetime.utcnow()),"fact":message.content})
+            self.db.dinos.insert_one({"id":message.author.id, "name":message.author.name, "timestamp":str(dt.utcnow()),"fact":message.content})
             return "Thanks! you are now entered in the giveaway"
 
 
@@ -3064,7 +3064,7 @@ class Commands:
                 oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
             elif len(entry["Approved"]) > 0:
                 oput = oput + "Status: *`-#- PENDING -#-`*\n"
-            else
+            else:
                 oput = oput + "Status: __`--- APPROVED ---`__\n"
             for entry in searchres:
                 oput = oput + "- Minecraft Name: `" + entry["name"] + "`\n"
@@ -3095,6 +3095,6 @@ class Commands:
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
-        refreshReturn = WHITELIST_EXPORT(True, True)
-
+        refreshReturn = EXPORT_WHITELIST(True, True)
+ 
         return "Whitelist Fully Refreshed."
