@@ -3064,7 +3064,7 @@ class Commands:
                 oput = oput + "**Minecraft Name: `" + entry["name"] + "`**\n"
                 if entry["suspended"] == True:
                     oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
-                elif len(entry["Approved"]) > 0:
+                elif len(entry["approved"]) == 0:
                     oput = oput + "Status: *`-#- PENDING -#-`*\n"
                 else:
                     oput = oput + "Status: __`--- APPROVED ---`__\n"
