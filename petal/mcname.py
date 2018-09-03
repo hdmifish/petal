@@ -218,7 +218,7 @@ def WLSuspend(baddies, sus=True):
         return -7
     actions = []
     for target in baddies:
-        act = 0
+        act = -9
         try:
             found = dbRead[dbRead.index(target)]
         except OSError:
@@ -238,8 +238,9 @@ def WLSuspend(baddies, sus=True):
         actions.append({"name" : target["name"], "change" : act})
     try:
         json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        wlwin = EXPORT_WHITELIST()
     except OSError: # oh no
         for revise in actions:
             revise["change"] = -7 # Could not update the database, so NOTHING that we just did actually saved
-    wlwin = EXPORT_WHITELIST()
+        wlwin = 0
     return actions, wlwin

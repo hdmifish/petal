@@ -3155,10 +3155,11 @@ class Commands:
                 return "Could you be more specific about whether you want to enable or disable their suspension?"
 """
 
-        rep, wlwin = WLSuspend(sub1, interp)
+        rep, wlwin = WLSuspend(victim, interp)
         codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
                 -2 : "No Change: Already suspended", -3 : "No Change: Not suspended",
-                -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure"}
+                -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure",
+                -9 : "Maybe no change? Something went horribly wrong D:"}
         wcode = {0 : "Failed to update whitelist", 1 : "Successfully updated whitelist"}
 
         oput = "WLSuspend Results:\n"
