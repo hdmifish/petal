@@ -3,7 +3,7 @@ import requests
 import datetime
 from collections import OrderedDict
 from .grasslands import Peacock
-__all__ = ["WLRequest", "WLAdd", "WLQuery", "EXPORT_WHITELIST"]
+__all__ = ["WLRequest", "WLAdd", "WLQuery", "WLSuspend", "EXPORT_WHITELIST"]
 dbName = "/minecraft/playerdb.json" # file in which userdata is stored
 WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 log = Peacock()
@@ -48,6 +48,7 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
                     appNew.update(altname=[]) # Spy on their dark and shadowy past
                     for name in namehist.json():
                         appNew["altname"].append(name["name"])
+                        appNew["name"] = name["name"] # Ensure the name is up to date
 
             dbNew.append(appNew)
         json.dump(dbNew, open(dbName, 'w'), indent=2)
@@ -199,10 +200,49 @@ def WLQuery(instr):
         log.err("OSError on query " + str(e))
         return -7
     res = []
-    for entry in dbRead:
-        for attr in entry:
-            if entry[attr] == instr and entry not in res:
+    in2 = instr.split(" ")
+    for in3 in in2:
+        for entry in dbRead:
+            for attr in entry:
+                if entry[attr] == in3 and entry not in res:
+                    res.append(entry)
+            if in3.lower() in (val.lower() for val in entry["altname"]) and entry not in res:
                 res.append(entry)
-        if instr.lower() in (val.lower() for val in entry["altname"]) and entry not in res:
-            res.append(entry)
     return res
+
+
+
+# !wlsuspend bad_person
+def WLSuspend(baddies, sus=True):
+    try:
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
+    except OSError: # File does not exist: Pointless to continue
+        return -7
+    actions = []
+    for target in baddies:
+        act = -9
+        try:
+            found = dbRead[dbRead.index(target)]
+        except OSError:
+            act = -8
+        else:
+            if found["suspended"] == sus:
+                if sus == True:
+                    act = -2 # -2: Already suspended
+                else:
+                    act = -3 # -1: Already forgiven
+            else:
+                if sus == True:
+                    act = 0 # 0: Suspended
+                else:
+                    act = -1 # -1: Forgiven
+            found["suspended"] = sus
+        actions.append({"name" : target["name"], "change" : act})
+    try:
+        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        wlwin = EXPORT_WHITELIST()
+    except OSError: # oh no
+        for revise in actions:
+            revise["change"] = -7 # Could not update the database, so NOTHING that we just did actually saved
+        wlwin = 0
+    return actions, wlwin

@@ -2971,6 +2971,10 @@ class Commands:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
 
         submission = message.content[len(self.config.prefix) + 4:].strip() # separated this for simplicity
+
+        if submission == "":
+            return "You need to include your Minecraft username, or I will not be able to find you! Like this: `!wlme Notch` :D"
+
         reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
@@ -3017,7 +3021,7 @@ class Commands:
 
         if reply == 0:
             if doSend == True:
-                recipientobj = discord.Server.get_member(recipientid)
+                recipientobj = self.client.get_server(self.config.get("mainServer")).get_member(recipientid)
                 try:
                     await self.client.send_message(recipientobj, user, "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`")
                 except:
@@ -3096,5 +3100,75 @@ class Commands:
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
         refreshReturn = EXPORT_WHITELIST(True, True)
- 
+
         return "Whitelist Fully Refreshed."
+
+    async def wlsuspend(self, message):
+        """
+        Flags a person to be removed from the whitelist
+        !wlsuspend bad_person
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        wordPos = ["true", "on", "yes", "active", "1", "enable"]
+        wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
+        submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
+
+        [sub1, sub2] = submission.split(" ",1) # Separate name of target
+        nsplit = sub2.lower().split(" ") # Split up the rest
+
+        victim = WLQuery(sub1)
+        if victim == -7:
+            return "Could not access database file"
+        if victim == []:
+            return "No results"
+
+        # A far more reasonable argument processor
+        if nsplit[0] == "" or nsplit[0] in wordPos:
+            interp = True
+        elif nsplit[0] in wordNeg:
+            interp = False
+        else:
+            return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
+
+""" unnecessarily overcomplicated (and probably slow) argument processor
+        positivity = 0
+        ambivalent = True
+
+        for word in nsplit:
+            if word in wordPos:
+                ambivalent = False
+                positivity += 1
+            elif word in wordNeg:
+                ambivalent = False
+                positivity -= 1
+
+        if not ambivalent:
+            if positivity > 0:
+                interp = True
+            elif positivity < 0:
+                interp = False
+            else:
+                return "Could you be more specific about whether you want to enable or disable their suspension?"
+"""
+
+        rep, wlwin = WLSuspend(victim, interp)
+        codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
+                -2 : "No Change: Already suspended", -3 : "No Change: Not suspended",
+                -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure",
+                -9 : "Maybe no change? Something went horribly wrong D:"}
+        wcode = {0 : "Failed to update whitelist", 1 : "Successfully updated whitelist"}
+
+        oput = "WLSuspend Results:\n"
+        for ln in rep:
+            oput = oput + "-- `" + ln["name"] + "`: " + codes[rep["change"]] + "\n"
+        oput = oput + wcode[wlwin]
+
+        return oput
