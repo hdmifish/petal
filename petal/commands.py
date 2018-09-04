@@ -3059,10 +3059,27 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 7:].strip() # separated this for simplicity
-        searchres = WLQuery(submission)
+
+        if submission.lower() == "pending":
+            searchres = []
+            noresult = "No requests are currently {}"
+            pList = WLDump()
+            for entry in pList:
+                if entry["approved"] == []:
+                    searchres.append(entry)
+        elif submission.lower() == "suspended" or submission.lower() == "restricted":
+            searchres = []
+            noresult = "No users are currently {}"
+            pList = WLDump()
+            for entry in pList:
+                if entry["suspended"] == True:
+                    searchres.append(entry)
+        else:
+            searchres = WLQuery(submission)
+            noresult = "No database entries matching `{}` found"
 
         if searchres == []:
-            return "No database entries containing `{}` found".format(submission)
+            return noresult.format(submission.lower())
         else:
             qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
@@ -3121,7 +3138,10 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
-        idList = WLDump()
+        uList = WLDump()
+        idList = []
+        for entry in uList:
+            idList.append(entry["discord"])
         oput = "Registered users who have left the server:\n"
         leftnum = 0
         for userid in idList:

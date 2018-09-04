@@ -70,11 +70,11 @@ def WLDump():
     except OSError: # File does not exist: Pointless to continue
         return 0
 
-    ids = []
+    uDump = []
     for applicant in dbRead: # Check everyone who has applied
-        ids.append(applicant["discord"])
+        uDump.append(applicant)
 
-    return ids
+    return uDump
 
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
