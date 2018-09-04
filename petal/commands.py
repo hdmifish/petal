@@ -3122,15 +3122,18 @@ class Commands:
 
         submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
         idList = WLDump()
-        oput = "Registered users who have left the server ({}):\n".format(len(idList))
+        oput = "Registered users who have left the server:\n"
+        leftnum = 0
         for userid in idList:
             try:
                 user = self.client.get_server(self.config.get("mainServer")).get_member(userid)
                 if user == None:
                     oput = oput + userid + "\n"
+                    leftnum += 1
             except: # Dont log an error here; An error here means a success
                 oput = oput + userid + "\n"
-        oput = oput + "--------"
+                leftnum += 1
+        oput = oput + "----({})----".format(len(leftnum))
         return oput
 
     async def wlsuspend(self, message):
