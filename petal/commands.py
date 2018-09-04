@@ -3123,8 +3123,12 @@ class Commands:
         wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
 
-        [sub1, sub2] = submission.split(" ",1) # Separate name of target
-        nsplit = sub2.lower().split(" ") # Split up the rest
+        sub0 = submission.lower().split(" ") # ["username", "rest", "of", "the", "message"]
+        sub1 = sub0[0] # "username"
+        if len(sub0) > 1:
+            sub2 = sub0[1] # "rest"
+        else:
+            sub2 = ""
 
         victim = WLQuery(sub1)
         if victim == -7:
@@ -3133,9 +3137,9 @@ class Commands:
             return "No results"
 
         # A far more reasonable argument processor
-        if nsplit[0] == "" or nsplit[0] in wordPos:
+        if sub2 == "" or sub2 in wordPos:
             interp = True
-        elif nsplit[0] in wordNeg:
+        elif sub2 in wordNeg:
             interp = False
         else:
             return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
@@ -3170,7 +3174,7 @@ class Commands:
 
         oput = "WLSuspend Results:\n"
         for ln in rep:
-            oput = oput + "-- `" + ln["name"] + "`: " + codes[rep["change"]] + "\n"
+            oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
         oput = oput + wcode[wlwin]
 
         return oput
