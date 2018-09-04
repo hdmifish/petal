@@ -3024,7 +3024,7 @@ class Commands:
                 recipientobj = self.client.get_server(self.config.get("mainServer")).get_member(recipientid)
                 try:
                     wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`"
-                    await self.send_message(channel=recipientobj, message=wlpm, )
+                    await self.client.send_message(channel=recipientobj, message=wlpm, )
                 except discord.DiscordException as e:
                     log.err("Error on WLAdd PM: " + str(e))
                     return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(mcname, recipientid)
