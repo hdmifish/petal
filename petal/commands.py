@@ -3081,7 +3081,7 @@ class Commands:
                 oput = oput + "- Known Usernames:\n"
                 for pname in entry["altname"]:
                     oput = oput + "  - `" + pname + "`\n"
-            oput = oput + "--------\n"
+            oput = oput + "--------"
             await self.client.edit_message(message=qout, new_content=oput)
             #return oput
 
@@ -3102,8 +3102,36 @@ class Commands:
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
         refreshReturn = EXPORT_WHITELIST(True, True)
+        refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
 
-        return "Whitelist Fully Refreshed."
+        return refstat[refreshReturn]
+
+    async def wlgone(self, message):
+        """
+        Checks the database for any users whose Discord ID is that of someone who has left
+        !wlgone
+        """
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
+        idList = WLDump()
+        oput = "Registered users who have left the server ({}):\n".format(len(idList))
+        for userid in idList:
+            try:
+                user = self.client.get_server(self.config.get("mainServer")).get_member(userid)
+                if user == None:
+                    oput = oput + userid + "\n"
+            except: # Dont log an error here; An error here means a success
+                oput = oput + userid + "\n"
+        oput = oput + "--------"
+        return oput
 
     async def wlsuspend(self, message):
         """
@@ -3123,8 +3151,12 @@ class Commands:
         wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
 
-        [sub1, sub2] = submission.split(" ",1) # Separate name of target
-        nsplit = sub2.lower().split(" ") # Split up the rest
+        sub0 = submission.lower().split(" ") # ["username", "rest", "of", "the", "message"]
+        sub1 = sub0[0] # "username"
+        if len(sub0) > 1:
+            sub2 = sub0[1] # "rest"
+        else:
+            sub2 = ""
 
         victim = WLQuery(sub1)
         if victim == -7:
@@ -3133,9 +3165,9 @@ class Commands:
             return "No results"
 
         # A far more reasonable argument processor
-        if nsplit[0] == "" or nsplit[0] in wordPos:
+        if sub2 == "" or sub2 in wordPos:
             interp = True
-        elif nsplit[0] in wordNeg:
+        elif sub2 in wordNeg:
             interp = False
         else:
             return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
@@ -3170,7 +3202,7 @@ class Commands:
 
         oput = "WLSuspend Results:\n"
         for ln in rep:
-            oput = oput + "-- `" + ln["name"] + "`: " + codes[rep["change"]] + "\n"
+            oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
         oput = oput + wcode[wlwin]
 
         return oput

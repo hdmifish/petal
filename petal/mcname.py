@@ -3,7 +3,7 @@ import requests
 import datetime
 from collections import OrderedDict
 from .grasslands import Peacock
-__all__ = ["WLRequest", "WLAdd", "WLQuery", "WLSuspend", "EXPORT_WHITELIST"]
+__all__ = ["WLRequest", "WLAdd", "WLQuery", "WLSuspend", "WLDump", "EXPORT_WHITELIST"]
 dbName = "/minecraft/playerdb.json" # file in which userdata is stored
 WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 log = Peacock()
@@ -63,6 +63,18 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
 
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1
+
+def WLDump():
+    try:
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
+    except OSError: # File does not exist: Pointless to continue
+        return 0
+
+    ids = []
+    for applicant in dbRead: # Check everyone who has applied
+        ids.append(applicant["discord"])
+
+    return ids
 
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
