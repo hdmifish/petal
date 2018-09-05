@@ -32,6 +32,15 @@ def WLDump():
         return -7
     return dbRead
 
+def WLSave(dbRead):
+    try:
+        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        ret = 0
+    except OSError: # Cannot write file: Well this was all rather pointless
+        log.err("OSError on DB save: " + str(e))
+        ret = -7
+    return ret
+
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     # Export the local database into the whitelist file itself
     # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
@@ -106,9 +115,7 @@ def writeLocalDB(player): # update db from ephemeral player; write db to file
             ret = -1
         else:
             ret = -2
-    try:
-        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
-    except OSError: # Cannot write file: Well this was all rather pointless
+    if WLSave(dbRead) != 0:
         ret = -7
     return ret
 
@@ -192,7 +199,8 @@ def WLAdd(idTarget, idSponsor):
         else: # User has already approved whitelisting
             ret = -2
 
-    json.dump(dbRead, open(dbName, 'w'), indent=2)
+    if WLSave(dbRead) != 0:
+        ret = -7
     return ret, doSend, targetid, targetname, EXPORT_WHITELIST()
 
 
