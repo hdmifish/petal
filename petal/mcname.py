@@ -30,10 +30,7 @@ def WLDump():
     except OSError: # File does not exist: Pointless to continue
         log.err("OSError on DB read: " + str(e))
         return -7
-    uDump = []
-    for applicant in dbRead: # Check everyone who has applied
-        uDump.append(applicant)
-    return uDump
+    return dbRead
 
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     # Export the local database into the whitelist file itself
