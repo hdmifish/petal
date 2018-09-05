@@ -3153,7 +3153,7 @@ class Commands:
             except: # Dont log an error here; An error here means a success
                 oput = oput + userid + "\n"
                 leftnum += 1
-        oput = oput + "----({})----".format(len(leftnum))
+        oput = oput + "----({})----".format(leftnum)
         return oput
 
     async def wlsuspend(self, message):
