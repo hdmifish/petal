@@ -24,6 +24,16 @@ ERROR CODES:
     # (Do not use this)
 PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-0000-0000-000000000000'), ('altname', []), ('discord', '000000000000000000'), ('approved', []), ('submitted', '1970-01-01_00:00'), ('suspended', False)])
 
+def WLDump():
+    try:
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
+    except OSError: # File does not exist: Pointless to continue
+        return 0
+    uDump = []
+    for applicant in dbRead: # Check everyone who has applied
+        uDump.append(applicant)
+    return uDump
+
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     # Export the local database into the whitelist file itself
     # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
@@ -63,18 +73,6 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
 
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1
-
-def WLDump():
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
-    except OSError: # File does not exist: Pointless to continue
-        return 0
-
-    uDump = []
-    for applicant in dbRead: # Check everyone who has applied
-        uDump.append(applicant)
-
-    return uDump
 
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
