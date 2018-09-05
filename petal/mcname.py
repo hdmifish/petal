@@ -28,7 +28,8 @@ def WLDump():
     try:
         dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
     except OSError: # File does not exist: Pointless to continue
-        return 0
+        log.err("OSError on DB read: " + str(e))
+        return -7
     uDump = []
     for applicant in dbRead: # Check everyone who has applied
         uDump.append(applicant)
@@ -85,9 +86,8 @@ def breakUID(str0): # Break apart Mojang UUID with dashes
 
 def writeLocalDB(player): # update db from ephemeral player; write db to file
 
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError: # File does not exist: Create the file
+    dbRead = WLDump()
+    if dbRead == -7: # File does not exist: Create the file
         dbRead = [{'uuid': uidF, 'name': [uname]}]
 
     pIndex = next((item for item in dbRead if item["uuid"] == player["uuid"]), False) # Is the player found in the list?
@@ -164,10 +164,8 @@ def WLRequest(nameGiven, discord_id):
 
 # !wl <ticket>
 def WLAdd(idTarget, idSponsor):
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError as e: # File does not exist: Pointless to continue
-        log.err("OSError: " + str(e))
+    dbRead = WLDump()
+    if dbRead == -7:
         return -7
     # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
     pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
@@ -204,10 +202,8 @@ def WLAdd(idTarget, idSponsor):
 
 # !wlquery <ticket>
 def WLQuery(instr):
-    try:
-        dbRead = json.load(open(dbName)) # dbRead is now a python object
-    except OSError as e: # File does not exist: Pointless to continue
-        log.err("OSError on query " + str(e))
+    dbRead = WLDump()
+    if dbRead == -7:
         return -7
     res = []
     in2 = instr.split(" ")
@@ -224,9 +220,8 @@ def WLQuery(instr):
 
 # !wlsuspend bad_person
 def WLSuspend(baddies, sus=True):
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError: # File does not exist: Pointless to continue
+    dbRead = WLDump()
+    if dbRead == -7: # File does not exist: Pointless to continue
         return -7
     actions = []
     for target in baddies:
