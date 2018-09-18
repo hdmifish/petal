@@ -24,6 +24,23 @@ ERROR CODES:
     # (Do not use this)
 PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-0000-0000-000000000000'), ('altname', []), ('discord', '000000000000000000'), ('approved', []), ('submitted', '1970-01-01_00:00'), ('suspended', False)])
 
+def WLDump():
+    try:
+        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
+    except OSError: # File does not exist: Pointless to continue
+        log.err("OSError on DB read: " + str(e))
+        return -7
+    return dbRead
+
+def WLSave(dbRead):
+    try:
+        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        ret = 0
+    except OSError: # Cannot write file: Well this was all rather pointless
+        log.err("OSError on DB save: " + str(e))
+        ret = -7
+    return ret
+
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     # Export the local database into the whitelist file itself
     # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
@@ -64,18 +81,6 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
     json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
     return 1
 
-def WLDump():
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
-    except OSError: # File does not exist: Pointless to continue
-        return 0
-
-    uDump = []
-    for applicant in dbRead: # Check everyone who has applied
-        uDump.append(applicant)
-
-    return uDump
-
 def breakUID(str0): # Break apart Mojang UUID with dashes
     str1 = str0[0:8]
     str2 = str0[8:12]
@@ -87,9 +92,8 @@ def breakUID(str0): # Break apart Mojang UUID with dashes
 
 def writeLocalDB(player): # update db from ephemeral player; write db to file
 
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError: # File does not exist: Create the file
+    dbRead = WLDump()
+    if dbRead == -7: # File does not exist: Create the file
         dbRead = [{'uuid': uidF, 'name': [uname]}]
 
     pIndex = next((item for item in dbRead if item["uuid"] == player["uuid"]), False) # Is the player found in the list?
@@ -111,9 +115,7 @@ def writeLocalDB(player): # update db from ephemeral player; write db to file
             ret = -1
         else:
             ret = -2
-    try:
-        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
-    except OSError: # Cannot write file: Well this was all rather pointless
+    if WLSave(dbRead) != 0:
         ret = -7
     return ret
 
@@ -166,10 +168,8 @@ def WLRequest(nameGiven, discord_id):
 
 # !wl <ticket>
 def WLAdd(idTarget, idSponsor):
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError as e: # File does not exist: Pointless to continue
-        log.err("OSError: " + str(e))
+    dbRead = WLDump()
+    if dbRead == -7:
         return -7
     # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
     pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
@@ -199,17 +199,16 @@ def WLAdd(idTarget, idSponsor):
         else: # User has already approved whitelisting
             ret = -2
 
-    json.dump(dbRead, open(dbName, 'w'), indent=2)
+    if WLSave(dbRead) != 0:
+        ret = -7
     return ret, doSend, targetid, targetname, EXPORT_WHITELIST()
 
 
 
 # !wlquery <ticket>
 def WLQuery(instr):
-    try:
-        dbRead = json.load(open(dbName)) # dbRead is now a python object
-    except OSError as e: # File does not exist: Pointless to continue
-        log.err("OSError on query " + str(e))
+    dbRead = WLDump()
+    if dbRead == -7:
         return -7
     res = []
     in2 = instr.split(" ")
@@ -226,9 +225,8 @@ def WLQuery(instr):
 
 # !wlsuspend bad_person
 def WLSuspend(baddies, sus=True):
-    try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict) # dbRead is now a python object
-    except OSError: # File does not exist: Pointless to continue
+    dbRead = WLDump()
+    if dbRead == -7: # File does not exist: Pointless to continue
         return -7
     actions = []
     for target in baddies:
