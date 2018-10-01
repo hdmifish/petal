@@ -22,7 +22,7 @@ from .grasslands import Pidgeon
 from .mcname import *
 
 from random import randint
-version = "0.5.0.9"
+version = "0.5.1"
 
 
 class Commands:
@@ -3229,3 +3229,31 @@ class Commands:
         oput = oput + wcode[wlwin]
 
         return oput
+
+    async def spookyclock(self, message):
+        """
+        Be careful, Skeletons are closer than you think
+        !spookyclock
+        """
+        td = (dt(2018,10,31,0,0)  - dt.utcnow()).total_seconds()
+        if td < 0:
+            return ":ghost: Beware! The skeletons are already here! :ghost:"
+        d = divmod(td, 86400)
+        h = divmod(d[1], 3600)
+        m = divmod(h[1], 60)
+        s = int(m[1])
+        return ":ghost: **Spooky Clock Says:** Skeletons are `{} days, {} hours, {} minutes and {} seconds away` :ghost:".format(str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s))
+
+    async def santaclock(self, message):
+        """
+        How long is it till you have to buy people nerdy tshirts?
+        !santaclock
+        """
+        td = (dt(2018,12,25,0,0) - dt.utcnow()).total_seconds()
+        if td < 0:
+            return "Christmas already happened.... Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now"
+        d = divmod(td, 86400)
+        h = divmod(d[1], 3600)
+        m = divmod(h[1], 60)
+        s = int(m[1])
+        return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes and {} seconds away` :christmas_tree:".format(str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s))	
