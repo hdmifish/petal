@@ -22,7 +22,13 @@ ERROR CODES:
 """
     # The default profile for a new player being added to the database
     # (Do not use this)
-PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-0000-0000-000000000000'), ('altname', []), ('discord', '000000000000000000'), ('approved', []), ('submitted', '1970-01-01_00:00'), ('suspended', False)])
+PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'),
+                             ('uuid', '00000000-0000-0000-0000-000000000000'),
+                             ('altname', []),
+                             ('discord', '000000000000000000'),
+                             ('approved', []),
+                             ('submitted', '1970-01-01_00:00'),
+                             ('suspended', False)])
 
 def WLDump():
     try:
@@ -42,8 +48,7 @@ def WLSave(dbRead):
     return ret
 
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
-    # Export the local database into the whitelist file itself
-    # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
+    """Export the local database into the whitelist file itself\n\nIf Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated"""
     try: # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
         dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
         wlFile = json.load(open(WhitelistFile))
@@ -171,12 +176,13 @@ def WLAdd(idTarget, idSponsor):
     dbRead = WLDump()
     if dbRead == -7:
         return -7
-    # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
-    pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
 
     targetid = -1
     targetname = "<Error>"
     doSend = False
+
+    # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
+    pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
 
     if pIndex == False: # Maybe try the Minecraft name?
         pIndex = next((item for item in dbRead if item["name"].lower() == idTarget.lower()), False)

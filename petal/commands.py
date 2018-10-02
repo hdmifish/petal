@@ -2979,6 +2979,11 @@ class Commands:
 
         if reply == 0:
 
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) creates NEW ENTRY for '{message.content[len(self.config.prefix) + 4:]}'")
+            except:
+                pass
+
             wlreq = await self.client.send_message(channel=mcchan, message="`<request loading...>`")
 
             await self.client.edit_message(message=wlreq, new_content="Whitelist Request from: `" + message.author.name + "#" + message.author.discriminator + "` with request: " + message.content[len(self.config.prefix) + 4:] + "\nTaggable: <@" + message.author.id + ">\nDiscord ID:  " + message.author.id + "\nMojang UID:  " + uuid)
@@ -3032,6 +3037,10 @@ class Commands:
                     return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
             else:
                 return "You have successfully reapproved `{}` for <@{}> :D".format(mcname, recipientid)
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets APPROVED on '{mcname}'")
+            except:
+                pass
             #return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
         elif reply == -2:
             return "You have already approved `{}` :o".format(mcname)
@@ -3226,6 +3235,10 @@ class Commands:
         oput = "WLSuspend Results:\n"
         for ln in rep:
             oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}")
+            except:
+                pass
         oput = oput + wcode[wlwin]
 
         return oput
