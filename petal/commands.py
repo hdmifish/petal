@@ -2960,8 +2960,8 @@ class Commands:
 
     async def wlme(self, message):
         """
-        Messages the MC mods (if applicable)
-        !wlme your_minecraft_username
+        Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
+        !wlme <your_minecraft_username>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3003,8 +3003,8 @@ class Commands:
 
     async def wl(self, message):
         """
-        Exports the provided ID from the local whitelist database to the whitelist proper
-        !wl ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
+        Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
+        !wl <profile_identifier>
         """
 
         mcchan = self.config.get("mc_channel")
@@ -3046,8 +3046,8 @@ class Commands:
 
     async def wlquery(self, message):
         """
-        Takes a string and finds any database entry that references it
-        !wlquery search_term
+        Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
+        !wlquery <search_term>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3104,8 +3104,8 @@ class Commands:
 
     async def wlrefresh(self, message):
         """
-        Takes a string and finds any database entry that references it
-        !wlquery search_term
+        Force an immediate rebuild of both the PlayerDB and the Whitelist itself
+        !wlrefresh
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3125,7 +3125,7 @@ class Commands:
 
     async def wlgone(self, message):
         """
-        Checks the database for any users whose Discord ID is that of someone who has left
+        Checks the WL database for any users whose Discord ID is that of someone who has left the server
         !wlgone
         """
         mcchan = self.config.get("mc_channel")
@@ -3159,7 +3159,7 @@ class Commands:
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
-        !wlsuspend bad_person
+        !wlsuspend <bad_person>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
