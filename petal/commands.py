@@ -1343,7 +1343,7 @@ class Commands:
             try:
                 petal.logLock = True
                 timex = time.time() + timedelta(days=int(msg2.content.strip())).total_seconds()
-                self.db.update_member(userToBan, {"banned": True, "bannedFrom": userToBan.server.id, "banExpires": str(timex).split('.')[0] })
+                self.db.update_member(userToBan, {"banned": True, "bannedFrom": userToBan.server.id, "banExpires": str(timex).split('.')[0], "tempBanned":True })
                 await self.client.ban(userToBan)
             except discord.errors.Forbidden as ex:
                 return "It seems I don't have perms to ban this user"
@@ -3256,4 +3256,4 @@ class Commands:
         h = divmod(d[1], 3600)
         m = divmod(h[1], 60)
         s = int(m[1])
-        return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes and {} seconds away` :christmas_tree:".format(str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s))	
+        return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes and {} seconds away` :christmas_tree:".format(str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s))

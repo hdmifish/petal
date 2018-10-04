@@ -33,6 +33,7 @@ class Petal(discord.Client):
         self.config = Config()
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
+        self.tempBanFlag = False;
 
 
         self.dev_mode = devmode
@@ -109,16 +110,35 @@ class Petal(discord.Client):
                 ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
                 if ban_expiry is None:
                     continue
+                if not self.db.get_attribute(m, "tempBanned"):
+                    print("Member {}({}) was not tempbanned. Skipping".format(m.name, m.id))
+                    continue
                 elif int(ban_expiry) <= int(epoch):
                     log.f(str(ban_expiry) + " compared to " + str(epoch))
                     print(flush=True)
                     await self.unban(mainserver, m)
+                    await self.db.update_member(member, {"banned":False})
                     log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
+
                 else:
                     log.f("BANS", m.name + " ({}) has {} seconds left".format(m.id, str((int(ban_expiry) - int(epoch)))))
                 await asyncio.sleep(0.5)
 
             await asyncio.sleep(interval)
+
+
+    async def on_member_ban(self, member):
+        print("Giving database a chance ot sync...")
+        await asyncio.sleep(1)
+
+        if not self.db.member_exists(member): return
+        banstate =  self.db.get_attribute(member, "tempBanned")
+        if banstate:
+            print("Member{}({}) tempbanned, ignoring".format(member.name, member.id))
+            return
+
+        self.db.update_member(member, {"tempBanned":False})
+        print("Member {} ({}) was banned manually".format(member.name, member.id))
 
 
 
