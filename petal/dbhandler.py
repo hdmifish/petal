@@ -99,6 +99,7 @@ class DBHandler(object):
                                    "use update_member to update them")
             return False
 
+
         else:
 
             data = {"name": member.name,
@@ -106,7 +107,7 @@ class DBHandler(object):
                     "discord_date": ts(member.created_at),
                     "local_date": ts(datetime.utcnow()),
                     "aliases": [],
-                    "servers": [member.server.id],
+
                     "discriminator": member.discriminator,
                     "isBot": member.bot,
                     "avatar_url": member.avatar_url,
@@ -121,6 +122,10 @@ class DBHandler(object):
                     "strikes": [],
                     "subscriptions": [],
                     "commands_count": 0}
+            if member.server is not None:
+                data['servers'] = [membre.server.id]
+
+
             if isinstance(member, discord.Member):
                 data["server_date"] = ts(member.joined_at)
                 data["joins"] =  [ ts(member.joined_at) ]
