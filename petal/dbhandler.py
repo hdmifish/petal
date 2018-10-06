@@ -123,7 +123,7 @@ class DBHandler(object):
                     "subscriptions": [],
                     "commands_count": 0}
             if member.server is not None:
-                data['servers'] = [membre.server.id]
+                data['servers'] = [member.server.id]
 
 
             if isinstance(member, discord.Member):

@@ -1302,7 +1302,7 @@ class Commands:
                     # Post-processing webhook for ban command
                     return generate_post_process_URI(message.author.name + message.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
                 except Exception as e:
-                    log.err("Could not generate post_process_message for ban" + str(e))
+                    self.log.err("Could not generate post_process_message for ban" + str(e))
                     return "Error occurred trying to generate webhook URI"
 
     async def tempban(self, message):
