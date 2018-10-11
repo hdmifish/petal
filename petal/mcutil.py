@@ -2,9 +2,9 @@ import json
 import requests
 import datetime
 from collections import OrderedDict
-from .grasslands import Peacock
+#from .grasslands import Peacock
 __all__ = ["Minecraft"]
-log = Peacock()
+#log = Peacock()
 
 """
 ERROR CODES:
@@ -64,7 +64,7 @@ class WLStuff:
 
     def WLDump(self):
         try:
-            with open(dbName) as fh:
+            with open(self.dbName) as fh:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
         except OSError: # File does not exist: Pointless to continue
             log.err("OSError on DB read: " + str(e))
@@ -73,7 +73,7 @@ class WLStuff:
 
     def WLSave(self, dbRead):
         try:
-            with open(dbName, 'w') as fh:
+            with open(self.dbName, 'w') as fh:
                 json.dump(dbRead, fh, indent=2) # Save all the things
             ret = 0
         except OSError: # Cannot write file: Well this was all rather pointless
@@ -84,7 +84,7 @@ class WLStuff:
     def EXPORT_WHITELIST(self, refreshall=False, refreshnet=False):
         """Export the local database into the whitelist file itself\n\nIf Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated"""
         try: # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
-            with open(dbName) as fh, open(WhitelistFile) as WLF:
+            with open(self.dbName) as fh, open(self.WhitelistFile) as WLF:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
                 wlFile = json.load(WLF)
             #wlFile = [] # Uncommenting this will force the whitelist to contain ONLY people in the DB file
@@ -125,7 +125,7 @@ class WLStuff:
 
     def writeLocalDB(self, player): # update db from ephemeral player; write db to file
 
-        dbRead = WLDump()
+        dbRead = self.WLDump()
         if dbRead == -7: # File does not exist: Create the file
             dbRead = [{'uuid': uidF, 'name': [uname]}]
 
@@ -148,7 +148,7 @@ class WLStuff:
                 ret = -1
             else:
                 ret = -2
-        if WLSave(dbRead) != 0:
+        if self.WLSave(dbRead) != 0:
             ret = -7
         return ret
 
@@ -166,11 +166,13 @@ class WLStuff:
         # Apply the values to a blank slate
         pNew = PLAYERDEFAULT.copy() # Get the slate
         pNew.update(eph) # Imprint anything new from the player
-        return writeLocalDB(pNew), uidF
+        return self.writeLocalDB(pNew), uidF
+
 
 ###---
 ##  Top Level Commands - Invoked via commands in Discord
 ###---
+
 
 class Minecraft:
     def __init__(self, client):
@@ -185,7 +187,7 @@ class Minecraft:
     def WLRequest(self, nameGiven, discord_id):
         udict = idFromName(nameGiven) # Get the id from the name, or an error
         if udict["code"] == 200: # If this is 200, the second part will contain json data; Try to add it
-            verdict, uid = addToLocalDB(udict["udat"], discord_id)
+            verdict, uid = self.etc.addToLocalDB(udict["udat"], discord_id)
             return verdict, uid
         # Map response codes to function errors
         elif udict["code"] == 204:
@@ -200,7 +202,7 @@ class Minecraft:
 
     # !wl <ticket>
     def WLAdd(self, idTarget, idSponsor):
-        dbRead = WLDump()
+        dbRead = self.etc.WLDump()
         if dbRead == -7:
             return -7
 
@@ -232,15 +234,13 @@ class Minecraft:
             else: # User has already approved whitelisting
                 ret = -2
 
-        if WLSave(dbRead) != 0:
+        if self.etc.WLSave(dbRead) != 0:
             ret = -7
         return ret, doSend, targetid, targetname, EXPORT_WHITELIST()
 
-
-
     # !wlquery <ticket>
     def WLQuery(self, instr):
-        dbRead = WLDump()
+        dbRead = self.etc.WLDump()
         if dbRead == -7:
             return -7
         res = []
@@ -258,7 +258,7 @@ class Minecraft:
 
     # !wlsuspend bad_person
     def WLSuspend(self, baddies, sus=True):
-        dbRead = WLDump()
+        dbRead = self.etc.WLDump()
         if dbRead == -7: # File does not exist: Pointless to continue
             return -7
         actions = []
@@ -284,7 +284,7 @@ class Minecraft:
         try:
             with open(dbName, 'w') as fh:
                 json.dump(dbRead, fh, indent=2) # Save all the things
-            wlwin = EXPORT_WHITELIST()
+            wlwin = self.etc.EXPORT_WHITELIST()
         except OSError: # oh no
             for revise in actions:
                 revise["change"] = -7 # Could not update the database, so NOTHING that we just did actually saved

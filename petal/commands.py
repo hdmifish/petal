@@ -2977,7 +2977,7 @@ class Commands:
         if submission == "":
             return "You need to include your Minecraft username, or I will not be able to find you! Like this: `!wlme Notch` :D"
 
-        reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
+        reply, uuid = self.minecraft.WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
 
@@ -3024,7 +3024,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
-        reply, doSend, recipientid, mcname, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
+        reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
             if doSend == True:
@@ -3074,19 +3074,19 @@ class Commands:
         if submission.lower() == "pending":
             searchres = []
             noresult = "No requests are currently {}"
-            pList = WLDump()
+            pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if entry["approved"] == []:
                     searchres.append(entry)
         elif submission.lower() == "suspended" or submission.lower() == "restricted":
             searchres = []
             noresult = "No users are currently {}"
-            pList = WLDump()
+            pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if entry["suspended"] == True:
                     searchres.append(entry)
         else:
-            searchres = WLQuery(submission)
+            searchres = self.minecraft.WLQuery(submission)
             noresult = "No database entries matching `{}` found"
 
         if searchres == []:
@@ -3129,7 +3129,7 @@ class Commands:
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
-        refreshReturn = EXPORT_WHITELIST(True, True)
+        refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
         refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
 
         return refstat[refreshReturn]
@@ -3149,7 +3149,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
-        uList = WLDump()
+        uList = self.minecraft.etc.WLDump()
         idList = []
         for entry in uList:
             idList.append(entry["discord"])
@@ -3227,7 +3227,7 @@ class Commands:
                 return "Could you be more specific about whether you want to enable or disable their suspension?"
         """
 
-        rep, wlwin = WLSuspend(victim, interp)
+        rep, wlwin = self.minecraft.WLSuspend(victim, interp)
         codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
                 -2 : "No Change: Already suspended", -3 : "No Change: Not suspended",
                 -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure",
