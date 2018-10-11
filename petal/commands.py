@@ -20,6 +20,7 @@ from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
 from .mcname import *
+from .mcutil import Minecraft
 
 from random import randint
 version = "0.5.1"
@@ -38,6 +39,7 @@ class Commands:
         self.db = client.db
 
         self.log = Peacock()
+        self.minecraft = Minecraft(client)
         self.startup = dt.utcnow()
         self.activeHelpers = []
         self.active_sad = []
@@ -2960,8 +2962,8 @@ class Commands:
 
     async def wlme(self, message):
         """
-        Messages the MC mods (if applicable)
-        !wlme your_minecraft_username
+        Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
+        !wlme <your_minecraft_username>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -2975,9 +2977,14 @@ class Commands:
         if submission == "":
             return "You need to include your Minecraft username, or I will not be able to find you! Like this: `!wlme Notch` :D"
 
-        reply, uuid = WLRequest(submission, message.author.id) # Send the submission through the new function
+        reply, uuid = self.minecraft.WLRequest(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
+
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) creates NEW ENTRY for '{message.content[len(self.config.prefix) + 4:]}'")
+            except:
+                pass
 
             wlreq = await self.client.send_message(channel=mcchan, message="`<request loading...>`")
 
@@ -3003,8 +3010,8 @@ class Commands:
 
     async def wl(self, message):
         """
-        Exports the provided ID from the local whitelist database to the whitelist proper
-        !wl ( target_minecraft_uuid OR target_discord_uuid OR target_minecraft_username )
+        Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
+        !wl <profile_identifier>
         """
 
         mcchan = self.config.get("mc_channel")
@@ -3017,7 +3024,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
-        reply, doSend, recipientid, mcname, wlwrite = WLAdd(submission, message.author.id) # Send the submission through the new function
+        reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
             if doSend == True:
@@ -3032,6 +3039,10 @@ class Commands:
                     return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
             else:
                 return "You have successfully reapproved `{}` for <@{}> :D".format(mcname, recipientid)
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets APPROVED on '{mcname}'")
+            except:
+                pass
             #return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
         elif reply == -2:
             return "You have already approved `{}` :o".format(mcname)
@@ -3046,8 +3057,8 @@ class Commands:
 
     async def wlquery(self, message):
         """
-        Takes a string and finds any database entry that references it
-        !wlquery search_term
+        Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
+        !wlquery <search_term>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3063,19 +3074,19 @@ class Commands:
         if submission.lower() == "pending":
             searchres = []
             noresult = "No requests are currently {}"
-            pList = WLDump()
+            pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if entry["approved"] == []:
                     searchres.append(entry)
         elif submission.lower() == "suspended" or submission.lower() == "restricted":
             searchres = []
             noresult = "No users are currently {}"
-            pList = WLDump()
+            pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if entry["suspended"] == True:
                     searchres.append(entry)
         else:
-            searchres = WLQuery(submission)
+            searchres = self.minecraft.WLQuery(submission)
             noresult = "No database entries matching `{}` found"
 
         if searchres == []:
@@ -3104,8 +3115,8 @@ class Commands:
 
     async def wlrefresh(self, message):
         """
-        Takes a string and finds any database entry that references it
-        !wlquery search_term
+        Force an immediate rebuild of both the PlayerDB and the Whitelist itself
+        !wlrefresh
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3118,14 +3129,14 @@ class Commands:
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
-        refreshReturn = EXPORT_WHITELIST(True, True)
+        refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
         refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
 
         return refstat[refreshReturn]
 
     async def wlgone(self, message):
         """
-        Checks the database for any users whose Discord ID is that of someone who has left
+        Checks the WL database for any users whose Discord ID is that of someone who has left the server
         !wlgone
         """
         mcchan = self.config.get("mc_channel")
@@ -3138,7 +3149,7 @@ class Commands:
             return "This needs to be done in the right channel!"
 
         submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
-        uList = WLDump()
+        uList = self.minecraft.etc.WLDump()
         idList = []
         for entry in uList:
             idList.append(entry["discord"])
@@ -3159,7 +3170,7 @@ class Commands:
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
-        !wlsuspend bad_person
+        !wlsuspend <bad_person>
         """
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
@@ -3216,7 +3227,7 @@ class Commands:
                 return "Could you be more specific about whether you want to enable or disable their suspension?"
         """
 
-        rep, wlwin = WLSuspend(victim, interp)
+        rep, wlwin = self.minecraft.WLSuspend(victim, interp)
         codes = {0 : "Suspension successfully enabled", -1 : "Suspension successfully lifted",
                 -2 : "No Change: Already suspended", -3 : "No Change: Not suspended",
                 -7 : "No Change: Failed to write database", -8 : "No Change: Indexing failure",
@@ -3226,6 +3237,10 @@ class Commands:
         oput = "WLSuspend Results:\n"
         for ln in rep:
             oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}")
+            except:
+                pass
         oput = oput + wcode[wlwin]
 
         return oput

@@ -1,12 +1,16 @@
+"""
+### ### DEPRECATED ### ###
+Switching over to mcutil.py, identical functionality but object-based structure
+"""
+
 import json
 import requests
 import datetime
 from collections import OrderedDict
 from .grasslands import Peacock
 __all__ = ["WLRequest", "WLAdd", "WLQuery", "WLSuspend", "WLDump", "EXPORT_WHITELIST"]
-dbName = "/minecraft/playerdb.json" # file in which userdata is stored
-WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 log = Peacock()
+
 """
 ERROR CODES:
  0: Cmnd success: user added or approved, or request sent
@@ -20,13 +24,24 @@ ERROR CODES:
 -8: Malign error: user supplied invalid name
 -9: Malign error: incomplete function (fault of developer)
 """
-    # The default profile for a new player being added to the database
-    # (Do not use this)
-PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'), ('uuid', '00000000-0000-0000-0000-000000000000'), ('altname', []), ('discord', '000000000000000000'), ('approved', []), ('submitted', '1970-01-01_00:00'), ('suspended', False)])
+
+# The default profile for a new player being added to the database
+# (Do not use this for other stuff)
+PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'),
+                             ('uuid', '00000000-0000-0000-0000-000000000000'),
+                             ('altname', []),
+                             ('discord', '000000000000000000'),
+                             ('approved', []),
+                             ('submitted', '1970-01-01_00:00'),
+                             ('suspended', False)])
+
+dbName = "/minecraft/playerdb.json" # file in which userdata is stored
+WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 
 def WLDump():
     try:
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
+        with open(dbName) as fh:
+            dbRead = json.load(fh, object_pairs_hook=OrderedDict)
     except OSError: # File does not exist: Pointless to continue
         log.err("OSError on DB read: " + str(e))
         return -7
@@ -34,7 +49,8 @@ def WLDump():
 
 def WLSave(dbRead):
     try:
-        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        with open(dbName, 'w') as fh:
+            json.dump(dbRead, fh, indent=2) # Save all the things
         ret = 0
     except OSError: # Cannot write file: Well this was all rather pointless
         log.err("OSError on DB save: " + str(e))
@@ -42,11 +58,11 @@ def WLSave(dbRead):
     return ret
 
 def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
-    # Export the local database into the whitelist file itself
-    # If Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated
+    """Export the local database into the whitelist file itself\n\nIf Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated"""
     try: # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
-        dbRead = json.load(open(dbName), object_pairs_hook=OrderedDict)
-        wlFile = json.load(open(WhitelistFile))
+        with open(dbName) as fh, open(WhitelistFile) as WLF:
+            dbRead = json.load(fh, object_pairs_hook=OrderedDict)
+            wlFile = json.load(WLF)
         #wlFile = [] # Uncommenting this will force the whitelist to contain ONLY people in the DB file
                      # (This will also force the whitelist file to be in the same order as the DB file)
     except OSError: # File does not exist: Pointless to continue
@@ -68,7 +84,8 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
                         appNew["name"] = name["name"] # Ensure the name is up to date
 
             dbNew.append(appNew)
-        json.dump(dbNew, open(dbName, 'w'), indent=2)
+        with open(dbName, 'w') as fh:
+            json.dump(dbNew, fh, indent=2)
         dbRead = dbNew
 
     for applicant in dbRead: # Check everyone who has applied
@@ -78,7 +95,8 @@ def EXPORT_WHITELIST(refreshall=False, refreshnet=False):
         elif app != False and applicant["suspended"] == True: #BadPersonAlert, remove them
             wlFile.remove(app)
 
-    json.dump(wlFile, open(WhitelistFile, 'w'), indent=2)
+    with open(WhitelistFile, 'w') as WLF:
+        json.dump(wlFile, WLF, indent=2)
     return 1
 
 def breakUID(str0): # Break apart Mojang UUID with dashes
@@ -171,12 +189,13 @@ def WLAdd(idTarget, idSponsor):
     dbRead = WLDump()
     if dbRead == -7:
         return -7
-    # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
-    pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
 
     targetid = -1
     targetname = "<Error>"
     doSend = False
+
+    # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
+    pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
 
     if pIndex == False: # Maybe try the Minecraft name?
         pIndex = next((item for item in dbRead if item["name"].lower() == idTarget.lower()), False)
@@ -249,7 +268,8 @@ def WLSuspend(baddies, sus=True):
             found["suspended"] = sus
         actions.append({"name" : target["name"], "change" : act})
     try:
-        json.dump(dbRead, open(dbName, 'w'), indent=2) # Save all the things
+        with open(dbName, 'w') as fh:
+            json.dump(dbRead, fh, indent=2) # Save all the things
         wlwin = EXPORT_WHITELIST()
     except OSError: # oh no
         for revise in actions:
