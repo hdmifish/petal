@@ -2,9 +2,9 @@ import json
 import requests
 import datetime
 from collections import OrderedDict
-#from .grasslands import Peacock
+from .grasslands import Peacock
 __all__ = ["Minecraft"]
-#log = Peacock()
+log = Peacock()
 
 """
 ERROR CODES:
