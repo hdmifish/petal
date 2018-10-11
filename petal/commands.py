@@ -20,6 +20,7 @@ from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
 from .mcname import *
+from .mcutil import Minecraft
 
 from random import randint
 version = "0.5.1"
@@ -38,6 +39,7 @@ class Commands:
         self.db = client.db
 
         self.log = Peacock()
+        self.minecraft = Minecraft(client)
         self.startup = dt.utcnow()
         self.activeHelpers = []
         self.active_sad = []

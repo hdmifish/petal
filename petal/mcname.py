@@ -1,3 +1,8 @@
+"""
+### ### DEPRECATED ### ###
+Switching over to mcutil.py, identical functionality but object-based structure
+"""
+
 import json
 import requests
 import datetime
