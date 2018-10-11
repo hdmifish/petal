@@ -54,13 +54,26 @@ def idFromName(uname_raw):
         return {'code':response.status_code}
 
 
+
 # The lower level tools that actually get stuff done; Called by the main Minecraft class
 class WLStuff:
     def __init__(self, client):
         self.client = client
         self.config = client.config
-        self.dbName = dbName
-        self.WhitelistFile = WhitelistFile
+
+    def cget(self, prop):
+        v = self.config.get(prop)
+        if v == "<poof>":
+            v = None
+        return v
+
+    @property
+    def dbName(self):
+        return self.cget("minecraftDB") or dbName
+
+    @property
+    def WhitelistFile(self):
+        return self.cget("minecraftWL") or WhitelistFile
 
     def WLDump(self):
         try:
