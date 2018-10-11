@@ -4,9 +4,8 @@ import datetime
 from collections import OrderedDict
 from .grasslands import Peacock
 __all__ = ["WLRequest", "WLAdd", "WLQuery", "WLSuspend", "WLDump", "EXPORT_WHITELIST"]
-dbName = "/minecraft/playerdb.json" # file in which userdata is stored
-WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 log = Peacock()
+
 """
 ERROR CODES:
  0: Cmnd success: user added or approved, or request sent
@@ -20,8 +19,9 @@ ERROR CODES:
 -8: Malign error: user supplied invalid name
 -9: Malign error: incomplete function (fault of developer)
 """
-    # The default profile for a new player being added to the database
-    # (Do not use this)
+
+# The default profile for a new player being added to the database
+# (Do not use this for other stuff)
 PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'),
                              ('uuid', '00000000-0000-0000-0000-000000000000'),
                              ('altname', []),
@@ -29,6 +29,9 @@ PLAYERDEFAULT = OrderedDict([('name', 'PLAYERNAME'),
                              ('approved', []),
                              ('submitted', '1970-01-01_00:00'),
                              ('suspended', False)])
+
+dbName = "/minecraft/playerdb.json" # file in which userdata is stored
+WhitelistFile = "/minecraft/whitelist.json" # The whitelist file itself
 
 def WLDump():
     try:
