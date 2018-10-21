@@ -1,6 +1,7 @@
 import json
 import requests
 import datetime
+
 from collections import OrderedDict
 from .grasslands import Peacock
 
@@ -35,8 +36,8 @@ PLAYERDEFAULT = OrderedDict(
     ]
 )
 
-dbName = "/minecraft/playerdb.json"  # file in which userdata is stored
-WhitelistFile = "/minecraft/whitelist.json"  # The whitelist file itself
+# dbName = "/minecraft/playerdb.json"  # file in which userdata is stored
+# WhitelistFile = "/minecraft/whitelist.json"  # The whitelist file itself
 
 # Break apart Mojang UUID with dashes
 def breakUID(str0):
@@ -76,11 +77,11 @@ class WLStuff:
 
     @property
     def dbName(self):
-        return self.cget("minecraftDB") or dbName
+        return self.cget("minecraftDB")
 
     @property
     def WhitelistFile(self):
-        return self.cget("minecraftWL") or WhitelistFile
+        return self.cget("minecraftWL")
 
     def WLDump(self):
         try:
@@ -136,7 +137,7 @@ class WLStuff:
                             ]  # Ensure the name is up to date
 
                 dbNew.append(appNew)
-            with open(dbName, "w") as fh:
+            with open(self.dbName, "w") as fh:
                 json.dump(dbNew, fh, indent=2)
             dbRead = dbNew
 
@@ -155,7 +156,7 @@ class WLStuff:
             ):  # BadPersonAlert, remove them
                 wlFile.remove(app)
 
-        with open(WhitelistFile, "w") as WLF:
+        with open(self.WhitelistFile, "w") as WLF:
             json.dump(wlFile, WLF, indent=2)
         return 1
 
@@ -222,8 +223,6 @@ class Minecraft:
     def __init__(self, client):
         self.client = client
         self.config = client.config
-        self.dbName = dbName
-        self.WhitelistFile = WhitelistFile
 
         self.etc = WLStuff(client)
 
@@ -333,7 +332,7 @@ class Minecraft:
                 found["suspended"] = sus
             actions.append({"name": target["name"], "change": act})
         try:
-            with open(dbName, "w") as fh:
+            with open(self.etc.dbName, "w") as fh:
                 json.dump(dbRead, fh, indent=2)  # Save all the things
             wlwin = self.etc.EXPORT_WHITELIST()
         except OSError:  # oh no
