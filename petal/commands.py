@@ -19,7 +19,6 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import *
 from .mcutil import Minecraft
 
 from random import randint
@@ -3027,22 +3026,22 @@ class Commands:
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(submission, message.author.id) # Send the submission through the new function
 
         if reply == 0:
+            try: # For now, just gonna do this just in case
+                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets APPROVED on '{mcname}'")
+            except:
+                pass
             if doSend == True:
                 recipientobj = self.client.get_server(self.config.get("mainServer")).get_member(recipientid)
                 try:
                     wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`"
                     await self.client.send_message(channel=recipientobj, message=wlpm, )
                 except discord.DiscordException as e:
-                    log.err("Error on WLAdd PM: " + str(e))
+                    self.log.err("Error on WLAdd PM: " + str(e))
                     return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(mcname, recipientid)
                 else:
                     return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(mcname, recipientid)
             else:
                 return "You have successfully reapproved `{}` for <@{}> :D".format(mcname, recipientid)
-            try: # For now, just gonna do this just in case
-                self.log.f("wl+", f"{message.author.name}#{message.author.discriminator} ({message.author.id}) sets APPROVED on '{mcname}'")
-            except:
-                pass
             #return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
         elif reply == -2:
             return "You have already approved `{}` :o".format(mcname)
@@ -3192,7 +3191,7 @@ class Commands:
         else:
             sub2 = ""
 
-        victim = WLQuery(sub1)
+        victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
             return "Could not access database file"
         if victim == []:

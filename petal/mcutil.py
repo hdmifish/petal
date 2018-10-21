@@ -105,13 +105,13 @@ class WLStuff:
         except OSError: # File does not exist: Pointless to continue
             return 0
 
-        if refreshall == True: # Rebuild Index
+        if refreshall: # Rebuild Index
             dbNew = [] # Stage 1: Make new DB
             for applicant in dbRead: # Stage 2: Find entries in old DB, import their stuff
                 appNew = PLAYERDEFAULT.copy()
                 appNew.update(applicant)
 
-                if refreshnet == True: # Stage 3, optional: Rebuild username history
+                if refreshnet: # Stage 3, optional: Rebuild username history
                     namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(applicant["uuid"].replace("-","")))
 
                     if namehist.status_code == 200:
@@ -144,7 +144,7 @@ class WLStuff:
 
         pIndex = next((item for item in dbRead if item["uuid"] == player["uuid"]), False) # Is the player found in the list?
 
-        if pIndex == False: # Player is not in the database -- Create entry
+        if not pIndex: # Player is not in the database -- Create entry
 
             # Fetch username history
             namehist = requests.get("https://api.mojang.com/user/profiles/{}/names".format(player["uuid"].replace("-","")))
@@ -226,13 +226,13 @@ class Minecraft:
         # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
         pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False) # Is the target player found in the database?
 
-        if pIndex == False: # Maybe try the Minecraft name?
+        if not pIndex: # Maybe try the Minecraft name?
             pIndex = next((item for item in dbRead if item["name"].lower() == idTarget.lower()), False)
 
-        if pIndex == False: # ...Discord ID?
+        if not pIndex: # ...Discord ID?
             pIndex = next((item for item in dbRead if item["discord"] == idTarget), False)
 
-        if pIndex == False: # Fine. Player is not in the database -- Refuse to continue
+        if not pIndex: # Fine. Player is not in the database -- Refuse to continue
             log.f("wlme", "IndexError player not in DB")
             ret = -8
         else:
@@ -276,19 +276,18 @@ class Minecraft:
             return -7
         actions = []
         for target in baddies:
-            act = -9
             try:
                 found = dbRead[dbRead.index(target)]
             except OSError:
                 act = -8
             else:
                 if found["suspended"] == sus:
-                    if sus == True:
+                    if sus:
                         act = -2 # -2: Already suspended
                     else:
                         act = -3 # -1: Already forgiven
                 else:
-                    if sus == True:
+                    if sus:
                         act = 0 # 0: Suspended
                     else:
                         act = -1 # -1: Forgiven
