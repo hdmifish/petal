@@ -164,7 +164,7 @@ class Commands:
                 return True
         else:
             return True
-    def generate_post_process_URI(mod, reason, message, target):
+    def generate_post_process_URI(self, mod, reason, message, target):
         if self.config.get("modURI") is None:
             return "*no modURI in config, so post processing will be skipped*"
         return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))

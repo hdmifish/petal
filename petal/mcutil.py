@@ -79,7 +79,7 @@ class WLStuff:
         try:
             with open(self.dbName) as fh:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
-        except OSError: # File does not exist: Pointless to continue
+        except OSError as e: # File does not exist: Pointless to continue
             log.err("OSError on DB read: " + str(e))
             return -7
         return dbRead
@@ -89,7 +89,7 @@ class WLStuff:
             with open(self.dbName, 'w') as fh:
                 json.dump(dbRead, fh, indent=2) # Save all the things
             ret = 0
-        except OSError: # Cannot write file: Well this was all rather pointless
+        except OSError as e: # Cannot write file: Well this was all rather pointless
             log.err("OSError on DB save: " + str(e))
             ret = -7
         return ret
@@ -140,7 +140,7 @@ class WLStuff:
 
         dbRead = self.WLDump()
         if dbRead == -7: # File does not exist: Create the file
-            dbRead = [{'uuid': uidF, 'name': [uname]}]
+            dbRead = []
 
         pIndex = next((item for item in dbRead if item["uuid"] == player["uuid"]), False) # Is the player found in the list?
 
@@ -249,7 +249,7 @@ class Minecraft:
 
         if self.etc.WLSave(dbRead) != 0:
             ret = -7
-        return ret, doSend, targetid, targetname, EXPORT_WHITELIST()
+        return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()
 
     # !wlquery <ticket>
     def WLQuery(self, instr):
