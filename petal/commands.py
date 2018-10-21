@@ -19,7 +19,6 @@ from .grasslands import Octopus
 from .grasslands import Giraffe
 from .grasslands import Peacock
 from .grasslands import Pidgeon
-from .mcname import *
 from .mcutil import Minecraft
 
 from random import randint
@@ -3192,7 +3191,7 @@ class Commands:
         else:
             sub2 = ""
 
-        victim = WLQuery(sub1)
+        victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
             return "Could not access database file"
         if victim == []:
