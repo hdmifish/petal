@@ -1269,6 +1269,7 @@ class Commands:
             try:
                 petal.logLock = True
                 await asyncio.sleep(1)
+                await self.db.update_member(userToBan, {"banned": True, "tempBanned":False })
                 await self.client.ban(userToBan)
             except discord.errors.Forbidden as ex:
                 return "It seems I don't have perms to ban this user"
