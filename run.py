@@ -1,4 +1,4 @@
-#!/usr/bin/python3.5
+#!/usr/bin/python3.6
 from petal import Petal
 import subprocess
 import traceback
