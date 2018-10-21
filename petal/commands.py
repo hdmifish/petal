@@ -23,7 +23,7 @@ from .mcname import *
 from .mcutil import Minecraft
 
 from random import randint
-version = "0.5.1"
+version = "0.5.7"
 
 
 class Commands:
@@ -1302,7 +1302,7 @@ class Commands:
                 response = await self.client.send_message(message.author, message.channel, userToBan.name + " (ID: " + userToBan.id + ") was successfully banned\n\n")
                 try:
                     # Post-processing webhook for ban command
-                    return generate_post_process_URI(message.author.name + message.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
+                    return self.generate_post_process_URI(message.author.name + message.author.discriminator,  reason.content,  response.content, userToBan.name + userToBan.discriminator)
                 except Exception as e:
                     self.log.err("Could not generate post_process_message for ban" + str(e))
                     return "Error occurred trying to generate webhook URI"
