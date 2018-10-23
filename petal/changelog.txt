@@ -63,4 +63,23 @@ Asynchronous prints are a pain.
 [v0.5.0.8] (8/29/18)
 Pip 10.0 broke embedded pip so I converted the autoupdater to subprocess as suggested by the docs. This should be more thread-friendly anyway. 
 As well, DAV made a critical commit of removing 8 spaces from grasslands.py which should make things significantly faster. 
-Finally, added the generate_post_process_URI command, in order to allow people to process their own ban output. Honestly, this is more of a Patch Gaming thing. But, it felt necessary to include it in the update. Documentation may come later if people ask me about it. 
+Finally, added the generate_post_process_URI command, in order to allow people to process their own ban output. Honestly, this is more of a Patch Gaming thing. But, it felt necessary to include it in the update. Documentation may come later if people ask me about it.
+
+[v0.5.7] (10/23/18)
+Plenty of updates here, I haven't had time to do changelogs on top of Dav's PRs. Gonna merge with him probably following these again. A couple things about me, I now have a room in the house i moved to, like with a door and everything. Im currently in the process of soundproofing it so that I may return to being able to sleep. Despite turning depression and coffee into code, I do have an annoying hidden stat known as 'SLEEP'. Unfortunately, SLEEP is required and has not been satisfied. 19 hours of classes also have been preventing me from really having time to go through and regularly commit. Big shout out to DAV. 
+
+Ok now for the technical stuff. (I have 5% battery left on this SSH'd laptop)
+
+'M': modifications, '+':additions, '-': deprecations, 'T':todos
+--------------------------------------------------------------------
+M Fixed the webhook call for bans. We have started to work on documentation so tmore on this later.
+
+M/+/i Dav did a bunch of modifications on the minecraft system and we have it linked and live.
+
+T redo documentation and possible windows exe/service
+
+T pypa package
+-------------------------------------------------------------------
+
+
+

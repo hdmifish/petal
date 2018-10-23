@@ -33,9 +33,9 @@ motdModChannel: '0'
 
 # Filesystem paths to the Minecraft PlayerDB and Whitelist files.
 # DB is a meta-document with any information necessary to find out who a player is. This can go anywhere.
-minecraftDB: '~/.minecraft/playerdb.json'
+minecraftDB: '/minecraft/playerdb.json'
 # WL is the actual Minecraft whitelist itself. Direct this at the whitelist file in the server directory, or at a file which is periodically copied onto the whitelist file.
-minecraftWL: '~/.minecraft/whitelist.json'
+minecraftWL: '/minecraft/whitelist.json'
 # WARNING: This MAY be dangerous the first time, if the people using the !WL* commands do not know what they are doing, because PlayerDB starts empty; It does NOT read from the Whitelist file, for security reasons*. Back up your Whitelist file before adding Petal for the first time. After PlayerDB is filled, it should be totally safe.
 
 # *If a griefer manages to get opped, this can prevent them from whitelisting additional griefers to come and help them.

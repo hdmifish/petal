@@ -10,7 +10,7 @@ import pytumblr
 import time
 import pytz
 import petal
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote_plus
 from datetime import datetime as dt
 from datetime import timedelta
 
@@ -166,7 +166,8 @@ class Commands:
     def generate_post_process_URI(self, mod, reason, message, target):
         if self.config.get("modURI") is None:
             return "*no modURI in config, so post processing will be skipped*"
-        return self.config.get("modURI") + "?mod={}&off={}&msg={}&uid={}".format(mod, urlencode(reason), urlencode(message), urlencode(target))
+        req = {"mod":mod, "off":reason,"msg":message,"uid":target}
+        return self.config.get("modURI") + "?" + urlencode(req, quote_via=quote_plus)
 
     def get_uptime(self):
         delta = dt.utcnow() - self.startup
