@@ -35,10 +35,15 @@ motdModChannel: '0'
 # DB is a meta-document with any information necessary to find out who a player is. This can go anywhere.
 minecraftDB: '/minecraft/playerdb.json'
 # WL is the actual Minecraft whitelist itself. Direct this at the whitelist file in the server directory, or at a file which is periodically copied onto the whitelist file.
-minecraftWL: '/minecraft/whitelist.json'
-# WARNING: This MAY be dangerous the first time, if the people using the !WL* commands do not know what they are doing, because PlayerDB starts empty; It does NOT read from the Whitelist file, for security reasons*. Back up your Whitelist file before adding Petal for the first time. After PlayerDB is filled, it should be totally safe.
+minecraftWL: '~/.minecraft/whitelist.json'
+# WARNING: This MAY be dangerous the first time, if the people using the !WL* commands do not know what they are doing, because PlayerDB starts empty; It does NOT read from the Whitelist file, for security reasons[1]. Back up your Whitelist file before adding Petal for the first time. After PlayerDB is filled, it should be totally safe.
+minecraftStrictWL: false
+# This value is whether the whitelist can ONLY contain entries in the database;
+# - If false, the only entries REMOVED FROM the whitelist will be in the database AND suspended.
+# - If true, the only entries ALLOWED ON the whitelist will be unsuspended DB entries. All non-DB entries will be cleared.
 
-# *If a griefer manages to get opped, this can prevent them from whitelisting additional griefers to come and help them.
+
+# [1] If a griefer manages to get opped, this can prevent them from whitelisting additional griefers to come and help them.
 
 # Prefix for petal to listen to
 prefix: '>'

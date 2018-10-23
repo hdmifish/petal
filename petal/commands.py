@@ -2966,6 +2966,9 @@ class Commands:
         Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
         !wlme <your_minecraft_username>
         """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
@@ -3014,7 +3017,9 @@ class Commands:
         Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
         !wl <profile_identifier>
         """
-
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
@@ -3061,6 +3066,9 @@ class Commands:
         Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
         !wlquery <search_term>
         """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
@@ -3119,6 +3127,9 @@ class Commands:
         Force an immediate rebuild of both the PlayerDB and the Whitelist itself
         !wlrefresh
         """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
@@ -3140,6 +3151,9 @@ class Commands:
         Checks the WL database for any users whose Discord ID is that of someone who has left the server
         !wlgone
         """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
@@ -3173,6 +3187,9 @@ class Commands:
         Flags a person to be removed from the whitelist
         !wlsuspend <bad_person>
         """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
         mcchan = self.config.get("mc_channel")
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."

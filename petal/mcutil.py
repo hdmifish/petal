@@ -105,11 +105,13 @@ class WLStuff:
     def EXPORT_WHITELIST(self, refreshall=False, refreshnet=False):
         """Export the local database into the whitelist file itself\n\nIf Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated"""
         try:  # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
+            strict = self.cget("minecraftStrictWL")
             with open(self.dbName) as fh, open(self.WhitelistFile) as WLF:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
-                wlFile = json.load(WLF)
-            # wlFile = [] # Uncommenting this will force the whitelist to contain ONLY people in the DB file
-            # (This will also force the whitelist file to be in the same order as the DB file)
+                if strict:
+                    wlFile = []
+                else:
+                    wlFile = json.load(WLF)
         except OSError:  # File does not exist: Pointless to continue
             return 0
 
