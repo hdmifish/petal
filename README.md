@@ -1,7 +1,6 @@
 [![Python 3.7](https://img.shields.io/badge/python-3.6%20|%203.7-blue.svg?logoColor=white&logo=python&style=popout)](https://www.python.org/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![GitHub commit activity the past week, 4 weeks, year](https://img.shields.io/github/commit-activity/y/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/graphs/commit-activity)
 [![GitHub contributors](https://img.shields.io/github/contributors/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/commit/master)
 
