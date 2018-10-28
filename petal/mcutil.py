@@ -114,13 +114,13 @@ class WLStuff:
             strict = self.cget("minecraftStrictWL")
             with open(self.dbName, "r") as fh, open(self.WhitelistFile, "r") as WLF:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
-                opFile = []  # Op list is always strict
                 if strict:
                     wlFile = []
                 else:
                     wlFile = json.load(WLF)
         except OSError:  # File does not exist: Pointless to continue
             return 0
+        opFile = []  # Op list is always strict
 
         if refreshall:  # Rebuild Index
             dbNew = []  # Stage 1: Make new DB
@@ -163,12 +163,14 @@ class WLStuff:
                 wlFile.append({"uuid": applicant["uuid"], "name": applicant["name"]})
 
                 # Is the applicant supposed to be an op?
-                if applicant["operator"] > 0:
+                level = applicant.get("operator", 0)
+                applicant["operator"] = level
+                if level > 0:
                     opFile.append(
                         {
                             "uuid": applicant["uuid"],
                             "name": applicant["name"],
-                            "level": applicant["operator"],
+                            "level": level,
                             "bypassesPlayerLimit": False,
                         }
                     )
