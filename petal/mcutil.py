@@ -178,7 +178,7 @@ class WLStuff:
                     }
                 )
 
-        log.f("wl+", "Operator filepath: {}".format(self.OpFile))
+        log.f("wl+", "Refreshing Whitelist")
         with open(self.OpFile, "w") as OPF:
             json.dump(opFile, OPF, indent=2)
         with open(self.WhitelistFile, "w") as WLF:
