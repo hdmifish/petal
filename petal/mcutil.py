@@ -46,7 +46,8 @@ def breakUID(str0):
     str3 = str0[12:16]
     str4 = str0[16:20]
     str5 = str0[20:32]
-    str99 = str1 + "-" + str2 + "-" + str3 + "-" + str4 + "-" + str5
+    # str99 = str1 + "-" + str2 + "-" + str3 + "-" + str4 + "-" + str5
+    str99 = "-".join([str1,str2,str3,str4,str5])
     return str99
 
 
