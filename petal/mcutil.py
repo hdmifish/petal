@@ -33,6 +33,7 @@ PLAYERDEFAULT = OrderedDict(
         ("approved", []),
         ("submitted", "1970-01-01_00:00"),
         ("suspended", False),
+        ("operator", 0),
     ]
 )
 
@@ -46,7 +47,8 @@ def breakUID(str0):
     str3 = str0[12:16]
     str4 = str0[16:20]
     str5 = str0[20:32]
-    str99 = str1 + "-" + str2 + "-" + str3 + "-" + str4 + "-" + str5
+    # str99 = str1 + "-" + str2 + "-" + str3 + "-" + str4 + "-" + str5
+    str99 = "-".join([str1, str2, str3, str4, str5])
     return str99
 
 
@@ -83,6 +85,10 @@ class WLStuff:
     def WhitelistFile(self):
         return self.cget("minecraftWL")
 
+    @property
+    def OpFile(self):
+        return self.cget("minecraftOP")
+
     def WLDump(self):
         try:
             with open(self.dbName) as fh:
@@ -106,8 +112,9 @@ class WLStuff:
         """Export the local database into the whitelist file itself\n\nIf Mojang ever changes the format of the server whitelist file, this is the function that will need to be updated"""
         try:  # Stage 0: Load the full database as ordered dicts, and the whitelist as dicts
             strict = self.cget("minecraftStrictWL")
-            with open(self.dbName) as fh, open(self.WhitelistFile) as WLF:
+            with open(self.dbName, "r") as fh, open(self.WhitelistFile, "r") as WLF:
                 dbRead = json.load(fh, object_pairs_hook=OrderedDict)
+                opFile = []  # Op list is always strict
                 if strict:
                     wlFile = []
                 else:
@@ -151,13 +158,27 @@ class WLStuff:
                 app == False
                 and len(applicant["approved"]) > 0
                 and applicant["suspended"] == False
-            ):  # Applicant is not whitelisted AND is approved, add them
+            ):  # Applicant is not whitelisted AND is approved AND is not suspended, add them
+
                 wlFile.append({"uuid": applicant["uuid"], "name": applicant["name"]})
+
+                # Is the applicant supposed to be an op?
+                if applicant["operator"] > 0:
+                    opFile.append(
+                        {
+                            "uuid": applicant["uuid"],
+                            "name": applicant["name"],
+                            "level": applicant["operator"],
+                            "bypassesPlayerLimit": False,
+                        }
+                    )
             elif (
-                app != False and applicant["suspended"] == True
+                app != False and applicant["suspended"] == True and app in wlFile
             ):  # BadPersonAlert, remove them
                 wlFile.remove(app)
 
+        with open(self.OpFile, "w") as OPF:
+            json.dump(opFile, OPF, indent=2)
         with open(self.WhitelistFile, "w") as WLF:
             json.dump(wlFile, WLF, indent=2)
         return 1
