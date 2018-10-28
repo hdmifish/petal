@@ -163,6 +163,7 @@ class WLStuff:
                 wlFile.append({"uuid": applicant["uuid"], "name": applicant["name"]})
 
                 # Is the applicant supposed to be an op?
+                log.f("wl+", "Operator level of {}: {}".format(applicant["name"], str(applicant.get("operator", "None"))))
                 level = applicant.get("operator", 0)
                 applicant["operator"] = level
                 if level > 0:
@@ -178,7 +179,9 @@ class WLStuff:
                 app != False and applicant["suspended"] == True and app in wlFile
             ):  # BadPersonAlert, remove them
                 wlFile.remove(app)
-
+        
+        log.f("wl+", "Operator filepath: {}".format(self.OpFile))
+        log.f("wl+", "Refreshing Whitelist")
         with open(self.OpFile, "w") as OPF:
             json.dump(opFile, OPF, indent=2)
         with open(self.WhitelistFile, "w") as WLF:
