@@ -159,26 +159,26 @@ class WLStuff:
                 and len(applicant["approved"]) > 0
                 and applicant["suspended"] == False
             ):  # Applicant is not whitelisted AND is approved AND is not suspended, add them
-
                 wlFile.append({"uuid": applicant["uuid"], "name": applicant["name"]})
-
-                # Is the applicant supposed to be an op?
-                level = applicant.get("operator", 0)
-                applicant["operator"] = level
-                if level > 0:
-                    opFile.append(
-                        {
-                            "uuid": applicant["uuid"],
-                            "name": applicant["name"],
-                            "level": level,
-                            "bypassesPlayerLimit": False,
-                        }
-                    )
             elif (
                 app != False and applicant["suspended"] == True and app in wlFile
             ):  # BadPersonAlert, remove them
                 wlFile.remove(app)
 
+            # Is the applicant supposed to be an op?
+            level = applicant.get("operator", 0)
+            applicant["operator"] = level
+            if level > 0:
+                opFile.append(
+                    {
+                        "uuid": applicant["uuid"],
+                        "name": applicant["name"],
+                        "level": level,
+                        "bypassesPlayerLimit": False,
+                    }
+                )
+
+        log.f("wl+", "Operator filepath: {}".format(self.OpFile))
         with open(self.OpFile, "w") as OPF:
             json.dump(opFile, OPF, indent=2)
         with open(self.WhitelistFile, "w") as WLF:
