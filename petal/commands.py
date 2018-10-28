@@ -3111,6 +3111,7 @@ class Commands:
                     oput = oput + "Status: *`-#- PENDING -#-`*\n"
                 else:
                     oput = oput + "Status: __`--- APPROVED ---`__\n"
+                oput = oput + "- Operator level: `" + entry["operator"] + "`\n"
                 oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
                 oput = oput + "- Discord UUID: `" + entry["discord"] + "`\n"
                 oput = oput + "- Discord Tag: <@" + entry["discord"] + ">\n"
