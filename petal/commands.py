@@ -3104,22 +3104,22 @@ class Commands:
             qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
-                oput = oput + "**Minecraft Name: `" + entry["name"] + "`**\n"
+                oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
                 if entry["suspended"] == True:
-                    oput = oput + "Status: **`#!# SUSPENDED #!#`**\n"
+                    oput += "Status: **`#!# SUSPENDED #!#`**\n"
                 elif len(entry["approved"]) == 0:
-                    oput = oput + "Status: *`-#- PENDING -#-`*\n"
+                    oput += "Status: *`-#- PENDING -#-`*\n"
                 else:
-                    oput = oput + "Status: __`--- APPROVED ---`__\n"
-                oput = oput + "- Operator level: `" + str(entry["operator"]) + "`\n"
-                oput = oput + "- Minecraft UUID: `" + entry["uuid"] + "`\n"
-                oput = oput + "- Discord UUID: `" + entry["discord"] + "`\n"
-                oput = oput + "- Discord Tag: <@" + entry["discord"] + ">\n"
-                oput = oput + "- Submitted at: `" + entry["submitted"] + "`\n"
-                oput = oput + "- Known Usernames:\n"
+                    oput += "Status: __`--- APPROVED ---`__\n"
+                oput += "- Operator level: `" + str(entry.get("operator", "<ERROR>")) + "`\n"
+                oput += "- Minecraft UUID: `" + entry.get("uuid", "<ERROR>") + "`\n"
+                oput += "- Discord UUID: `" + entry.get("discord", "<ERROR>") + "`\n"
+                oput += "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
+                oput += "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
+                oput += "- Known Usernames:\n"
                 for pname in entry["altname"]:
-                    oput = oput + "  - `" + pname + "`\n"
-            oput = oput + "--------"
+                    oput += "  - `" + pname + "`\n"
+            oput += "--------"
             await self.client.edit_message(message=qout, new_content=oput)
             #return oput
 
