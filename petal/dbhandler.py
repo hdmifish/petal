@@ -122,8 +122,12 @@ class DBHandler(object):
                     "strikes": [],
                     "subscriptions": [],
                     "commands_count": 0}
-            if member.server is not None:
+            
+            try:
                 data['servers'] = [member.server.id]
+            except AttributeError:
+                log.f('dbhandler', 'user type object, cannot add server attribute') 
+    
 
 
             if isinstance(member, discord.Member):
