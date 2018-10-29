@@ -369,3 +369,43 @@ class Minecraft:
                 )  # Could not update the database, so NOTHING that we just did actually saved
             wlwin = 0
         return actions, wlwin
+
+    def WLMod(self, newmod, newlevel):
+        dbRead = self.etc.WLDump()
+        if dbRead == -7:
+            return -7
+
+        targetid = -1
+        targetname = "<Error>"
+        doSend = False
+
+        # newmod can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
+        pIndex = next(
+            (item for item in dbRead if item["uuid"] == newmod), False
+        )  # Is the target player found in the database?
+
+        if not pIndex:  # Maybe try the Minecraft name?
+            pIndex = next(
+                (item for item in dbRead if item["name"].lower() == newmod.lower()),
+                False,
+            )
+
+        if not pIndex:  # ...Discord ID?
+            pIndex = next(
+                (item for item in dbRead if item["discord"] == newmod), False
+            )
+
+        if not pIndex:  # Fine. Player is not in the database -- Refuse to continue
+            log.f("wl+", "IndexError player not in DB")
+            ret = -8
+        else:
+            targetid = pIndex["discord"]
+            targetname = pIndex["name"]
+            # pIndex = dbRead.index(pIndex) # DBase index of player (integer 0+) # why?
+            pIndex["operator"] = newlevel
+            log.f("wl+", "{} was given Level {} Operator status".format(*[str(term) for term in [targetid, newlevel]]))
+            ret = 0
+
+        if self.etc.WLSave(dbRead) != 0:
+            ret = -7
+        return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()

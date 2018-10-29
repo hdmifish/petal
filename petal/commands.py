@@ -3264,6 +3264,52 @@ class Commands:
 
         return oput
 
+    async def wlmod(self, message):
+        """
+        Flags a person to be given a level of operator status
+        Level 1 can: bypass spawn protection
+        Level 2 can: use /clear, /difficulty, /effect, /gamemode, /gamerule, /give, /summon, /setblock and /tp, and can edit command blocks
+        Level 3 can: use /ban, /deop, /whitelist, /kick, and /op
+        Level 4 can: use /stop
+        ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
+        `!wlmod <profile_identifier> <0|1|2|3|4>`
+        """
+        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        if None in mclists:
+            return "Looks like the bot owner doesn't have the whitelist configured. Sorry."
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+        if message.channel != mcchan:
+            return "This needs to be done in the right channel!"
+
+        submission = message.content[len(self.config.prefix) + 5:].strip() # separated this for simplicity
+
+        sub0 = submission.lower().split(" ") # ["username", "rest", "of", "the", "message"]
+        sub1 = sub0[0] # "username"
+        try:
+            level = int(sub0[1]) # "rest"
+        except:
+            level = -1
+        if not 0 <= level <= 4:
+            return "You need to specify an op level for {} between `0` and `4` D:".format(sub1)
+
+        victim = self.minecraft.WLQuery(sub1)
+        if victim == -7:
+            return "Could not access database file"
+        if victim == []:
+            return "No results"
+        if len(victim) > 1:
+            return "Ambiguous command: {} results".format(str(len(victim)))
+
+        # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)
+        rep = self.minecraft.WLMod(victim[0], level)
+
+        return "{} has been granted Level {} Operator status. Return values: {}".format(victim[0], level, ", ".join([str(term) for term in rep]))
+
     async def spookyclock(self, message):
         """
         Be careful, Skeletons are closer than you think
