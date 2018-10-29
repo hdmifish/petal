@@ -43,9 +43,11 @@ minecraftStrictWL: false
 # This value is whether the whitelist can ONLY contain entries in the database;
 # - If false, the only entries REMOVED FROM the whitelist will be in the database AND suspended.
 # - If true, the only entries ALLOWED ON the whitelist will be unsuspended DB entries. All non-DB entries will be cleared.
-
+minecraftCommandOpLevel: 3
+# If a Discord ID does not have an entry in the PlayerDB with at least this rank of Operator status, that user is not permitted to use whitelist utilities. You should set this to 0 until you have added yourself to the DB.
 
 # [1] If a griefer manages to get opped, this can prevent them from whitelisting additional griefers to come and help them.
+
 
 # Prefix for petal to listen to
 prefix: '>'

@@ -409,3 +409,13 @@ class Minecraft:
         if self.etc.WLSave(dbRead) != 0:
             ret = -7
         return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()
+
+    def WLAuthenticate(self, msg, clearance=3):
+        entries = self.WLQuery(str(msg.author.id))
+        for e in entries:
+            try:
+                if e["discord"] == str(msg.author.id) and e["operator"] >= clearance:
+                    return True
+            except:
+                continue
+        return False

@@ -3139,6 +3139,8 @@ class Commands:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
         if message.channel != mcchan:
             return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 2):
+            return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
         await self.client.send_typing(mcchan)
