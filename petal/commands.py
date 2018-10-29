@@ -3299,16 +3299,18 @@ class Commands:
 
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
-            return "Could not access database file"
-        if victim == []:
-            return "No results"
-        if len(victim) > 1:
-            return "Ambiguous command: {} results".format(str(len(victim)))
+            return "Could not access database file."
+        elif victim == []:
+            return "No valid target found."
+        elif len(victim) > 1:
+            return "Ambiguous command: {} possible targets found.".format(str(len(victim)))
+        elif message.author.id == victim[0]["discord"]:
+            return "You cannot change your own Operator status."
 
         # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)
-        rep = self.minecraft.WLMod(victim[0], level)
+        rep = self.minecraft.WLMod(victim[0]["discord"], level)
 
-        return "{} has been granted Level {} Operator status. Return values: {}".format(victim[0], level, ", ".join([str(term) for term in rep]))
+        return "{} has been granted __Level {} Operator__ status. Return values: `{}`".format(victim[0]["name"], level, "`, `".join([str(term) for term in rep]))
 
     async def spookyclock(self, message):
         """
