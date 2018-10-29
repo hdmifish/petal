@@ -391,9 +391,7 @@ class Minecraft:
             )
 
         if not pIndex:  # ...Discord ID?
-            pIndex = next(
-                (item for item in dbRead if item["discord"] == newmod), False
-            )
+            pIndex = next((item for item in dbRead if item["discord"] == newmod), False)
 
         if not pIndex:  # Fine. Player is not in the database -- Refuse to continue
             log.f("wl+", "IndexError player not in DB")
@@ -403,7 +401,12 @@ class Minecraft:
             targetname = pIndex["name"]
             # pIndex = dbRead.index(pIndex) # DBase index of player (integer 0+) # why?
             pIndex["operator"] = newlevel
-            log.f("wl+", "{} was given Level {} Operator status".format(*[str(term) for term in [targetid, newlevel]]))
+            log.f(
+                "wl+",
+                "{} was given Level {} Operator status".format(
+                    *[str(term) for term in [targetid, newlevel]]
+                ),
+            )
             ret = 0
 
         if self.etc.WLSave(dbRead) != 0:

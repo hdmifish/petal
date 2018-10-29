@@ -3101,7 +3101,7 @@ class Commands:
         if searchres == []:
             return noresult.format(submission.lower())
         else:
-            qout = await self.client.send_message(channel=mcchan, message="<query loading...>")
+            qout = await self.client.send_message(channel=message.channel, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
                 oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
@@ -3141,7 +3141,7 @@ class Commands:
             return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 9:].strip() # separated this for simplicity
-        await self.client.send_typing(mcchan)
+        await self.client.send_typing(message.channel)
         refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
         refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
 
