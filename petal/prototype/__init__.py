@@ -16,8 +16,9 @@ class CommandRouter:
         for MODULE in LoadModules:
             # TODO: Strip down "MODULE" to a single word to prevent any sort of injection
             try:
-                exec(f"self.{MODULE} = {MODULE}.CommandModule(config, *a, **kw)")
-                exec(f"self.commands.append(self.{MODULE})")
+                mod = eval(MODULE).CommandModule(config, *a, **kw)
+                self.commands.append(mod)
+                exec(f"self.{MODULE} = mod")
             except:
                 pass
 
