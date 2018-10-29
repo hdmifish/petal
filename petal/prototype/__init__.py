@@ -9,14 +9,15 @@ __all__ = ["CommandRouter"]
 
 
 class CommandRouter:
-    def __init__(self, config, *a, **kw):
+    def __init__(self, client, *a, **kw):
+        self.client = client
+        self.config = client.config
         self.commands = []
-        self.config = config
 
         for MODULE in LoadModules:
             # TODO: Strip down "MODULE" to a single word to prevent any sort of injection
             try:
-                mod = eval(MODULE).CommandModule(config, *a, **kw)
+                mod = eval(MODULE).CommandModule(client, *a, **kw)
                 self.commands.append(mod)
                 exec(f"self.{MODULE} = mod")
             except:
