@@ -3026,8 +3026,8 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 3):
+            return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 2:].strip() # separated this for simplicity
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(submission, message.author.id) # Send the submission through the new function
@@ -3075,8 +3075,8 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 2):
+            return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 7:].strip() # separated this for simplicity
 
@@ -3137,8 +3137,6 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
         if not self.minecraft.WLAuthenticate(message, 2):
             return "You have insufficient security clearance to do that D:"
 
@@ -3163,8 +3161,8 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 2):
+            return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 6:].strip() # separated this for simplicity
         uList = self.minecraft.etc.WLDump()
@@ -3199,8 +3197,8 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 3):
+            return "You have insufficient security clearance to do that D:"
 
         wordPos = ["true", "on", "yes", "active", "1", "enable"]
         wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
@@ -3285,8 +3283,8 @@ class Commands:
         mcchan = self.client.get_channel(mcchan)
         if mcchan is None:
             return "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-        if message.channel != mcchan:
-            return "This needs to be done in the right channel!"
+        if not self.minecraft.WLAuthenticate(message, 4):
+            return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 5:].strip() # separated this for simplicity
 
