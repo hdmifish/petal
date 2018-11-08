@@ -1987,7 +1987,7 @@ class Commands:
         >anon or >anon <tagged user>
         """
         alpha = ["giraffe", "panda", "whale", "raccoon", "rabbit",
-                 "squirell", "moose", "sheep", "ferret", "stoat", "cow",
+                 "squirrel", "moose", "sheep", "ferret", "stoat", "cow",
                  "noperope", "kitten", "puppy", "snail", "turtle", "tortoise",
                  "zebra", "lion", "elephant", "sloth", "drop bear", "octopus",
                  "turkey", "pelican", "GreaterDog", "lesserDog", "seahorse"]
