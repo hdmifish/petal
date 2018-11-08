@@ -1542,9 +1542,11 @@ class Commands:
         """
         if message.author == self.client.user:
             return
-        if not self.level2(message.author):
-            return ("You do not have sufficient permissions to use the purge" +
-                    " function")
+        if not self.user_has_role(message.author, "mod"):
+            return "You do not have sufficient permissions to use this feature. You need the `mod` role"
+        #if not self.level2(message.author):
+        #    return ("You do not have sufficient permissions to use the purge" +
+        #            " function")
         args = self.clean_input(message.content)
         if len(args) < 1:
             return "Please provide a number between 1 and 200"
