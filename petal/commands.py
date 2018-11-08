@@ -1987,7 +1987,7 @@ class Commands:
         >anon or >anon <tagged user>
         """
         alpha = ["giraffe", "panda", "whale", "raccoon", "rabbit",
-                 "squirell", "moose", "sheep", "ferret", "stoat", "cow",
+                 "squirrel", "moose", "sheep", "ferret", "stoat", "cow",
                  "noperope", "kitten", "puppy", "snail", "turtle", "tortoise",
                  "zebra", "lion", "elephant", "sloth", "drop bear", "octopus",
                  "turkey", "pelican", "GreaterDog", "lesserDog", "seahorse"]
@@ -3079,46 +3079,54 @@ class Commands:
             return "You have insufficient security clearance to do that D:"
 
         submission = message.content[len(self.config.prefix) + 7:].strip() # separated this for simplicity
+        verbose = "-v" in submission
 
-        if submission.lower() == "pending":
+        if "pending" in submission.lower():
             searchres = []
             noresult = "No requests are currently {}"
             pList = self.minecraft.etc.WLDump()
             for entry in pList:
-                if entry["approved"] == []:
+                if not entry["approved"]:
                     searchres.append(entry)
-        elif submission.lower() == "suspended" or submission.lower() == "restricted":
+        elif "suspended" in submission.lower() or "restricted" in submission.lower():
             searchres = []
             noresult = "No users are currently {}"
             pList = self.minecraft.etc.WLDump()
             for entry in pList:
-                if entry["suspended"] == True:
+                if entry["suspended"]:
                     searchres.append(entry)
         else:
-            searchres = self.minecraft.WLQuery(submission)
+            searchres = self.minecraft.WLQuery(submission.replace("-v",""))
             noresult = "No database entries matching `{}` found"
 
-        if searchres == []:
-            return noresult.format(submission.lower())
+        if not searchres:
+            return noresult.format(submission.lower().replace("-v","").strip())
         else:
             qout = await self.client.send_message(channel=message.channel, message="<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
                 oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
-                if entry["suspended"] == True:
+                if entry["suspended"]:
                     oput += "Status: **`#!# SUSPENDED #!#`**\n"
                 elif len(entry["approved"]) == 0:
                     oput += "Status: *`-#- PENDING -#-`*\n"
                 else:
                     oput += "Status: __`--- APPROVED ---`__\n"
+                duser = self.client.get_server(self.config.get("mainServer")).get_member(entry.get("discord",0))
+                oput += "- On Discord: "
+                if duser:
+                    oput += "**__`YES`__**\n"
+                else:
+                    oput += "**__`! NO !`__**\n"
                 oput += "- Operator level: `" + str(entry.get("operator", "<ERROR>")) + "`\n"
                 oput += "- Minecraft UUID: `" + entry.get("uuid", "<ERROR>") + "`\n"
                 oput += "- Discord UUID: `" + entry.get("discord", "<ERROR>") + "`\n"
-                oput += "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
-                oput += "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
-                oput += "- Known Usernames:\n"
-                for pname in entry["altname"]:
-                    oput += "  - `" + pname + "`\n"
+                if verbose:
+                    oput += "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
+                    oput += "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
+                    oput += "- Known Usernames:\n"
+                    for pname in entry["altname"]:
+                        oput += "  - `" + pname + "`\n"
             oput += "--------"
             await self.client.edit_message(message=qout, new_content=oput)
             #return oput
@@ -3174,7 +3182,7 @@ class Commands:
         for userid in idList:
             try:
                 user = self.client.get_server(self.config.get("mainServer")).get_member(userid)
-                if user == None:
+                if user is None:
                     oput = oput + userid + "\n"
                     leftnum += 1
             except: # Dont log an error here; An error here means a success

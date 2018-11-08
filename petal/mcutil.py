@@ -320,6 +320,8 @@ class Minecraft:
             return -7
         res = []
         in2 = instr.split(" ")
+        while "" in in2:
+            in2.remove("")
         for in3 in in2:
             for entry in dbRead:
                 for attr in entry:
