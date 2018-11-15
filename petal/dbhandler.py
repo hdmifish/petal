@@ -183,13 +183,14 @@ class DBHandler(object):
                 log.f("DBHandler", m2id(member) + " has no field: " + key)
             return None
 
-    def update_member(self, member, data=None, type=0):
+    def update_member(self, member, data=None, type=0, lfg=False):
         """
         Updates a the database with keys and values provided in the data field
 
         :param member: member to update
         :param data: dictionary containing data to update
         :param type: 0 = None, 1 = Message, 2 = Command
+        :param lfg: Whether this operation is an update to the user LFG status
         :return: str response
         """
         if not self.useDB:
@@ -201,6 +202,7 @@ class DBHandler(object):
         if not self.member_exists(member):
             self.add_member(member)
 
+        # mem: MONGO DOCUMENT (as python dict)
         mem = self.get_member(member)
         if mem is None:
             log.f("DBhandler", "Member doesn't exist")
@@ -209,40 +211,51 @@ class DBHandler(object):
         # TODO: get member dict first then query over. Update finally
         count = 0
 
-        for key in data:
-            if isinstance(data[key], dict):
-                print(str(key) + "\n" + str(data) + "\n")
-                mem[key] = data[key]
-                print(str(mem[key]))
-                for vk in mem[key]:
-                    mem[key][vk] = ts(mem[key][vk])
+        if lfg:
+            # This operation is running in LFG-Update mode; Update the dict "lfg"
+            if not "lfg" in mem:
+                mem["lfg"] = data
+            else:
+                mem["lfg"].update(data)
+        else:
+            for key in data:
+                # data:      DICT
+                # key:       STR (probably)
+                # mem[key]:  CURRENT VALUE
+                # data[key]: NEW VALUE
+                if isinstance(data[key], dict):
+                    print(str(key) + "\n" + str(data) + "\n")
+                    mem[key] = data[key]
+                    print(str(mem[key]))
+                    for vk in mem[key]:
+                        mem[key][vk] = ts(mem[key][vk])
 
-            elif key in mem:
-                if isinstance(mem[key], list):
-                    if isinstance(data[key], list):
-                        for item in data[key]:
-                            # log.f("DBHandler", "Item: " + item)
-                            if item not in mem[key]:
-                                #  log.f("DBHandler", "ON key: " + key + " added " + item + " to " + str(mem[key]))
-                                mem[key].append(item)
+                elif key in mem:
+                    if isinstance(mem[key], list):
+                        if isinstance(data[key], list):
+                            for item in data[key]:
+                                # log.f("DBHandler", "Item: " + item)
+                                if item not in mem[key]:
+                                    #  log.f("DBHandler", "ON key: " + key + " added " + item + " to " + str(mem[key]))
+                                    mem[key].append(item)
+                                    count += 1
+                        else:
+                            if data[key] not in mem[key]:
+                                mem[key].append(data[key])
+                                log.f("DBHandler", "added " + data[key] + " to " + key)
                                 count += 1
+
                     else:
-                        if data[key] not in mem[key]:
-                            mem[key].append(data[key])
-                            log.f("DBHandler", "added " + data[key] + " to " + key)
-                            count += 1
+                        # log.f("DBHandler", "replace key: " + key + " -> "
+                        #  + str(mem[key]) + " with "
+                        #      + str(data[key]))
+                        # log.f("Replaced " + key + ": " + str(mem[key]) + " -> " + str(ts(data[key])))
+                        mem[key] = ts(data[key])
 
                 else:
-                    # log.f("DBHandler", "replace key: " + key + " -> "
-                    #  + str(mem[key]) + " with "
-                    #      + str(data[key]))
-                    # log.f("Replaced " + key + ": " + str(mem[key]) + " -> " + str(ts(data[key])))
+                    # log.f("Added " + key)
                     mem[key] = ts(data[key])
-
-            else:
-                # log.f("Added " + key)
-                mem[key] = ts(data[key])
-                count += 1
+                    count += 1
 
         if type == 1:
             mem["message_count"] += 1
@@ -255,6 +268,9 @@ class DBHandler(object):
         self.members.replace_one({"uid": m2id(member)}, mem, upsert=False)
 
         return True
+
+    def update_lfg(self, member, game, value):
+        pass
 
     def get_void(self):
         void_size = self.void.count()
