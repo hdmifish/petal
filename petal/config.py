@@ -2,21 +2,25 @@ from ruamel import yaml
 from .grasslands import Peacock
 from random import randint
 from datetime import datetime
+
 log = Peacock()
 
 
 class Config(object):
     def __init__(self):
         try:
-            with open('config.yml', 'r') as fp:
+            with open("config.yml", "r") as fp:
                 self.doc = yaml.load(fp, Loader=yaml.RoundTripLoader)
         except IOError as e:
             log.err("Could not open config.yml: " + str(e))
             exit()
         except Exception as e:
-            log.err("An unexcpected exception of type: "
-                    + type(e).__name__
-                    + "has occurred: " + str(e))
+            log.err(
+                "An unexcpected exception of type: "
+                + type(e).__name__
+                + "has occurred: "
+                + str(e)
+            )
             exit()
         else:
             if "token" in self.doc:
@@ -56,8 +60,10 @@ class Config(object):
             log.f("config", "Loaded word filter")
             self.tc = self.get("trackChannel")
             if self.tc is None:
-                log.warn("trackChannel object not found in config.yml. " +
-                         "That functionality is disabled")
+                log.warn(
+                    "trackChannel object not found in config.yml. "
+                    + "That functionality is disabled"
+                )
 
             # self.lockLog = False  //deprecated
             # self.imageIndex = self.doc["imageIndex"]
@@ -87,16 +93,19 @@ class Config(object):
         if vb:
             log.info("Saving...")
         try:
-            with open('config.yml', 'w') as fp:
+            with open("config.yml", "w") as fp:
                 yaml.dump(self.doc, fp, Dumper=yaml.RoundTripDumper)
         except PermissionError:
             log.err("No write access to config.yml")
         except IOError as e:
             log.err("Could not open config.yml: " + str(e))
         except Exception as e:
-            log.err("An unexcpected exception of type: "
-                    + type(e).__name__
-                    + "has occurred: " + str(e))
+            log.err(
+                "An unexcpected exception of type: "
+                + type(e).__name__
+                + "has occurred: "
+                + str(e)
+            )
         else:
             if vb:
                 log.info("Save complete")
@@ -104,13 +113,16 @@ class Config(object):
 
     def load(self, vb=False):
         try:
-            with open('config.yml', 'r') as fp:
+            with open("config.yml", "r") as fp:
                 self.doc = yaml.load(fp, Loader=yaml.RoundTripLoader)
         except IOError as e:
             log.err("Could not open config.yml: " + str(e))
         except Exception as e:
-            log.err("An unexcpected exception of type: "
-                    + type(e).__name__
-                    + "has occurred: " + str(e))
+            log.err(
+                "An unexcpected exception of type: "
+                + type(e).__name__
+                + "has occurred: "
+                + str(e)
+            )
         else:
             return self

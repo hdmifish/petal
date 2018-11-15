@@ -5,6 +5,7 @@ from random import randint as rand
 import pytz
 
 from .grasslands import Peacock
+
 log = Peacock()
 
 
@@ -46,11 +47,15 @@ class DBHandler(object):
     to let the user know it is off.
 
     """
+
     def __init__(self, config):
         if config.get("dbconf") is None:
-            log.f("DBHandler", "Could not find database config entry "
-                               "in config.yml. "
-                               "Certain features will be disabled")
+            log.f(
+                "DBHandler",
+                "Could not find database config entry "
+                "in config.yml. "
+                "Certain features will be disabled",
+            )
             self.useDB = False
             return
 
@@ -69,9 +74,9 @@ class DBHandler(object):
             self.db = client["petal"]
         else:
             self.db = client[db_conf["name"]]
-        self.members = self.db['members']
-        self.reminders = self.db['reminders']
-        self.motd = self.db['motd']
+        self.members = self.db["members"]
+        self.reminders = self.db["reminders"]
+        self.motd = self.db["motd"]
         self.void = self.db["void"]
         self.ac = self.db["ac"]
         self.subs = self.db["subs"]
@@ -95,44 +100,45 @@ class DBHandler(object):
             return False
         if self.member_exists(member):
             if verbose:
-                log.f("DBhandler", "Member already exists in database, "
-                                   "use update_member to update them")
+                log.f(
+                    "DBhandler",
+                    "Member already exists in database, "
+                    "use update_member to update them",
+                )
             return False
-
 
         else:
 
-            data = {"name": member.name,
-                    "uid": member.id,
-                    "discord_date": ts(member.created_at),
-                    "local_date": ts(datetime.utcnow()),
-                    "aliases": [],
-
-                    "discriminator": member.discriminator,
-                    "isBot": member.bot,
-                    "avatar_url": member.avatar_url,
-                    "location": "Brisbane, Australia",
-                    "osu": "",
-                    "banned": False,
-                    "subreddit": "aww",
-                    "message_count": 0,
-                    "last_active": ts(datetime.utcnow()),
-                    "last_message": 0,
-                    "last_message_channel": '0',
-                    "strikes": [],
-                    "subscriptions": [],
-                    "commands_count": 0}
+            data = {
+                "name": member.name,
+                "uid": member.id,
+                "discord_date": ts(member.created_at),
+                "local_date": ts(datetime.utcnow()),
+                "aliases": [],
+                "discriminator": member.discriminator,
+                "isBot": member.bot,
+                "avatar_url": member.avatar_url,
+                "location": "Brisbane, Australia",
+                "osu": "",
+                "banned": False,
+                "subreddit": "aww",
+                "message_count": 0,
+                "last_active": ts(datetime.utcnow()),
+                "last_message": 0,
+                "last_message_channel": "0",
+                "strikes": [],
+                "subscriptions": [],
+                "commands_count": 0,
+            }
 
             try:
-                data['servers'] = [member.server.id]
+                data["servers"] = [member.server.id]
             except AttributeError:
-                log.f('dbhandler', 'user type object, cannot add server attribute') 
-
-
+                log.f("dbhandler", "user type object, cannot add server attribute")
 
             if isinstance(member, discord.Member):
                 data["server_date"] = ts(member.joined_at)
-                data["joins"] =  [ ts(member.joined_at) ]
+                data["joins"] = [ts(member.joined_at)]
             if member.display_name != member.name:
                 data["aliases"].append(member.display_name)
 
@@ -167,7 +173,7 @@ class DBHandler(object):
         mem = self.get_member(member)
         if mem is None:
             if verbose:
-                log.f("DBHandler",   member.name + m2id(member) + " not found in db")
+                log.f("DBHandler", member.name + m2id(member) + " not found in db")
             return None
 
         if key in mem:
@@ -217,13 +223,13 @@ class DBHandler(object):
                         for item in data[key]:
                             # log.f("DBHandler", "Item: " + item)
                             if item not in mem[key]:
-                               #  log.f("DBHandler", "ON key: " + key + " added " + item + " to " + str(mem[key]))
+                                #  log.f("DBHandler", "ON key: " + key + " added " + item + " to " + str(mem[key]))
                                 mem[key].append(item)
                                 count += 1
                     else:
                         if data[key] not in mem[key]:
                             mem[key].append(data[key])
-                            log.f("DBHandler", "added " + data[key] + " to " + key )
+                            log.f("DBHandler", "added " + data[key] + " to " + key)
                             count += 1
 
                 else:
@@ -232,8 +238,6 @@ class DBHandler(object):
                     #      + str(data[key]))
                     # log.f("Replaced " + key + ": " + str(mem[key]) + " -> " + str(ts(data[key])))
                     mem[key] = ts(data[key])
-
-
 
             else:
                 # log.f("Added " + key)
@@ -246,8 +250,7 @@ class DBHandler(object):
             mem["commands_count"] += 1
 
         if count > 0:
-            log.f("DBHandler", "Added "  + str(count) + " fields to "
-                  + mem["name"])
+            log.f("DBHandler", "Added " + str(count) + " fields to " + mem["name"])
 
         self.members.replace_one({"uid": m2id(member)}, mem, upsert=False)
 
@@ -266,10 +269,12 @@ class DBHandler(object):
         return response
 
     def save_void(self, content, name, id):
-        if self.void.count({"content" : content}) > 0:
+        if self.void.count({"content": content}) > 0:
             return None
 
-        self.void.insert({"content": content, "number": self.void.count(), "author": name + " " + id})
+        self.void.insert(
+            {"content": content, "number": self.void.count(), "author": name + " " + id}
+        )
         return self.void.count()
 
     def delete_void(self, number):
@@ -281,7 +286,9 @@ class DBHandler(object):
 
     def add_reminder(self, author, content, timestamp):
         timestamp = ts(timestamp)
-        return self.reminders.insert_one({"ts": timestamp, "author": author.id, "content": content})
+        return self.reminders.insert_one(
+            {"ts": timestamp, "author": author.id, "content": content}
+        )
 
     def get_motd_entry(self, update=False):
         response = self.motd.find_one({"used": False, "approved": True})
@@ -289,7 +296,12 @@ class DBHandler(object):
             return None
         if not update:
             return response
-        self.motd.update({'_id': response['_id']}, {'$set': {"used": True}},  upsert=False, multi=False)
+        self.motd.update(
+            {"_id": response["_id"]},
+            {"$set": {"used": True}},
+            upsert=False,
+            multi=False,
+        )
         return response
 
     def get_motd_max(self):
@@ -302,21 +314,24 @@ class DBHandler(object):
             num = 2000
         else:
             num = num["num"] + 1
-        object = {"author": author,
-                  "num": num,
-                  "content": content,
-                  "approved": False,
-                  "used": False}
+        object = {
+            "author": author,
+            "num": num,
+            "content": content,
+            "approved": False,
+            "used": False,
+        }
         # print(str(object))
         return self.motd.find_one({"_id": self.motd.insert_one(object).inserted_id})
 
-
     def update_motd(self, num, approve=True):
         if approve:
-            self.motd.update_one({"num": num},{"$set" : {"approved": True, "used": False}}, upsert=False)
+            self.motd.update_one(
+                {"num": num}, {"$set": {"approved": True, "used": False}}, upsert=False
+            )
         else:
-            self.motd.update_one({"num": num},
-                                 {"$set": {"approved": False, "used": False}},
-                                 upsert=False)
+            self.motd.update_one(
+                {"num": num}, {"$set": {"approved": False, "used": False}}, upsert=False
+            )
 
         return self.motd.find_one({"num": num})
