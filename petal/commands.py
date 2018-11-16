@@ -4102,7 +4102,7 @@ class Commands:
         if command == "list":
             mem = self.db.get_member(message.author)
             out = ""
-            for game, interest in mem["lfg"]:
+            for game, interest in mem["lfg"].items():
                 if interest > 0:
                     out += "Interest in '{}': {}\n".format(game.upper(), str(interest))
             if out:
