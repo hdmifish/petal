@@ -4076,3 +4076,44 @@ class Commands:
         return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes and {} seconds away` :christmas_tree:".format(
             str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
         )
+
+    async def lfg(self, message):
+        """
+        Read/Write the LFG tables to help you find someone to play with
+        Your interest in playing a certain game is described by a number:
+        0: I do not want to play this right now
+        1: When someone searches this game, list my name
+        2: When someone searches this game, list my name AND ping me
+
+        `!lfg list` - Show your current interest settings
+        `!lfg set <game-code> <level>` - Set your interest in <game-code> to <level>
+        `!lfg find <game-code>` - Search for someone to play <game-code> with
+        """
+
+        submission = message.content[len(self.config.prefix) + 4 :].strip().lower()
+
+        command, param = submission.split(" ", 1)
+
+        if command == "list":
+            pass
+
+        elif command == "set":
+            try:
+                gamecode, level = param.split()
+                level = int(level)
+                if not 0 <= level <= 2:
+                    return "Interest level must be between 0 and 2, inclusive"
+
+            except ValueError:
+                return "Malformed parameters"
+
+            else:
+                game = self.db.subs.find_one({"code": gamecode.upper()})
+
+                if game is None:
+                    return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
+                else:
+                    self.db.update_member(message.author, {gamecode: level}, subdict="lfg")
+
+        elif command == "find":
+            pass
