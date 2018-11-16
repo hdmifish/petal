@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub contributors](https://img.shields.io/github/contributors/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/commit/master)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Petal
 [![Discord invite](https://img.shields.io/badge/Built%20for-Patch%20Gaming-1db2bf.svg?logoColor=white&logo=discord&style=popout-square)](https://discord.gg/patchgaming)
