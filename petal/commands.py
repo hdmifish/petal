@@ -4092,10 +4092,23 @@ class Commands:
 
         submission = message.content[len(self.config.prefix) + 4 :].strip().lower()
 
-        command, param = submission.split(" ", 1)
+        subsplit = submission.split(" ", 1)
+        command = subsplit[0]
+        if len(subsplit) > 1:
+            param = subsplit[1]
+        else:
+            param = ""
 
         if command == "list":
-            pass
+            mem = self.db.get_member(message.author)
+            out = ""
+            for game, interest in mem["lfg"]:
+                if interest > 0:
+                    out += "Interest in '{}': {}\n".format(game.upper(), str(interest))
+            if out:
+                return "Your current LFG interest table:```{}```".format(out)
+            else:
+                return "You currently have no LFG interests set"
 
         elif command == "set":
             try:
@@ -4114,6 +4127,7 @@ class Commands:
                     return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
                 else:
                     self.db.update_member(message.author, {gamecode: level}, subdict="lfg")
+                    return "Your LFG status has been updated"
 
         elif command == "find":
             pass
