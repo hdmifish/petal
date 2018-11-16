@@ -183,14 +183,14 @@ class DBHandler(object):
                 log.f("DBHandler", m2id(member) + " has no field: " + key)
             return None
 
-    def update_member(self, member, data=None, type=0, lfg=False):
+    def update_member(self, member, data=None, type=0, subdict=""):
         """
         Updates a the database with keys and values provided in the data field
 
         :param member: member to update
         :param data: dictionary containing data to update
         :param type: 0 = None, 1 = Message, 2 = Command
-        :param lfg: Whether this operation is an update to the user LFG status
+        :param subdict: Whether this operation is an update to a subdict of the user
         :return: str response
         """
         if not self.useDB:
@@ -211,12 +211,13 @@ class DBHandler(object):
         # TODO: get member dict first then query over. Update finally
         count = 0
 
-        if lfg:
-            # This operation is running in LFG-Update mode; Update the dict "lfg"
-            if not "lfg" in mem:
-                mem["lfg"] = data
+        if subdict:
+            # This operation is running in Subdict mode; Update the dict provided
+            if not subdict in mem:
+                mem[subdict] = data
+                count += 1
             else:
-                mem["lfg"].update(data)
+                mem[subdict].update(data)
         else:
             for key in data:
                 # data:      DICT
