@@ -4126,8 +4126,30 @@ class Commands:
                 if game is None:
                     return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
                 else:
-                    self.db.update_member(message.author, {gamecode: level}, subdict="lfg")
+                    self.db.update_member(message.author,
+                                          {gamecode: level},
+                                          subdict="lfg")
                     return "Your LFG status has been updated"
 
         elif command == "find":
-            pass
+            gamecode = param.upper()
+            game = self.db.subs.find_one({"code": gamecode})
+
+            if not game:
+                return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
+            else:
+                return_filter = {"name": 1, "discriminator": 1, "uid": 1}
+                to_list = self.db.members.find(
+                    {"lfg.{}".format(gamecode): 1}, return_filter
+                )
+                to_ping = self.db.members.find(
+                    {"lfg.{}".format(gamecode): 2}, return_filter
+                )
+
+                o = "List of people interested in playing `{}`:".format(gamecode)
+                for u in to_list:
+                    o += "\n`{}#{}`".format(u["name"], u["discriminator"])
+                for u in to_ping:
+                    o += "\n`<@{}>`".format(u["uid"])
+                o += "\n-----"
+                return o

@@ -270,9 +270,6 @@ class DBHandler(object):
 
         return True
 
-    def update_lfg(self, member, game, value):
-        pass
-
     def get_void(self):
         void_size = self.void.count()
         if void_size == 0:
