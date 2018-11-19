@@ -4087,6 +4087,7 @@ class Commands:
 
         `!lfg list` - Show your current interest settings
         `!lfg set <game-code> <level>` - Set your interest in <game-code> to <level>
+        `!lfg clear` - Clear all entries from your interest table
         `!lfg find <game-code>` - Search for someone to play <game-code> with
         """
 
@@ -4130,6 +4131,10 @@ class Commands:
                                           {gamecode: level},
                                           subdict="lfg")
                     return "Your LFG status has been updated"
+
+        elif command == "clear":
+            self.db.update_member(message.author, {"lfg": {}})
+            return "Your LFG interest table has been cleared"
 
         elif command == "find":
             gamecode = param.upper()
