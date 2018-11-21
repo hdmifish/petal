@@ -80,3 +80,24 @@ class CommandRouter:
             return "Command '{}' not found.".format(command_word)
         else:
             return func(command_components, src)  # Execute it
+
+    def parse(self, string=None, src=None):
+        """
+        Given a message, determine whether it is a command;
+        If it is, route it accordingly
+        """
+        if not string:
+            # If a string is not provided, a source message MUST be;
+            # Extract a new string from it
+            if not src:
+                # But if no source message is provided, fail
+                raise ValueError("CommandRouter.parse() must take a string and/or a source Discord message")
+            else:
+                string = src.content
+
+        prefix = self.config.prefix
+        if string.startswith(prefix):
+            # Message begins with the invocation prefix
+            command = string[len(prefix):]
+            return self.route(command, src)
+            # Remove the prefix and route the command
