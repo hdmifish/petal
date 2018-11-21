@@ -32,13 +32,29 @@ PLAYERDEFAULT = OrderedDict(
         ("discord", "000000000000000000"),
         ("approved", []),
         ("submitted", "1970-01-01_00:00"),
-        ("suspended", False),
+        ("suspended", 000),
         ("operator", 0),
     ]
 )
 
-# dbName = "/minecraft/playerdb.json"  # file in which userdata is stored
-# WhitelistFile = "/minecraft/whitelist.json"  # The whitelist file itself
+SUSPENSION = {
+    True: "Nonspecific suspension",
+    False: "Not suspended",
+    000: "Not suspended",
+    # Trivial suspensions
+    101: "Joke suspension",
+    102: "Self-sequested suspension",
+    103: "User not in Discord",
+    # Minor suspensions
+    201: "Minor trolling",
+    # Moderate suspensions
+    301: "Major trolling",
+    302: "Stealing",
+    # Major suspensions
+    401: "Use of slurs",
+    402: "Griefing",
+    403: "Discord banned",
+}
 
 # Break apart Mojang UUID with dashes
 def breakUID(str0):
