@@ -1,9 +1,12 @@
+import importlib
+import sys
+
 LoadModules = ["mod", "public", "util"]
 # List of modules to load; All Command-providing modules should be included, except core
 
 for module in LoadModules:
     # Import everything in the list above
-    exec("from . import " + module)
+    importlib.import_module(module)
 
 __all__ = ["CommandRouter"]
 
@@ -38,12 +41,13 @@ class CommandRouter:
 
         for MODULE in LoadModules:
             # TODO: Strip down "MODULE" to a single word to prevent any sort of injection
-            try:
-                mod = eval(MODULE).CommandModule(client, *a, **kw)
-                self.commands.append(mod)
-                exec(f"self.{MODULE} = mod")
-            except:
-                pass
+            # Get the module
+            mod = sys.modules.get(MODULE, None)
+            if mod:
+                # Instantiate its command engine
+                cmod = mod.CommandModule(client, *a, **kw)
+                self.commands.append(cmod)
+                setattr(self, MODULE, cmod)
 
     def find_command(self, kword):
         """
