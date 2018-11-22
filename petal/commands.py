@@ -4152,9 +4152,9 @@ class Commands:
                 )
 
                 o = "List of people interested in playing `{}`:".format(gamecode)
-                for u in to_list:
+                for u in list(to_list):
                     o += "\n`{}#{}`".format(u["name"], u["discriminator"])
-                for u in to_ping:
+                for u in list(to_ping):
                     o += "\n`<@{}>`".format(u["uid"])
                 o += "\n-----"
                 return o
