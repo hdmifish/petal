@@ -3769,8 +3769,13 @@ class Commands:
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
                 oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
-                if entry["suspended"]:
+                if entry.get("suspended"):
                     oput += "Status: **`#!# SUSPENDED #!#`**\n"
+                    oput += "Reason: {}\n".format(
+                        self.minecraft.suspend_table.get(
+                            entry.get("suspended", True), "<ERROR>"
+                        )
+                    )
                 elif len(entry["approved"]) == 0:
                     oput += "Status: *`-#- PENDING -#-`*\n"
                 else:
@@ -4127,9 +4132,9 @@ class Commands:
                 if game is None:
                     return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
                 else:
-                    self.db.update_member(message.author,
-                                          {gamecode: level},
-                                          subdict="lfg")
+                    self.db.update_member(
+                        message.author, {gamecode: level}, subdict="lfg"
+                    )
                     return "Your LFG status has been updated"
 
         elif command == "clear":
@@ -4152,9 +4157,9 @@ class Commands:
                 )
 
                 o = "List of people interested in playing `{}`:".format(gamecode)
-                for u in to_list:
+                for u in list(to_list):
                     o += "\n`{}#{}`".format(u["name"], u["discriminator"])
-                for u in to_ping:
+                for u in list(to_ping):
                     o += "\n`<@{}>`".format(u["uid"])
                 o += "\n-----"
                 return o
