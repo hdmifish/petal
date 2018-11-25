@@ -276,6 +276,7 @@ class Minecraft:
         self.config = client.config
 
         self.etc = WLStuff(client)
+        self.suspend_table = SUSPENSION
 
     # !wlme <username>
     def WLRequest(self, nameGiven, discord_id):
