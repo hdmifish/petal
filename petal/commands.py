@@ -3890,7 +3890,7 @@ class Commands:
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
-        !wlsuspend <bad_person>
+        !wlsuspend <bad_person> <code>
         """
         mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
         if None in mclists:
@@ -3910,15 +3910,13 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 3):
             return "You have insufficient security clearance to do that D:"
 
-        wordPos = ["true", "on", "yes", "active", "1", "enable"]
-        wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
+        wordPos = ["true", "on", "yes", "active", "enable"]
+        wordNeg = ["false", "off", "no", "inactive", "disable"]
         submission = message.content[
             len(self.config.prefix) + 9 :
         ].strip()  # separated this for simplicity
 
-        sub0 = submission.lower().split(
-            " "
-        )  # ["username", "rest", "of", "the", "message"]
+        sub0 = submission.lower().split()  # ["username", "rest", "of", "the", "message"]
         sub1 = sub0[0]  # "username"
         if len(sub0) > 1:
             sub2 = sub0[1]  # "rest"
@@ -3932,10 +3930,12 @@ class Commands:
             return "No results"
 
         # A far more reasonable argument processor
-        if sub2 == "" or sub2 in wordPos:
+        if sub2.isnumeric():
+            interp = int(sub2)
+        elif sub2 in wordPos:
             interp = True
         elif sub2 in wordNeg:
-            interp = False
+            interp = 0
         else:
             return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
 
