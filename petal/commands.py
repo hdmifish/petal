@@ -3565,7 +3565,11 @@ class Commands:
         Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
         !wlme <your_minecraft_username>
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3649,7 +3653,11 @@ class Commands:
         Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
         !wl <profile_identifier>
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3682,7 +3690,7 @@ class Commands:
                 )
             except:
                 pass
-            if doSend == True:
+            if doSend:
                 recipientobj = self.client.get_server(
                     self.config.get("mainServer")
                 ).get_member(recipientid)
@@ -3719,7 +3727,11 @@ class Commands:
         Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
         !wlquery <search_term>
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3814,7 +3826,11 @@ class Commands:
         Force an immediate rebuild of both the PlayerDB and the Whitelist itself
         !wlrefresh
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3832,9 +3848,6 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 2):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 9 :
-        ].strip()  # separated this for simplicity
         await self.client.send_typing(message.channel)
         refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
         refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
@@ -3846,7 +3859,11 @@ class Commands:
         Checks the WL database for any users whose Discord ID is that of someone who has left the server
         !wlgone
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3864,9 +3881,6 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 2):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 6 :
-        ].strip()  # separated this for simplicity
         uList = self.minecraft.etc.WLDump()
         idList = []
         for entry in uList:
@@ -3890,9 +3904,13 @@ class Commands:
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
-        !wlsuspend <bad_person>
+        !wlsuspend <bad_person> <code>
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
@@ -3910,14 +3928,14 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 3):
             return "You have insufficient security clearance to do that D:"
 
-        wordPos = ["true", "on", "yes", "active", "1", "enable"]
-        wordNeg = ["false", "off", "no", "inactive", "0", "disable"]
+        wordPos = ["true", "on", "yes", "active", "enable"]
+        wordNeg = ["false", "off", "no", "inactive", "disable"]
         submission = message.content[
             len(self.config.prefix) + 9 :
         ].strip()  # separated this for simplicity
 
-        sub0 = submission.lower().split(
-            " "
+        sub0 = (
+            submission.lower().split()
         )  # ["username", "rest", "of", "the", "message"]
         sub1 = sub0[0]  # "username"
         if len(sub0) > 1:
@@ -3925,40 +3943,26 @@ class Commands:
         else:
             sub2 = ""
 
+        if sub1.lower() == "help":
+            return "Suspension codes:\n" + "\n".join(
+                ["{}: {}".format(k, v) for k, v in self.minecraft.suspend_table.items()]
+            )
+
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
             return "Could not access database file"
-        if victim == []:
+        if not victim:
             return "No results"
 
         # A far more reasonable argument processor
-        if sub2 == "" or sub2 in wordPos:
+        if sub2.isnumeric():
+            interp = int(sub2)
+        elif sub2 in wordPos:
             interp = True
         elif sub2 in wordNeg:
-            interp = False
+            interp = 0
         else:
             return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
-
-        """ unnecessarily overcomplicated (and probably slow) argument processor
-        positivity = 0
-        ambivalent = True
-
-        for word in nsplit:
-            if word in wordPos:
-                ambivalent = False
-                positivity += 1
-            elif word in wordNeg:
-                ambivalent = False
-                positivity -= 1
-
-        if not ambivalent:
-            if positivity > 0:
-                interp = True
-            elif positivity < 0:
-                interp = False
-            else:
-                return "Could you be more specific about whether you want to enable or disable their suspension?"
-        """
 
         rep, wlwin = self.minecraft.WLSuspend(victim, interp)
         codes = {
@@ -3996,7 +4000,11 @@ class Commands:
         ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
         `!wlmod <profile_identifier> <0|1|2|3|4>`
         """
-        mclists = (self.config.get("minecraftDB"), self.config.get("minecraftDB"))
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
         if None in mclists:
             return (
                 "Looks like the bot owner doesn't have the whitelist configured. Sorry."
