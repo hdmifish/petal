@@ -3943,6 +3943,11 @@ class Commands:
         else:
             sub2 = ""
 
+        if sub1.lower() == "help":
+            return "Suspension codes:\n" + "\n".join(
+                ["{}: {}".format(k, v) for k, v in self.minecraft.suspend_table.items()]
+            )
+
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
             return "Could not access database file"
