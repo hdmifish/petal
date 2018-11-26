@@ -4127,6 +4127,7 @@ class Commands:
         elif command == "set":
             try:
                 gamecode, level = param.split()
+                gamecode = gamecode.upper()
                 level = int(level)
                 if not 0 <= level <= 2:
                     return "Interest level must be between 0 and 2, inclusive"
@@ -4135,7 +4136,7 @@ class Commands:
                 return "Malformed parameters"
 
             else:
-                game = self.db.subs.find_one({"code": gamecode.upper()})
+                game = self.db.subs.find_one({"code": gamecode})
 
                 if game is None:
                     return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
