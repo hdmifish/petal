@@ -1319,7 +1319,7 @@ class Commands:
             if confmsg is None:
                 return "Timed out... user was not kicked"
             else:
-                if confmsg.content != "yes":
+                if confmsg.content.lower() != "yes":
                     return userToBan.name + " was not kicked. What changed your mind? "
 
             userToBan = self.get_member(message, self.clean_input(message.content)[0])
@@ -1409,7 +1409,7 @@ class Commands:
             if msg is None:
                 return "Timed out... user was not banned"
             else:
-                if msg.content != "yes":
+                if msg.content.lower() != "yes":
                     return userToBan.name + " was not banned"
 
             try:
