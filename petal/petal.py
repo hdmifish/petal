@@ -228,10 +228,6 @@ class Petal(discord.Client):
         if Petal.logLock:
             return
 
-        self.db.update_member(
-            member, {"aliases": [member.name], "servers": [member.server.id]}
-        )
-
         if self.db.add_member(member):
             user_embed = discord.Embed(
                 title="User Joined",
@@ -251,6 +247,10 @@ class Petal(discord.Client):
                 )
             else:
                 return
+
+        self.db.update_member(
+            member, {"aliases": [member.name], "servers": [member.server.id]}
+        )
 
         user_embed.set_thumbnail(url=member.avatar_url)
         user_embed.add_field(name="Name", value=member.name)
@@ -428,6 +428,8 @@ class Petal(discord.Client):
                 description=before.name + " changed their name to " + after.name,
                 colour=0x34F3AD,
             )
+
+            userEmbed.add_field(name="UUID", value=str(before.id))
 
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 

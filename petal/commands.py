@@ -1305,6 +1305,8 @@ class Commands:
         else:
 
             userToBan = self.get_member(message, self.clean_input(message.content)[0])
+            if userToBan is None:
+                return "Could not get user with that id"
 
             await self.client.send_message(
                 message.author,
@@ -1319,7 +1321,7 @@ class Commands:
             if confmsg is None:
                 return "Timed out... user was not kicked"
             else:
-                if confmsg.content != "yes":
+                if confmsg.content.lower() != "yes":
                     return userToBan.name + " was not kicked. What changed your mind? "
 
             userToBan = self.get_member(message, self.clean_input(message.content)[0])
@@ -1409,7 +1411,7 @@ class Commands:
             if msg is None:
                 return "Timed out... user was not banned"
             else:
-                if msg.content != "yes":
+                if msg.content.lower() != "yes":
                     return userToBan.name + " was not banned"
 
             try:
@@ -3695,7 +3697,7 @@ class Commands:
                     self.config.get("mainServer")
                 ).get_member(recipientid)
                 try:
-                    wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`"
+                    wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect"
                     await self.client.send_message(channel=recipientobj, message=wlpm)
                 except discord.DiscordException as e:
                     self.log.err("Error on WLAdd PM: " + str(e))
@@ -4127,6 +4129,7 @@ class Commands:
         elif command == "set":
             try:
                 gamecode, level = param.split()
+                gamecode = gamecode.upper()
                 level = int(level)
                 if not 0 <= level <= 2:
                     return "Interest level must be between 0 and 2, inclusive"
@@ -4135,7 +4138,7 @@ class Commands:
                 return "Malformed parameters"
 
             else:
-                game = self.db.subs.find_one({"code": gamecode.upper()})
+                game = self.db.subs.find_one({"code": gamecode})
 
                 if game is None:
                     return "Sadly, that game doesn't exist. However, you can ask for it to be added!"
