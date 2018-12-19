@@ -429,6 +429,8 @@ class Petal(discord.Client):
                 colour=0x34F3AD,
             )
 
+            userEmbed.add_field(name="UUID", value=str(before.id))
+
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
