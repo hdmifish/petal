@@ -1305,6 +1305,8 @@ class Commands:
         else:
 
             userToBan = self.get_member(message, self.clean_input(message.content)[0])
+            if userToBan is None:
+                return "Could not get user with that id"
 
             await self.client.send_message(
                 message.author,
