@@ -228,10 +228,6 @@ class Petal(discord.Client):
         if Petal.logLock:
             return
 
-        self.db.update_member(
-            member, {"aliases": [member.name], "servers": [member.server.id]}
-        )
-
         if self.db.add_member(member):
             user_embed = discord.Embed(
                 title="User Joined",
@@ -251,6 +247,10 @@ class Petal(discord.Client):
                 )
             else:
                 return
+
+        self.db.update_member(
+            member, {"aliases": [member.name], "servers": [member.server.id]}
+        )
 
         user_embed.set_thumbnail(url=member.avatar_url)
         user_embed.add_field(name="Name", value=member.name)
