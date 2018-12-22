@@ -4065,7 +4065,7 @@ class Commands:
         Be careful, Skeletons are closer than you think
         !spookyclock
         """
-        td = (dt(2018, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
+        td = (dt(2019, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return ":ghost: Beware! The skeletons are already here! :ghost:"
         d = divmod(td, 86400)
