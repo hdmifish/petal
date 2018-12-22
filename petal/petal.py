@@ -273,11 +273,14 @@ class Petal(discord.Client):
                 None, self.get_channel(self.config.logChannel), response
             )
 
-        if (datetime.utcnow() - member.created_at).days <= 6:
+        age = datetime.utcnow() - member.created_at
+        if age.days <= 6:
             await self.send_message(
                 None,
                 self.get_channel(self.config.logChannel),
-                "This member's account " + "was created less than 7 days ago!",
+                "This member's account was created only {} hours ago!".format(
+                    int(age.total_seconds() / 3600)
+                ),
             )
 
         return
