@@ -183,6 +183,9 @@ class Petal(discord.Client):
         """
         Overload on the send_message function
         """
+        if not message or not str(message):
+            # Without a message to send, dont even try; it would just error
+            return None
         if self.dev_mode:
             message = "[DEV]  " + str(message) + "  [DEV]"
         if author is not None:
