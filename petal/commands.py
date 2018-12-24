@@ -562,11 +562,19 @@ class Commands:
             if response is None or not self.check(response):
                 return "Command: `" + invoker + "` was not changed."
             else:
-                self.config.commands[invoker] = {"com": command, "perm": perms, "nsfw": nsfw}
+                self.config.commands[invoker] = {
+                    "com": command,
+                    "perm": perms,
+                    "nsfw": nsfw,
+                }
                 self.config.save()
                 return "Command: `" + invoker + "` was redefined"
         else:
-            self.config.commands[invoker] = {"com": command, "perm": perms, "nsfw": nsfw}
+            self.config.commands[invoker] = {
+                "com": command,
+                "perm": perms,
+                "nsfw": nsfw,
+            }
             self.config.save()
             return "New Command `{}` Created!".format(invoker)
 
