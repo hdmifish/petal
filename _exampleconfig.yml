@@ -132,6 +132,10 @@ ignoreServers:
 ignoreChannels:
 - '0'
 
+# Channels where a custom command marked as NSFW can be used
+nsfwChannels:
+- '0'
+
 # This is the helping-hands vote system. It is used for lvote, leave it disabled unless you understand what it does
 # choppingBlock:
 #  '00000000000':
