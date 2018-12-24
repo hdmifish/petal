@@ -426,6 +426,10 @@ class Commands:
         com = self.config.commands[invoker]
         response = com["com"]
         # perms = com["perm"]
+        nsfw = com.get("nsfw", False)
+
+        if nsfw and message.channel.id not in self.config.get("nsfwChannels"):
+            return
 
         try:
             output = response.format(
@@ -533,17 +537,21 @@ class Commands:
 
         invoker = self.remove_prefix(message.content).split("|")[0].strip()
         command = self.remove_prefix(message.content).split("|")[1].strip()
+        perms = "0"  # TODO: Reimplement this later (it was never used)
 
-        if len(self.remove_prefix(message.content).split("|")) > 3:
-            perms = self.remove_prefix(message.content).split("|")[2].strip()
+        if len(self.remove_prefix(message.content).split("|")) > 2:
+            try:
+                nsfw = bool(self.remove_prefix(message.content).split("|")[2].strip().capitalize())
+            except:
+                nsfw = False
         else:
-            perms = "0"
+            nsfw = False
 
         if invoker in self.config.commands:
             await self.client.send_message(
                 message.author,
                 message.channel,
-                "This command already exists, " + "type 'yes' to rewrite it",
+                "This command already exists, type 'yes' to rewrite it",
             )
             response = await self.client.wait_for_message(
                 timeout=15, author=message.author, channel=message.channel
@@ -552,11 +560,11 @@ class Commands:
             if response is None or not self.check(response):
                 return "Command: `" + invoker + "` was not changed."
             else:
-                self.config.commands[invoker] = {"com": command, "perm": perms}
+                self.config.commands[invoker] = {"com": command, "perm": perms, "nsfw": nsfw}
                 self.config.save()
                 return "Command: `" + invoker + "` was redefined"
         else:
-            self.config.commands[invoker] = {"com": command, "perm": perms}
+            self.config.commands[invoker] = {"com": command, "perm": perms, "nsfw": nsfw}
             self.config.save()
             return "New Command `{}` Created!".format(invoker)
 
@@ -4065,7 +4073,7 @@ class Commands:
         Be careful, Skeletons are closer than you think
         !spookyclock
         """
-        td = (dt(2018, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
+        td = (dt(2019, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return ":ghost: Beware! The skeletons are already here! :ghost:"
         d = divmod(td, 86400)
