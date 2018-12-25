@@ -16,50 +16,105 @@ class Peacock(object):
         return "[{}]".format(str(dt.utcnow())[:-7])
 
     def log(self, message):
-        print(Fore.WHITE + "[LOG] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii') + Fore.RESET, flush=True)
+        print(
+            Fore.WHITE
+            + "[LOG] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
         return
 
     def warn(self, message):
-        print(Fore.YELLOW + "[WARN] " + self.timestamp() +
-              " " + message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.YELLOW
+            + "[WARN] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
         return
 
     def err(self, message):
-        print(Fore.RED + "[ERROR] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.RED
+            + "[ERROR] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def info(self, message):
-        print(Fore.CYAN + "[INFO] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.CYAN
+            + "[INFO] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def com(self, message):
-        print(Fore.BLUE + "[COMMAND] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.BLUE
+            + "[COMMAND] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def member(self, message):
-        print(Fore.CYAN + "[MEMBER] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.CYAN
+            + "[MEMBER] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def debug(self, message):
-        print(Fore.MAGENTA + "[DEBUG] " + self.timestamp() + " " +
-              message.encode('ascii', 'ignore').decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.MAGENTA
+            + "[DEBUG] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def ready(self, message):
-        print(Fore.GREEN + "[READY] " + self.timestamp() + " " +
-              message.encode("ascii", "ignore").decode('ascii')
-              + Fore.RESET, flush=True)
+        print(
+            Fore.GREEN
+            + "[READY] "
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
     def f(self, func="basic", message=""):
-        print(Fore.MAGENTA + "[FUNC/{}] ".format(func.upper())
-              + self.timestamp() + " " +
-              message.encode("ascii", "ignore").decode('ascii') + Fore.RESET, flush=True)
+        print(
+            Fore.MAGENTA
+            + "[FUNC/{}] ".format(func.upper())
+            + self.timestamp()
+            + " "
+            + message.encode("ascii", "ignore").decode("ascii")
+            + Fore.RESET,
+            flush=True,
+        )
 
 
 class Octopus(object):
@@ -94,12 +149,14 @@ class Octopus(object):
     def __init__(self, API_KEY, log=Peacock()):
         self.log = log
         if API_KEY is None:
-            self.log.err("No API KEY Provided. Syntax is Octopus(API_KEY," +
-                         " Logger object)")
+            self.log.err(
+                "No API KEY Provided. Syntax is Octopus(API_KEY," + " Logger object)"
+            )
             return None
         self.key = API_KEY
-        response = requests.get("https://osu.ppy.sh/api/get_beatmaps?k={}" +
-                                "&limit={}".format(self.key, 1))
+        response = requests.get(
+            "https://osu.ppy.sh/api/get_beatmaps?k={}" + "&limit={}".format(self.key, 1)
+        )
         if "error" in response:
             self.log.err("OSU Error: " + response["error"])
             return None
@@ -107,21 +164,20 @@ class Octopus(object):
             self.log.ready("OSU support enabled")
 
     def get_user(self, userid, mode=0):
-        response = requests.get("https://osu.ppy.sh/api/get_user?k=" +
-                                "{}&m={}&u={}".format(self.key,
-                                                      mode,
-                                                      userid.strip()))
+        response = requests.get(
+            "https://osu.ppy.sh/api/get_user?k="
+            + "{}&m={}&u={}".format(self.key, mode, userid.strip())
+        )
         if response.json() == []:
             return None
         user = self.Tentacle_user(response.json()[0])
         return user
 
     def get_beatmap(self, beatid, sets="", mode=0):
-        response = requests.get("https://osu.ppy.sh/api/get_beatmaps?k=" +
-                                "{}&s={}&b={}&m={}".format(self.key,
-                                                           sets,
-                                                           beatid,
-                                                           mode))
+        response = requests.get(
+            "https://osu.ppy.sh/api/get_beatmaps?k="
+            + "{}&s={}&b={}&m={}".format(self.key, sets, beatid, mode)
+        )
         return response
 
 
@@ -129,10 +185,12 @@ class Giraffe(object):
     def __init__(self, API_KEY, log=Peacock()):
         self.log = log
         if API_KEY is None:
-            self.log.err("No API KEY Provided. " +
-                         "Syntax is Giraffe(API_KEY, Logger object)\n " +
-                         "The API KEY is the same as your Client ID from" +
-                         " imgur")
+            self.log.err(
+                "No API KEY Provided. "
+                + "Syntax is Giraffe(API_KEY, Logger object)\n "
+                + "The API KEY is the same as your Client ID from"
+                + " imgur"
+            )
 
             return None
         else:
@@ -140,44 +198,43 @@ class Giraffe(object):
         self.key = API_KEY
 
     def get_image(self, imageID):
-        headers = {'Authorization': 'Client-Id {}'.format(self.key)}
-        req = requests.get('https://api.imgur.com/3/image/{}'.format(imageID),
-                           headers=headers)
+        headers = {"Authorization": "Client-Id {}".format(self.key)}
+        req = requests.get(
+            "https://api.imgur.com/3/image/{}".format(imageID), headers=headers
+        )
         response = req.json()
 
-        if not response['success']:
+        if not response["success"]:
             return None
 
         return self.Imgur_Image(response["data"])
 
     def get_random(self, albumID):
-        headers = {'Authorization': 'Client-Id {}'.format(self.key)}
-        req = requests.get('https://api.imgur.com/3/album/{}'.format(albumID),
-                           headers=headers)
+        headers = {"Authorization": "Client-Id {}".format(self.key)}
+        req = requests.get(
+            "https://api.imgur.com/3/album/{}".format(albumID), headers=headers
+        )
         response = req.json()
         print(response)
-        if not response['success']:
+        if not response["success"]:
             return None
 
-        return self.Imgur_Image(response["data"][randint(0,
-                                                         len(response["data"])
-                                                         - 1)])
+        return self.Imgur_Image(response["data"][randint(0, len(response["data"]) - 1)])
 
     def get_subreddit(self, subID):
 
-        headers = {'Authorization': 'Client-Id {}'.format(self.key)}
-        req = requests.get('https://api.imgur.com/3/gallery/r/{}'
-                           .format(subID), headers=headers)
+        headers = {"Authorization": "Client-Id {}".format(self.key)}
+        req = requests.get(
+            "https://api.imgur.com/3/gallery/r/{}".format(subID), headers=headers
+        )
         response = req.json()
 
-        if not response['success']:
+        if not response["success"]:
             return None
         if len(response["data"]) == 0:
             return None
 
-        return self.Imgur_Image(response["data"][randint(0,
-                                                         len(response["data"])
-                                                         - 1)])
+        return self.Imgur_Image(response["data"][randint(0, len(response["data"]) - 1)])
 
     class Imgur_Image:
         def __init__(self, data):
@@ -188,12 +245,17 @@ class Giraffe(object):
             self.nsfw = data["nsfw"]
             self.link = data["link"]
 
+
 class Pidgeon:
     def __init__(self, query, version="0.3.2"):
         self.query = query
         api_url = "https://en.wikipedia.org/w/api.php?action=query&titles={q}&format=json&prop=extracts&exintro&explaintext"
         url = api_url.format(q=query)
-        headers = {'User-Agent': 'Petalbot/' + version + ' (http://leaf.drunkencode.net/; nullexistence180@gmail.com) Python 3.5.2'}
+        headers = {
+            "User-Agent": "Petalbot/"
+            + version
+            + " (http://leaf.drunkencode.net/; nullexistence180@gmail.com) Python 3.5.2"
+        }
         # Peacock().f("wiki", str(headers))
         req = requests.get(url, headers=headers)
         self.response = req.json()
@@ -202,7 +264,9 @@ class Pidgeon:
         if self.response is None:
             return (0, "No data returned for: " + self.query)
         try:
-            page = self.response["query"]["pages"][list(self.response["query"]["pages"].keys())[0]]
+            page = self.response["query"]["pages"][
+                list(self.response["query"]["pages"].keys())[0]
+            ]
             Peacock().f("wiki", "Query: " + str(page))
             p = page["extract"][:360] + "..."
 
@@ -214,14 +278,4 @@ class Pidgeon:
 
         else:
 
-
             return (1, {"title": page["title"], "content": p, "id": page["pageid"]})
-
-
-
-
-
-
-
-
-
