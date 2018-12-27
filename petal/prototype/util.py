@@ -1,5 +1,6 @@
 from . import core
 
+
 class CommandsUtil(core.Commands):
     def echo(self, text, *a, src, **kw):
         print(text)
@@ -9,6 +10,7 @@ class CommandsUtil(core.Commands):
             print(text.upper())
         else:
             print(text)
+
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
