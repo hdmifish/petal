@@ -152,7 +152,7 @@ class CommandRouter:
             if not src:
                 # But if no source message is provided, fail
                 raise ValueError(
-                    "CommandRouter.parse() must take a string and/or a source Discord message"
+                    "CommandRouter.run() must take a string and/or a source Discord message"
                 )
             else:
                 string = src.content
