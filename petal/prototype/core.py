@@ -1,15 +1,19 @@
 class Commands:
     def __init__(self, client, *a, **kw):
         self.client = client
-        self.config = client.config
+        # self.config = client.config
         self.args = a  # Save for later
         self.kwargs = kw  # Just in case
 
     def get_command(self, kword):
-        try:
-            x = eval(f"self.{kword}")
-        except:
-            x = None
-        if not "method" in str(type(x)) or x == Commands.get_command:
-            x = None
-        return x
+        return getattr(self, kword, None)
+
+    def authenticate(self, *_):
+        """
+        Take a Discord message and return True if:
+          1. The author of the message is allowed to access this package
+          2. This command can be run in this channel
+        Should be overwritten by modules providing secure functions
+        (For example, moderation tools)
+        """
+        return True
