@@ -69,7 +69,10 @@ class CommandRouter:
         flags = {}
 
         # Get a list of strings where the --flags are separated out
-        exp = [s.strip() if type(s) == str else s for s in re.split(pattern, command)]
+        exp = list(
+            [s.strip() if type(s) == str else s for s in re.split(pattern, command)]
+        )
+        # My IDE marks a bunch of fake errors if I dont re-encapsulate this; Ignore it
 
         # Clean out the list
         while "" in exp:
@@ -92,7 +95,7 @@ class CommandRouter:
             except StopIteration:
                 # If there isnt one, then if this one is a flag, it is True
                 flag_arg = True
-            if str(possible_flag).startswith("-"):
+            if exp[i] == possible_flag and str(possible_flag).startswith("-"):
                 # This word is a flag; Eat it because we pass it separately
                 exp[i] = None
                 if str(flag_arg).startswith("-"):
