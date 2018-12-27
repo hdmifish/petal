@@ -39,7 +39,7 @@ def get_command(name, *args, **kwargs):
 class CommandRouter:
     def __init__(self, client, *a, **kw):
         self.client = client
-        # self.config = client.config
+        self.config = client.config
         self.commands = []
 
         for MODULE in LoadModules:
@@ -123,10 +123,8 @@ class CommandRouter:
         """
         # 'ban badperson666 evilness'
         # Separate the first word from the rest
-        command_components = command.split(" ", 1)
-        # ['ban', 'badperson666 evilness']
-        command_word = command_components.pop(0)
-        # 'ban'; ['badperson666 evilness']
+        command_word, command_components = command.split(" ", 1)
+        # 'ban'; 'badperson666 evilness'
 
         # Find the method
         engine, func = self.find_command(command_word)
@@ -136,7 +134,7 @@ class CommandRouter:
             return "Authentication failure."
         else:
             # Parse it
-            text, flags = self.parse(*command_components)
+            text, flags = self.parse(command_components)
             # And execute it
             return func(text, **flags, src=src)
 
@@ -156,7 +154,7 @@ class CommandRouter:
             else:
                 string = src.content
 
-        prefix = "!"  # self.config.prefix
+        prefix = self.config.prefix
         if string.startswith(prefix):
             # Message begins with the invocation prefix
             command = string[len(prefix) :]
