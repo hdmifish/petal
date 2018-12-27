@@ -47,7 +47,7 @@ class CommandRouter:
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
                 # Instantiate its command engine
-                cmod = mod.CommandModule(client, *a, **kw)
+                cmod = mod.CommandModule(client, self, *a, **kw)
                 self.commands.append(cmod)
                 setattr(self, MODULE, cmod)
 

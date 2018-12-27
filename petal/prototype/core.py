@@ -1,7 +1,8 @@
 class Commands:
-    def __init__(self, client, *a, **kw):
+    def __init__(self, client, router, *a, **kw):
         self.client = client
         self.config = client.config
+        self.router = router
         self.args = a  # Save for later
         self.kwargs = kw  # Just in case
 
