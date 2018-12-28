@@ -278,12 +278,19 @@ class Petal(discord.Client):
 
         age = datetime.utcnow() - member.created_at
         if age.days <= 6:
+            # Account is less than a week old, mention its age
+            timeago = [int(age.total_seconds() / 60), "minutes"]
+            if timeago[0] >= 120:
+                # 2 hours or more? Say it in hours
+                timeago = [int(timeago[0] / 60), "hours"]
+            elif timeago[0] == 1:
+                # Only a single minute? Use the singular
+                timeago[1] = "minute"
+
             await self.send_message(
                 None,
                 self.get_channel(self.config.logChannel),
-                "This member's account was created only {} hours ago!".format(
-                    int(age.total_seconds() / 3600)
-                ),
+                "This member's account was created only {} {} ago!".format(*timeago),
             )
 
         return
