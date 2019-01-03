@@ -3834,9 +3834,14 @@ class Commands:
                     oput += (
                         "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
                     )
-                    oput += "- Known Usernames:\n"
+                    oput += "- Alternate Usernames:\n"
                     for pname in entry["altname"]:
                         oput += "  - `" + pname + "`\n"
+                    oput += "- Notes:\n"
+                    for note in entry.get("notes", []):
+                        oput += "  - `" + note + "`\n"
+                else:
+                    oput += "- Notes: `{}`\n".format(len(entry.get("notes", [])))
             oput += "--------"
             await self.client.edit_message(message=qout, new_content=oput)
             # return oput
