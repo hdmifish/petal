@@ -44,9 +44,11 @@ SUSPENSION = {
     # Trivial suspensions
     101: "Joke suspension",
     102: "Self-sequested suspension",
-    103: "User not in Discord",
+    103: "Old Account",
+    104: "User not in Discord",
     # Minor suspensions
     201: "Minor trolling",
+    203: "Compromised Account",
     # Moderate suspensions
     301: "Major trolling",
     302: "Stealing",
