@@ -4078,6 +4078,69 @@ class Commands:
             victim[0]["name"], level, "`, `".join([str(term) for term in rep])
         )
 
+    async def wlnote(self, message):
+        """
+        Flags a person to be given a level of operator status
+        Level 1 can: bypass spawn protection
+        Level 2 can: use /clear, /difficulty, /effect, /gamemode, /gamerule, /give, /summon, /setblock and /tp, and can edit command blocks
+        Level 3 can: use /ban, /deop, /whitelist, /kick, and /op
+        Level 4 can: use /stop
+        ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
+        `!wlmod <profile_identifier> <0|1|2|3|4>`
+        """
+        mclists = (
+            self.config.get("minecraftDB"),
+            self.config.get("minecraftWL"),
+            self.config.get("minecraftOP"),
+        )
+        if None in mclists:
+            return (
+                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
+            )
+        mcchan = self.config.get("mc_channel")
+        if mcchan is None:
+            return (
+                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+            )
+        mcchan = self.client.get_channel(mcchan)
+        if mcchan is None:
+            return (
+                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
+            )
+        if not self.minecraft.WLAuthenticate(message, 4):
+            return "You have insufficient security clearance to do that D:"
+
+        submission = message.content[
+            len(self.config.prefix) + 6 :
+        ].strip()  # separated this for simplicity
+
+        sub0 = submission.lower().split(
+            " ",
+            1
+        )  # ["username", "rest of the message"]
+        sub1 = sub0[0]  # "username"
+        try:
+            note = int(sub0[1])  # "rest of the message"
+        except:
+            note = ""
+        if not note:
+            return
+
+        victim = self.minecraft.WLQuery(sub1)
+        if victim == -7:
+            return "Could not access database file."
+        elif not victim:
+            return "No valid target found."
+        elif len(victim) > 1:
+            return "Ambiguous command: {} possible targets found.".format(
+                str(len(victim))
+            )
+
+        rep = self.minecraft.WLNote(victim[0]["discord"], note)
+
+        if not rep:
+            return "{} has been noted: `{}`".format(victim[0]["name"], note)
+
     async def spookyclock(self, message):
         """
         Be careful, Skeletons are closer than you think

@@ -34,6 +34,7 @@ PLAYERDEFAULT = OrderedDict(
         ("submitted", "1970-01-01_00:00"),
         ("suspended", 000),
         ("operator", 0),
+        ("notes", []),
     ]
 )
 
@@ -448,6 +449,46 @@ class Minecraft:
         if self.etc.WLSave(dbRead) != 0:
             ret = -7
         return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()
+
+    def WLNote(self, user, note):
+        dbRead = self.etc.WLDump()
+        if dbRead == -7:
+            return -7
+
+        # user can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
+        pIndex = next((item for item in dbRead if item["uuid"] == user), False)
+        # Is the target player found in the database?
+
+        if not pIndex:
+            # Maybe try the Minecraft name?
+            pIndex = next(
+                (item for item in dbRead if item["name"].lower() == user.lower()),
+                False,
+            )
+
+        if not pIndex:
+            # ...Discord ID?
+            pIndex = next((item for item in dbRead if item["discord"] == user), False)
+
+        if not pIndex:
+            # Fine. Player is not in the database -- Refuse to continue
+            log.f("wl+", "IndexError player not in DB")
+            ret = -8
+        else:
+            targetid = pIndex["discord"]
+            pIndex["notes"].append(note)
+            log.f(
+                "wl+",
+                "{} has been noted: `{}`".format(
+                    *[str(term) for term in [targetid, note]]
+                ),
+            )
+            ret = 0
+
+        if self.etc.WLSave(dbRead) != 0:
+            ret = -7
+        self.etc.EXPORT_WHITELIST()
+        return ret
 
     def WLAuthenticate(self, msg, clearance=3):
         entries = self.WLQuery(str(msg.author.id))
