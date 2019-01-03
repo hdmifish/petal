@@ -462,8 +462,7 @@ class Minecraft:
         if not pIndex:
             # Maybe try the Minecraft name?
             pIndex = next(
-                (item for item in dbRead if item["name"].lower() == user.lower()),
-                False,
+                (item for item in dbRead if item["name"].lower() == user.lower()), False
             )
 
         if not pIndex:

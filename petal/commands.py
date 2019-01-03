@@ -3605,9 +3605,8 @@ class Commands:
                 "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
             )
 
-        submission = message.content[
-            len(self.config.prefix) + 4 :
-        ].strip()  # separated this for simplicity
+        # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 4 :].strip()
 
         if submission == "":
             return "You need to include your Minecraft username, or I will not be able to find you! Like this: `!wlme Notch` :D"
@@ -3695,12 +3694,12 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 3):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 2 :
-        ].strip()  # separated this for simplicity
+        # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 2 :].strip()
+        # Send the submission through the function
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
             submission, message.author.id
-        )  # Send the submission through the new function
+        )
 
         if reply == 0:
             try:  # For now, just gonna do this just in case
@@ -3769,9 +3768,8 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 2):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 7 :
-        ].strip()  # separated this for simplicity
+        # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 7 :].strip()
         verbose = "-v" in submission
 
         if "pending" in submission.lower():
@@ -3959,9 +3957,8 @@ class Commands:
             len(self.config.prefix) + 9 :
         ].strip()  # separated this for simplicity
 
-        sub0 = (
-            submission.lower().split()
-        )  # ["username", "rest", "of", "the", "message"]
+        sub0 = submission.lower().split()
+        # ["username", "rest", "of", "the", "message"]
         sub1 = sub0[0]  # "username"
         if len(sub0) > 1:
             sub2 = sub0[1]  # "rest"
@@ -4047,13 +4044,11 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 4):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 5 :
-        ].strip()  # separated this for simplicity
+        # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 5 :].strip()
 
-        sub0 = submission.lower().split(
-            " "
-        )  # ["username", "rest", "of", "the", "message"]
+        sub0 = submission.lower().split(" ")
+        # ["username", "rest", "of", "the", "message"]
         sub1 = sub0[0]  # "username"
         try:
             level = int(sub0[1])  # "rest"
@@ -4067,7 +4062,7 @@ class Commands:
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
             return "Could not access database file."
-        elif victim == []:
+        elif not victim:
             return "No valid target found."
         elif len(victim) > 1:
             return "Ambiguous command: {} possible targets found.".format(
@@ -4115,14 +4110,11 @@ class Commands:
         if not self.minecraft.WLAuthenticate(message, 4):
             return "You have insufficient security clearance to do that D:"
 
-        submission = message.content[
-            len(self.config.prefix) + 6 :
-        ].strip()  # separated this for simplicity
+        # separated this for simplicity
+        submission = message.content[len(self.config.prefix) + 6 :].strip()
 
-        sub0 = submission.lower().split(
-            " ",
-            1
-        )  # ["username", "rest of the message"]
+        sub0 = submission.lower().split(" ", 1)
+        # ["username", "rest of the message"]
         sub1 = sub0[0]  # "username"
         try:
             note = int(sub0[1])  # "rest of the message"
