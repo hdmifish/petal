@@ -12,29 +12,6 @@ for module in LoadModules:
 
 __all__ = ["CommandRouter"]
 
-"""
-A suggestion from a friend:
-
-import functools
-import importlib
-
-@functools.lru_cache(maxsize=None)
-def get_command(name, *args, **kwargs):
-    mod = importlib.import(name)
-    return mod.CommandModule(*args, **kwargs)
-
-
-_commands = dict()
-def get_command(name, *args, **kwargs):
-    if name in _commands:
-        return _commands[name]
-
-    mod = importlib.import(name)
-    c = mod.CommandModule(*args, **kwargs)
-    _commands[name] = c
-    return c
-"""
-
 
 class CommandRouter:
     def __init__(self, client, *a, **kw):
@@ -165,7 +142,3 @@ class CommandRouter:
             command = string[len(prefix) :]
             return self.route(command, src)
             # Remove the prefix and route the command
-
-
-"""
-"""
