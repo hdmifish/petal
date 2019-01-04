@@ -2,10 +2,10 @@ from . import core
 
 
 class CommandsUtil(core.Commands):
-    def echo(self, text, *a, src, **kw):
+    def cmd_echo(self, text, *a, src, **kw):
         print(text)
 
-    def echo2(self, text, *a, loud=False, src, **kw):
+    def cmd_echo2(self, text, *a, loud=False, src, **kw):
         if loud:
             print(text.upper())
         else:

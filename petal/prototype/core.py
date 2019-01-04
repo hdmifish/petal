@@ -7,7 +7,9 @@ class Commands:
         self.kwargs = kw  # Just in case
 
     def get_command(self, kword):
-        return getattr(self, kword, None)
+        if "__" not in kword:
+            # Refuse to fetch anything with a dunder
+            return getattr(self, "cmd_" + kword, None)
 
     def authenticate(self, *_):
         """
