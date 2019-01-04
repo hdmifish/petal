@@ -126,8 +126,10 @@ class CommandRouter:
         """
         # 'ban badperson666 evilness'
         # Separate the first word from the rest
-        command_word, command_components = command.split(" ", 1)
-        # 'ban'; 'badperson666 evilness'
+        command_components = command.split(" ", 1)
+        # ['ban', 'badperson666 evilness']
+        command_word = command_components.pop(0)
+        # 'ban'; ['badperson666 evilness']
 
         # Find the method
         engine, func = self.find_command(command_word)
@@ -137,7 +139,7 @@ class CommandRouter:
             return "Authentication failure."
         else:
             # Parse it
-            text, flags = self.parse(command_components)
+            text, flags = self.parse(*command_components)
             # And execute it
             return func(text, **flags, src=src)
 
