@@ -447,7 +447,7 @@ class Minecraft:
             ret = 0
 
         if self.etc.WLSave(dbRead) != 0:
-            ret = -7
+            ret = -6
         return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()
 
     def WLNote(self, user, note):
@@ -485,7 +485,7 @@ class Minecraft:
             ret = 0
 
         if self.etc.WLSave(dbRead) != 0:
-            ret = -7
+            ret = -6
         self.etc.EXPORT_WHITELIST()
         return ret
 
