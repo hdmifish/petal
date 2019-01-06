@@ -4080,13 +4080,8 @@ class Commands:
 
     async def wlnote(self, message):
         """
-        Flags a person to be given a level of operator status
-        Level 1 can: bypass spawn protection
-        Level 2 can: use /clear, /difficulty, /effect, /gamemode, /gamerule, /give, /summon, /setblock and /tp, and can edit command blocks
-        Level 3 can: use /ban, /deop, /whitelist, /kick, and /op
-        Level 4 can: use /stop
-        ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
-        `!wlmod <profile_identifier> <0|1|2|3|4>`
+        Adds a note string to a user profile, viewable via `!WLQuery -v`
+        `!wlnote <profile_identifier> <any pertinent information to save>`
         """
         mclists = (
             self.config.get("minecraftDB"),
