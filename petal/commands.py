@@ -4115,13 +4115,10 @@ class Commands:
 
         sub0 = submission.lower().split(" ", 1)
         # ["username", "rest of the message"]
+        if len(sub0) < 2:
+            return "WLNote requires a profile identifier and a string"
         sub1 = sub0[0]  # "username"
-        try:
-            note = int(sub0[1])  # "rest of the message"
-        except:
-            note = ""
-        if not note:
-            return
+        note = sub0[1]  # "rest of the message"
 
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
