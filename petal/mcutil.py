@@ -45,11 +45,11 @@ SUSPENSION = {
     # Trivial suspensions
     101: "Joke suspension",
     102: "Self-sequested suspension",
-    103: "Old Account",
+    103: "Old account",
     104: "User not in Discord",
     # Minor suspensions
     201: "Minor trolling",
-    203: "Compromised Account",
+    203: "Compromised account",
     # Moderate suspensions
     301: "Major trolling",
     302: "Stealing",
@@ -447,7 +447,7 @@ class Minecraft:
             ret = 0
 
         if self.etc.WLSave(dbRead) != 0:
-            ret = -7
+            ret = -6
         return ret, doSend, targetid, targetname, self.etc.EXPORT_WHITELIST()
 
     def WLNote(self, user, note):
@@ -485,7 +485,7 @@ class Minecraft:
             ret = 0
 
         if self.etc.WLSave(dbRead) != 0:
-            ret = -7
+            ret = -6
         self.etc.EXPORT_WHITELIST()
         return ret
 

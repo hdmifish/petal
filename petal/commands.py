@@ -4135,8 +4135,17 @@ class Commands:
 
         rep = self.minecraft.WLNote(victim[0]["discord"], note)
 
+        errors = {
+            0: "Success",
+            -6: "Failed to write database",
+            -7: "Failed to read database",
+            -8: "Target not found in database"
+        }
+
         if not rep:
             return "{} has been noted: `{}`".format(victim[0]["name"], note)
+        else:
+            return errors.get(rep, "Unknown Error ('{}')".format(rep))
 
     async def spookyclock(self, message):
         """
