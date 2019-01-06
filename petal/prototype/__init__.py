@@ -102,7 +102,7 @@ class CommandRouter:
         # Return a final string of all non-flags with a dict of flags
         return " ".join(exp), flags
 
-    def route(self, command: str, src=None):
+    async def route(self, command: str, src=None):
         """
         Route a command (and the source message) to the correct method of the correct module.
         By this point, the prefix should have been stripped away already, leaving a plaintext command.
@@ -124,9 +124,9 @@ class CommandRouter:
             # Parse it
             text, flags = self.parse(*command_components)
             # And execute it
-            return func(text, **flags, src=src)
+            return await func(text, **flags, src=src)
 
-    def run(self, src):
+    async def run(self, src):
         """
         Given a message, determine whether it is a command;
         If it is, route it accordingly
@@ -136,5 +136,5 @@ class CommandRouter:
         if src.content.startswith(prefix):
             # Message begins with the invocation prefix
             command = src.content[len(prefix) :]
-            return self.route(command, src)
+            return await self.route(command, src)
             # Remove the prefix and route the command
