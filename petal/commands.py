@@ -4108,11 +4108,11 @@ class Commands:
         # separated this for simplicity
         submission = message.content[len(self.config.prefix) + 6 :].strip()
 
-        sub0 = submission.lower().split(" ", 1)
+        sub0 = submission.split(" ", 1)
         # ["username", "rest of the message"]
         if len(sub0) < 2:
             return "WLNote requires a profile identifier and a string"
-        sub1 = sub0[0]  # "username"
+        sub1 = sub0[0].lower()  # "username"
         note = sub0[1]  # "rest of the message"
 
         victim = self.minecraft.WLQuery(sub1)
@@ -4125,7 +4125,7 @@ class Commands:
                 str(len(victim))
             )
 
-        rep = self.minecraft.WLNote(victim[0]["discord"], note)
+        rep = self.minecraft.WLNote(victim[0]["uuid"], note)
 
         errors = {
             0: "Success",
