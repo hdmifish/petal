@@ -123,7 +123,7 @@ class Petal(discord.Client):
                     log.f(str(ban_expiry) + " compared to " + str(epoch))
                     print(flush=True)
                     await self.unban(mainserver, m)
-                    await self.db.update_member(m, {"banned": False})
+                    self.db.update_member(m, {"banned": False})
                     log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
 
                 else:
