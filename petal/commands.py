@@ -4168,7 +4168,7 @@ class Commands:
         How long is it till you have to buy people nerdy tshirts?
         !santaclock
         """
-        td = (dt(2018, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
+        td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return "Christmas already happened.... Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now"
         d = divmod(td, 86400)
