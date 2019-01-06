@@ -27,4 +27,4 @@ class Commands:
         Should be overwritten by modules providing secure functions
         (For example, moderation tools)
         """
-        return True
+        return False

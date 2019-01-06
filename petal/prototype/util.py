@@ -2,6 +2,9 @@ from . import core
 
 
 class CommandsUtil(core.Commands):
+    def authenticate(self, *_):
+        return True
+
     def cmd_echo(self, text, *a, src, **kw):
         print(text)
 

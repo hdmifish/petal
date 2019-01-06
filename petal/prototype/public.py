@@ -2,7 +2,8 @@ from . import core
 
 
 class CommandsPublic(core.Commands):
-    pass
+    def authenticate(self, *_):
+        return True
 
 
 # Keep the actual classname unique from this common identifier
