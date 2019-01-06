@@ -11,6 +11,14 @@ class Commands:
             # Refuse to fetch anything with a dunder
             return getattr(self, "cmd_" + kword, None)
 
+    def get_all(self, *_):
+        full = [
+            getattr(self, attr)
+            for attr in dir(self)
+            if "__" not in attr and attr.startswith("cmd_")
+        ]
+        return full
+
     def authenticate(self, *_):
         """
         Take a Discord message and return True if:
