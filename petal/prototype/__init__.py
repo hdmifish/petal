@@ -120,25 +120,15 @@ class CommandRouter:
             # And execute it
             return func(text, **flags, src=src)
 
-    def run(self, string=None, src=None):
+    def run(self, src):
         """
         Given a message, determine whether it is a command;
         If it is, route it accordingly
         """
-        if not string:
-            # If a string is not provided, a source message MUST be;
-            # Extract a new string from it
-            if not src:
-                # But if no source message is provided, fail
-                raise ValueError(
-                    "CommandRouter.run() must take a string and/or a source Discord message"
-                )
-            else:
-                string = src.content
 
         prefix = self.config.prefix
-        if string.startswith(prefix):
+        if src.content.startswith(prefix):
             # Message begins with the invocation prefix
-            command = string[len(prefix) :]
+            command = src.content[len(prefix) :]
             return self.route(command, src)
             # Remove the prefix and route the command
