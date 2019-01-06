@@ -40,6 +40,12 @@ class CommandRouter:
                 return mod, func
         return None, None
 
+    def get_all(self):
+        full = []
+        for mod in self.commands:
+            full += mod.get_all()
+        return full
+
     def parse(self, command):
         pattern = r"(?<!-)(-\w(?=[^\w])|--\w{2,})( [^\s-]+)?"
         # This regex works beautifully and I hate it deeply

@@ -11,7 +11,7 @@ class Commands:
             # Refuse to fetch anything with a dunder
             return getattr(self, "cmd_" + kword, None)
 
-    def get_all(self, *_):
+    def get_all(self):
         full = [
             getattr(self, attr)
             for attr in dir(self)
