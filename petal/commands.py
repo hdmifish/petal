@@ -4080,13 +4080,8 @@ class Commands:
 
     async def wlnote(self, message):
         """
-        Flags a person to be given a level of operator status
-        Level 1 can: bypass spawn protection
-        Level 2 can: use /clear, /difficulty, /effect, /gamemode, /gamerule, /give, /summon, /setblock and /tp, and can edit command blocks
-        Level 3 can: use /ban, /deop, /whitelist, /kick, and /op
-        Level 4 can: use /stop
-        ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
-        `!wlmod <profile_identifier> <0|1|2|3|4>`
+        Adds a note string to a user profile, viewable via `!WLQuery -v`
+        `!wlnote <profile_identifier> <any pertinent information to save>`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -4115,13 +4110,10 @@ class Commands:
 
         sub0 = submission.lower().split(" ", 1)
         # ["username", "rest of the message"]
+        if len(sub0) < 2:
+            return "WLNote requires a profile identifier and a string"
         sub1 = sub0[0]  # "username"
-        try:
-            note = int(sub0[1])  # "rest of the message"
-        except:
-            note = ""
-        if not note:
-            return
+        note = sub0[1]  # "rest of the message"
 
         victim = self.minecraft.WLQuery(sub1)
         if victim == -7:
@@ -4168,7 +4160,7 @@ class Commands:
         How long is it till you have to buy people nerdy tshirts?
         !santaclock
         """
-        td = (dt(2018, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
+        td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return "Christmas already happened.... Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now"
         d = divmod(td, 86400)
