@@ -14,14 +14,14 @@ class CommandsUtil(core.Commands):
         Help text is drawn from the docstring of a command method, which should be formatted into three sections -- Summary, Details, and Syntax -- which are separated by double-newlines.
         The Summary section provides cursory information about a command, and is typically all one needs to understand it.
         The Details section contains more involved information about how the command works, possibly including technical information.
-        The Syntax section describes exactly how the command is invoked.
+        The Syntax section describes exactly how the command should be invoked. Angle brackets indicate a parameter to be filled, square brackets indicate an optional segment, and parentheses indicate choices, separated by pipes.
 
         Syntax: `{p}help [<command>]`
         """
 
         mod, cmd = self.router.find_command(string)
         if not cmd:
-            # TODO: Iso, put your defualt helptext here; Didnt copy it over in case you wanted it changed
+            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
             pass
         elif cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
