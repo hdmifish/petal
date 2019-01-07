@@ -7,7 +7,7 @@ class CommandsUtil(core.Commands):
     def authenticate(self, *_):
         return True
 
-    async def cmd_help(self, string, src, *_, **__):
+    async def cmd_help(self, string, src, **_):
         """
         Print information regarding command usage.
 
