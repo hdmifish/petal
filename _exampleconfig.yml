@@ -15,6 +15,16 @@ selfbot: false
 # Next up Petal is going to need to know your ID.
 owner: '0'
 
+# For this option, you may (or may not) supply a list of server admin IDs.
+# These are the people who will be able to use very dangerous commands.
+server_admins:
+- '0'
+
+# For this option, you may (or may not) supply a list of maintainer IDs.
+# These are the people who control the bot at the top level. Probably just yourself.
+bot_maintainers:
+- '0'
+
 # ---BASIC PETAL CONFIGURATION--- #
 
 # How often do you want the config to be updated automatically? (300 = 5 Minutes, 600 = 10, 3600 = 1 hour, 86400 = 1 day)

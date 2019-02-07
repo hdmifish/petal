@@ -3,7 +3,12 @@ import itertools
 import re
 import sys
 
-from petal.grasslands import Peacock
+import facebook
+import praw
+import pytumblr
+import twitter
+
+from petal.grasslands import Giraffe, Octopus, Peacock
 
 
 # List of modules to load; All Command-providing modules should be included (NOT "core").
@@ -40,10 +45,87 @@ class CommandRouter:
             else:
                 self.log.warn("FAILED to load {} commands.".format(MODULE))
 
+        # Execute legacy initialization
+        # TODO: Move this elsewhere
+
+        self.osuKey = self.config.get("osu")
+        if self.osuKey is not None:
+            self.o = Octopus(self.osuKey)
+
+        else:
+            self.log.warn("No OSU! key found.")
+
+        self.imgurKey = self.config.get("imgur")
+        if self.imgurKey is not None:
+            self.i = Giraffe(self.imgurKey)
+        else:
+            self.log.warn("No imgur key found.")
+        if self.config.get("reddit") is not None:
+            reddit = self.config.get("reddit")
+            self.r = praw.Reddit(
+                client_id=reddit["clientID"],
+                client_secret=reddit["clientSecret"],
+                user_agent=reddit["userAgent"],
+                username=reddit["username"],
+                password=reddit["password"],
+            )
+            if self.r.read_only:
+                self.log.warn(
+                    "This account is in read only mode. "
+                    + "You may have done something wrong. "
+                    + "This will disable reddit functionality."
+                )
+                self.r = None
+                return
+            else:
+                self.log.ready("Reddit support enabled!")
+        else:
+            self.log.warn("No Reddit keys found")
+
+        if self.config.get("twitter") is not None:
+            tweet = self.config.get("twitter")
+            self.t = twitter.Api(
+                consumer_key=tweet["consumerKey"],
+                consumer_secret=tweet["consumerSecret"],
+                access_token_key=tweet["accessToken"],
+                access_token_secret=tweet["accessTokenSecret"],
+                tweet_mode="extended",
+            )
+            # tweet te
+            if "id" not in str(self.t.VerifyCredentials()):
+                self.log.warn(
+                    "Your Twitter authentication is invalid, "
+                    + " Twitter posting will not work"
+                )
+                self.t = None
+                return
+        else:
+            self.log.warn("No Twitter keys found.")
+
+        if self.config.get("facebook") is not None:
+            fb = self.config.get("facebook")
+            self.fb = facebook.GraphAPI(
+                access_token=fb["graphAPIAccessToken"], version=fb["version"]
+            )
+
+        if self.config.get("tumblr") is not None:
+            tumble = self.config.get("tumblr")
+            self.tb = pytumblr.TumblrRestClient(
+                tumble["consumerKey"],
+                tumble["consumerSecret"],
+                tumble["oauthToken"],
+                tumble["oauthTokenSecret"],
+            )
+            self.log.ready("Tumblr support Enabled!")
+        else:
+            self.log.warn("No Tumblr keys found.")
+        self.log.ready("Command Module Loaded!")
+
     def find_command(self, kword):
         """
         Find and return a class method whose name matches kword
         """
+        # TODO: Allow search fallthrough on auth failure.
         for mod in self.engines:
             func = mod.get_command(kword)
             if not func:
@@ -147,6 +229,8 @@ class CommandRouter:
         Given a message, determine whether it is a command;
         If it is, route it accordingly.
         """
+        if src.author == self.client.user:
+            return
         prefix = self.config.prefix
         if src.content.startswith(prefix):
             # Message begins with the invocation prefix

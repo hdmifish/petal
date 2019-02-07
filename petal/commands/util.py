@@ -21,7 +21,6 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}help [<command>]`
         """
-
         mod, cmd = self.router.find_command(string)
         if not cmd:
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
@@ -53,6 +52,16 @@ class CommandsUtil(core.Commands):
             await self.client.embed(src.channel, em)
         else:
             return "No help for `{}` available".format(cmd.__name__)
+
+    async def cmd_commands(self, *_):
+        """
+        List all commands
+        """
+        formattedList = ""
+        for f in self.router.get_all():
+            formattedList += str(f) + "\n"
+
+        return "```\n" + formattedList + "```"
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer

@@ -1,11 +1,13 @@
 colorama
 discord
+facebook
 facebook-sdk
 praw
 pymongo
 PyTumblr
 requests
 tweepy
+twitter
 pytz
 pyNaCL
 python-twitter

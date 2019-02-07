@@ -5,8 +5,8 @@ from . import core
 
 
 class CommandsAdmin(core.Commands):
-    def authenticate(self, *_):
-        return False
+    def authenticate(self, src):
+        return src.author.id in (self.config.get("server_admins") or [])
 
 
 # Keep the actual classname unique from this common identifier
