@@ -289,6 +289,10 @@ class Commands:
         self.log.f("event", "could not find subscription key in your announcement")
         return None, None
 
+
+    ### COMMANDS BEGIN ###
+
+
     async def list_connected_servers(self, message):
         """
         hello
@@ -3426,6 +3430,7 @@ class Commands:
             self.db.update_member(message.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
+    # IMPORTED
     def get_ac(self):
         l = list(self.db.ac.find())
         return l[random.randint(0, len(l) - 1)]["ending"]

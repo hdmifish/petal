@@ -3,8 +3,12 @@ import itertools
 import re
 import sys
 
-LoadModules = ["mod", "public", "util"]
-# List of modules to load; All Command-providing modules should be included, except core
+from petal.grasslands import Peacock
+
+
+# List of modules to load; All Command-providing modules should be included (NOT "core").
+# Order of this list is the order in which commands will be searched. First occurrence runs.
+LoadModules = ["admin", "dev", "mod", "listener", "minecraft", "public", "util"]
 
 for module in LoadModules:
     # Import everything in the list above
@@ -17,22 +21,30 @@ class CommandRouter:
     def __init__(self, client, *a, **kw):
         self.client = client
         self.config = client.config
-        self.commands = []
+        self.engines = []
 
+        self.log = Peacock()
+        self.log.info("Loading Command modules...")
+
+        # Load all command engines
         for MODULE in LoadModules:
             # Get the module
+            self.log.info("Loading {}...".format(MODULE))
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
                 # Instantiate its command engine
                 cmod = mod.CommandModule(client, self, *a, **kw)
-                self.commands.append(cmod)
+                self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
+                self.log.info("{} commands loaded.".format(MODULE))
+            else:
+                self.log.warn("FAILED to load {} commands.".format(MODULE))
 
     def find_command(self, kword):
         """
         Find and return a class method whose name matches kword
         """
-        for mod in self.commands:
+        for mod in self.engines:
             func = mod.get_command(kword)
             if not func:
                 continue
@@ -42,11 +54,12 @@ class CommandRouter:
 
     def get_all(self):
         full = []
-        for mod in self.commands:
+        for mod in self.engines:
             full += mod.get_all()
         return full
 
     def parse(self, command):
+        # TODO: Note to self: Remake this with getopt instead. Idiot.
         pattern = r"(?<!-)(-\w(?=[^\w])|--\w{2,})( [^\s-]+)?"
         # This regex works beautifully and I hate it deeply
         flags = {}
@@ -125,7 +138,7 @@ class CommandRouter:
             return "Authentication failure."
         else:
             # Parse it
-            text, flags = self.parse(*command_components)
+            text, flags = self.parse(command_components)
             # And execute it
             return await func(text, **flags, src=src)
 

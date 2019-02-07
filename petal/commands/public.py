@@ -1,3 +1,6 @@
+"""Commands module for PUBLIC COMMANDS.
+Access: Public"""
+
 from . import core
 
 

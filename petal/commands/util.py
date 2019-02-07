@@ -1,3 +1,6 @@
+"""Commands module for BOT-RELATED UTILITIES.
+Access: Public"""
+
 from . import core
 
 import discord

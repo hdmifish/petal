@@ -1,14 +1,14 @@
-"""Commands module for MODERATION UTILITIES.
-Access: Role-based"""
+"""Commands module for MINECRAFT-RELATED UTILITIES.
+Access: Server Ops"""
 
 from . import core
 
 
-class CommandsMod(core.Commands):
+class CommandsMinecraft(core.Commands):
     def authenticate(self, *_):
         return False
 
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
-CommandModule = CommandsMod
+CommandModule = CommandsMinecraft

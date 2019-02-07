@@ -2,16 +2,19 @@ class Commands:
     def __init__(self, client, router, *a, **kw):
         self.client = client
         self.config = client.config
+
         self.router = router
+        self.log = self.router.log
+
         self.args = a  # Save for later
         self.kwargs = kw  # Just in case
 
-    def get_command(self, kword):
+    def get_command(self, kword: str):
         if "__" not in kword:
             # Refuse to fetch anything with a dunder
             return getattr(self, "cmd_" + kword, None)
 
-    def get_all(self):
+    def get_all(self) -> list:
         full = [
             getattr(self, attr)
             for attr in dir(self)
