@@ -110,9 +110,12 @@ class CommandRouter:
         # 'ban badperson666 evilness'
         # Separate the first word from the rest
         command_components = command.split(" ", 1)
-        # ['ban', 'badperson666 evilness']
-        command_word = command_components.pop(0)
-        # 'ban'; ['badperson666 evilness']
+        if len(command_components) > 1:
+            command_word, command_components = command_components
+        else:
+            command_word = command_components[0]
+            command_components = ""
+        # 'ban'; 'badperson666 evilness'
 
         # Find the method
         engine, func = self.find_command(command_word)
@@ -129,9 +132,8 @@ class CommandRouter:
     async def run(self, src):
         """
         Given a message, determine whether it is a command;
-        If it is, route it accordingly
+        If it is, route it accordingly.
         """
-
         prefix = self.config.prefix
         if src.content.startswith(prefix):
             # Message begins with the invocation prefix
