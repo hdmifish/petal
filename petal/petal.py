@@ -19,6 +19,19 @@ from .dbhandler import DBHandler
 log = Peacock()
 
 
+nopogo = """Hey there, {tag}!
+Someone ran this command cause you asked about Pokémon before reading our rules or even the server name....
+Couple things, despite our server name starting with a P and Pokémon also starting with a P. We are not a pokemon go/tcg/switch group. This is a mental health gaming server.
+
+That being said, we do have a #looking-to-play channel where you can meet other people to play PoGo with.
+
+Please do not share friend codes or invite links in other channels besides that one. 
+
+Go ahead and check the PM you got from me, and if you didnt get one. Let someone in the #welcome  channel (the only one you can talk in right now) know. 
+
+Thanks, <@246671230353014784>"""
+
+
 class Petal(discord.Client):
     logLock = False
 
@@ -615,6 +628,15 @@ class Petal(discord.Client):
                     message.channel,
                     "Petal has been configured by staff"
                     + " to not respond to PMs right now",
+                )
+            return
+
+        if content == "p!pokemon":
+            if not message.author == self.user:
+                await self.send_message(
+                    None,
+                    message.channel,
+                    nopogo.format(tag="<@" + str(message.author.id) + ">"),
                 )
             return
 
