@@ -291,6 +291,15 @@ commands:
     perm: '0'
     com: "it's a no from me,  but just in case you're having a bad day: https://i.imgur.com/SMu3O65.gifv"
 
+# Print the value in this map whenever someone says the key (case insensitive).
+# This will be run through some substitutions, using Python str.format(), and
+#     can do some basic attribute retrieval. See the example below (but you may
+#     want to remove it, if your server does actually use Pokemon bots).
+# {user} - The Discord user who said the thing
+# {self} - The Discord user object of the BOT ITSELF
+autoreplies:
+  p!pokemon: "Hey there, {user.mention}!\nIt looks like you tried to use a Pokémon bot before reading our rules or even the server name...\nA couple things: Despite our server name starting with a `P` and Pokémon also starting with a `P`, we are not a pokemon go/tcg/switch group. This is a mental health gaming server.\n\nThat being said, we do have a #looking-to-play channel where you can meet other people to play PoGo with.\n\nPlease do not share friend codes or invite links in other channels besides that one. \n\nGo ahead and check the PM you got from my bot friend <@168518865477697539>. If you didn't get one, let someone in the #welcome channel (the only one you can talk in right now) know. \n\nThanks, {self.mention}"
+
 calmGallery:
 - author: isometricramen
   content: http://i.imgur.com/olVyCIh.gif

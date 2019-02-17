@@ -603,7 +603,7 @@ class Petal(discord.Client):
                 await self.send_message(
                     None,
                     message.channel,
-                    "Something went wrong will granting"
+                    "Something went wrong with granting"
                     + " your role. Pm a member of staff "
                     + str(e),
                 )
@@ -616,6 +616,16 @@ class Petal(discord.Client):
                     "Petal has been configured by staff"
                     + " to not respond to PMs right now",
                 )
+            return
+
+        replies = self.config.get("autoreplies") or {}
+        if content in replies:
+            if not message.author == self.user:
+                reply = replies.get(content, "").format(
+                    user=message.author, self=self.user
+                )
+                if reply:
+                    await self.send_message(None, message.channel, reply)
             return
 
         if not content.startswith(self.config.prefix):
