@@ -207,6 +207,37 @@ class CommandRouter:
         """
         args = cline.copy()
         opts = {}
+
+        # Loop through given arguments
+        for i, arg in enumerate(args.copy()):
+            # Find args that begin with a dash
+            if arg.startswith("-"):
+                # This arg is an option key
+                key = arg.lstrip("-")
+
+                if "=" in key:
+                    # A specific value was given
+                    key, val = key.split("=", 1)
+                else:
+                    # Unspecified value defaults to generic True
+                    val = True
+
+                if arg.startswith("--"):
+                    # This arg is a long opt; The whole word is one key
+                    opts[key] = val
+                else:
+                    # This is a short opt cluster; Each letter is a key
+                    for char in key:
+                        opts[char] = True
+                    opts[key[-1]] = val
+
+                # Replace processed options with a placeholder
+                args[i] = None
+
+        # Remove all placeholders now that position no longer matters
+        while None in args:
+            args.remove(None)
+
         return args, opts
 
     async def route(self, command: str, src=None):
