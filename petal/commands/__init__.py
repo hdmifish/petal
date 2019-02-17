@@ -1,6 +1,7 @@
 import importlib
 import itertools
 import re
+import shlex
 import sys
 
 import facebook
@@ -197,32 +198,48 @@ class CommandRouter:
         # Return a final string of all non-flags with a dict of flags
         return " ".join(exp), flags
 
+    def parse2(self, cline: list) -> (list, dict):
+        """Replacement of parse() above.
+        $cline is a list of strings. Figure out which strings, if any, are meant
+            to be options/flags. If an option has a related value, add it to the
+            options dict with the value as its value. Otherwise, do the same but
+            with True instead. Return what args remain with the options dict.
+        """
+        args = cline.copy()
+        opts = {}
+        return args, opts
+
     async def route(self, command: str, src=None):
         """
         Route a command (and the source message) to the correct method of the correct module.
         By this point, the prefix should have been stripped away already, leaving a plaintext command.
         """
-        # 'ban badperson666 evilness'
-        # Separate the first word from the rest
-        command_components = command.split(" ", 1)
-        if len(command_components) > 1:
-            command_word, command_components = command_components
-        else:
-            command_word = command_components[0]
-            command_components = ""
-        # 'ban'; 'badperson666 evilness'
+        # # 'ban badperson666 evilness'
+        # # Separate the first word from the rest
+        # command_components = command.split(" ", 1)
+        # if len(command_components) > 1:
+        #     command_word, command_components = command_components
+        # else:
+        #     command_word = command_components[0]
+        #     command_components = ""
+        # # 'ban'; 'badperson666 evilness'
+
+        # Split the full command line into a list of tokens; Each is its own arg
+        cline = list(shlex.shlex(command, posix=True, punctuation_chars=True))
+        # Extract the first word, the command itself
+        cword = cline.pop(0)
 
         # Find the method
-        engine, func = self.find_command(command_word)
+        engine, func = self.find_command(cword)
         if not func:
-            return "Command '{}' not found.".format(command_word)
+            return "Command '{}' not found.".format(cword)
         elif not engine.authenticate(src):
             return "Authentication failure."
         else:
             # Parse it
-            text, flags = self.parse(command_components)
+            args, opts = self.parse2(cline)
             # And execute it
-            return await func(text, **flags, src=src)
+            return await func(args=args, **opts, src=src)
 
     async def run(self, src):
         """

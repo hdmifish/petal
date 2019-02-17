@@ -22,12 +22,15 @@ class CommandsMod(core.Commands):
             else:
                 return False
 
-    async def cmd_kick(self, message, src, *_):
+    async def cmd_kick(self, args, src, **_):
         """
         Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
 
         {p}kick <user tag/id>
         """
+        if not args:
+            return
+
         logChannel = src.server.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
@@ -50,7 +53,7 @@ class CommandsMod(core.Commands):
 
         else:
 
-            userToBan = self.get_member(src, self.separate(message)[0])
+            userToBan = self.get_member(src, args[0])
             if userToBan is None:
                 return "Could not get user with that id"
 
@@ -107,13 +110,16 @@ class CommandsMod(core.Commands):
                     + ") was successfully kicked"
                 )
 
-    async def cmd_ban(self, message, src, *_):
+    async def cmd_ban(self, args, src, **_):
         """
         Bans a user permenantly. Temp ban coming when member module works.
 
         {p}ban <user tag/id>
         """
-        logChannel = message.server.get_channel(self.config.get("logChannel"))
+        if not args:
+            return
+
+        logChannel = src.server.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -134,7 +140,7 @@ class CommandsMod(core.Commands):
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.get_member(src, self.separate(message)[0])
+        userToBan = self.get_member(src, args[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -214,12 +220,14 @@ class CommandsMod(core.Commands):
                 #     )
                 #     return "Error occurred trying to generate webhook URI"
 
-    async def cmd_tempban(self, message, src, *_):
+    async def cmd_tempban(self, args, src, **_):
         """
         Temporarily bans a user
 
         {p}tempban <user tag/id>
         """
+        if not args:
+            return
 
         logChannel = src.server.get_channel(self.config.get("logChannel"))
         if logChannel is None:
@@ -251,7 +259,7 @@ class CommandsMod(core.Commands):
         if msg2 is None:
             return "Timed out while waiting for input"
 
-        userToBan = self.get_member(src, self.separate(message)[0])
+        userToBan = self.get_member(src, args[0])
         if userToBan is None:
             return "Could not get user with that id"
 
@@ -305,13 +313,16 @@ class CommandsMod(core.Commands):
                     + str(dt.utcnow() + timedelta(days=int(msg2.content)))[:-7]
                 )
 
-    async def cmd_warn(self, message, src, *_):
+    async def cmd_warn(self, args, src, **_):
         """
         Sends an official, logged, warning to a user.
 
         {p}warn <user tag/id>
         """
-        logChannel = message.server.get_channel(self.config.get("logChannel"))
+        if not args:
+            return
+
+        logChannel = src.server.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -330,7 +341,7 @@ class CommandsMod(core.Commands):
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.get_member(src, self.separate(message)[0])
+        userToWarn = self.get_member(src, args[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -378,12 +389,15 @@ class CommandsMod(core.Commands):
                     + ") was successfully warned"
                 )
 
-    async def cmd_mute(self, message, src, *_):
+    async def cmd_mute(self, args, src, **_):
         """
         Toggles the mute tag on a user if your server supports that role.
 
         {p}mute <user tag/ id>
         """
+        if not args:
+            return
+
         muteRole = discord.utils.get(src.server.roles, name="mute")
         if muteRole is None:
             return (
@@ -410,7 +424,7 @@ class CommandsMod(core.Commands):
         if msg is None:
             return "Timed out while waiting for input"
 
-        userToWarn = self.get_member(src, self.separate(message)[0])
+        userToWarn = self.get_member(src, args[0])
         if userToWarn is None:
             return "Could not get user with that id"
 
@@ -481,13 +495,12 @@ class CommandsMod(core.Commands):
                     + ") was successfully {}d".format(muteswitch)
                 )
 
-    async def cmd_purge(self, message, src, *_):
+    async def cmd_purge(self, args, src, **_):
         """
         purges up to 200 messages in the current channel
 
         Syntax: {p}purge <number of messages to delete>
         """
-        args = self.separate(message)
         if len(args) < 1:
             return "Please provide a number between 1 and 200"
         try:
@@ -516,7 +529,7 @@ class CommandsMod(core.Commands):
         try:
             # petal.logLock = True
             await self.client.purge_from(
-                channel=message.channel, limit=numDelete + 3, check=None
+                channel=src.channel, limit=numDelete + 3, check=None
             )
         except discord.errors.Forbidden:
             return "I don't have enough perms to purge messages"

@@ -8,7 +8,7 @@ class CommandsMaintenance(core.Commands):
     def authenticate(self, src):
         return src.author.id in (self.config.get("bot_maintainers") or [])
 
-    async def cmd_list_connected_servers(self, __, src, *_):
+    async def cmd_list_connected_servers(self, src, **_):
         """
         hello
         """
@@ -17,7 +17,7 @@ class CommandsMaintenance(core.Commands):
                 src.author, src.channel, s.name + " " + s.id
             )
 
-    async def cmd_hello(self, *_):
+    async def cmd_hello(self, **_):
         """
         This is a test, its a test
         """

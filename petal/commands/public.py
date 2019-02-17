@@ -12,7 +12,7 @@ class CommandsPublic(core.Commands):
     def authenticate(self, *_):
         return True
 
-    async def cmd_hello(self, *_):
+    async def cmd_hello(self, **_):
         """
         This is a test, its a test
         """
@@ -20,19 +20,18 @@ class CommandsPublic(core.Commands):
         # Fix by allowing fallthrough on auth failure in commands.__init__.py. Later.
         return "Hey there!"
 
-    async def cmd_choose(self, message, *_):
+    async def cmd_choose(self, args, **_):
         """
         Choose a random option from a list, separated by |
 
         Syntax: `{p}choose foo | bar`
         """
-        args = self.separate(message)
         response = "From what you gave me, I believe `{}` is the best choice".format(
             args[random.randint(0, len(args) - 1)]
         )
         return response
 
-    async def cmd_freehug(self, message, src, *_):
+    async def cmd_freehug(self, args, src, **_):
         """
         Request a free hug from a hug donor
 
@@ -42,7 +41,6 @@ class CommandsPublic(core.Commands):
         '{p}freehug status' - If you're a donor, see how many requests you have recieved
         '{p}freehug' - requests a hug
         """
-        args = self.separate(message)
 
         if args[0] == "":
             valid = []
@@ -127,13 +125,12 @@ class CommandsPublic(core.Commands):
                 self.config.save()
                 return "You have been removed from the donor list."
 
-    async def cmd_sub(self, message, *_):
+    async def cmd_sub(self, args, **_):
         """
         Returns a random image from a given subreddit.
 
         Syntax: '{p}sub <subreddit>'
         """
-        args = self.separate(message)
         sr = args[0] or "cats"
         # if force is not None:
         #     sr = force
@@ -165,13 +162,12 @@ class CommandsPublic(core.Commands):
         else:
             return ob.link
 
-    async def cmd_void(self, message, src, *_):
+    async def cmd_void(self, args, src, **_):
         """
         >void grabs a random item from the void and displays/prints it.
         >void <link or text message> sends to void forever
         """
-        args = self.separate(message)
-        if args[0] == "":
+        if not args:
             response = self.client.db.get_void()
             author = response["author"]
             num = response["number"]
@@ -194,7 +190,9 @@ class CommandsPublic(core.Commands):
                 )
                 return response
         else:
-            count = self.client.db.save_void(args[0], src.author.name, src.author.id)
+            count = self.client.db.save_void(
+                src.split(" ", 1)[1], src.author.name, src.author.id
+            )
 
             if count is not None:
                 return "Added item number " + str(count) + " to the void"

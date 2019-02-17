@@ -10,7 +10,7 @@ class CommandsUtil(core.Commands):
     def authenticate(self, *_):
         return True
 
-    async def cmd_help(self, string, src, **_):
+    async def cmd_help(self, args, src, **_):
         """
         Print information regarding command usage.
 
@@ -21,11 +21,12 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}help [<command>]`
         """
-        mod, cmd = self.router.find_command(string)
-        if not cmd:
+        if not args:
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
-            pass
-        elif cmd.__doc__:
+            return "`<Default helptext goes here>`\n`#BlameIso`"
+
+        mod, cmd = self.router.find_command(args[0])
+        if cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)
             # Split the docstring up by double-newlines
@@ -53,7 +54,7 @@ class CommandsUtil(core.Commands):
         else:
             return "No help for `{}` available".format(cmd.__name__)
 
-    async def cmd_commands(self, *_):
+    async def cmd_commands(self, **_):
         """
         List all commands
         """

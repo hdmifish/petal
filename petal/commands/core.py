@@ -39,9 +39,9 @@ class Commands:
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
-    def separate(self, string):
-        # Multiple arguments are expected to have been passed. Split them to a list.
-        return [i.strip() for i in string.split("|")]
+    # def separate(self, string):
+    #     # Multiple arguments are expected to have been passed. Split them to a list.
+    #     return [i.strip() for i in string.split("|")]
 
     def get_member(self, message, member):
         if isinstance(message, discord.Server):
