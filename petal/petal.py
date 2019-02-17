@@ -603,7 +603,7 @@ class Petal(discord.Client):
                 await self.send_message(
                     None,
                     message.channel,
-                    "Something went wrong will granting"
+                    "Something went wrong with granting"
                     + " your role. Pm a member of staff "
                     + str(e),
                 )
