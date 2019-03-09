@@ -209,7 +209,7 @@ class CommandRouter:
         opts = {}
 
         # Loop through given arguments
-        for i, arg in enumerate(args.copy()):
+        for i, arg in enumerate(args):
             # Find args that begin with a dash
             if arg.startswith("-"):
                 # This arg is an option key
