@@ -69,10 +69,8 @@ To download petal without creating a new directory:
 `sudo git clone https://github.com/hdmifish/petal.git`
 
 If you want to customize where petal will go:
-1. `mkdir your_directory_name`
-2. `cd your_directory_name`
-3. `git clone https://github.com/hdmifish/petal.git .` (the dot is important)
-4. `ls`
+1. `git clone https://github.com/hdmifish/petal.git your_directory_name` (replace your_direcotry_name with the directory of your choosing)
+2. `ls`
 
 When you run `ls` you should see something like this:
 ![What it "should" look like](https://i.imgur.com/Y9wICtz.png)
