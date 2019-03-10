@@ -131,7 +131,7 @@ class CommandsPublic(core.Commands):
 
         Syntax: '{p}sub <subreddit>'
         """
-        sr = args[0] or "cats"
+        sr = args[0] if args else "cats"
         # if force is not None:
         #     sr = force
         try:
