@@ -3599,6 +3599,7 @@ class Commands:
             )
             return "Thanks! you are now entered in the giveaway"
 
+    # IMPORTED
     async def wlme(self, message):
         """
         Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
@@ -3686,6 +3687,7 @@ class Commands:
         else:
             return "Nondescript Error ({})".format(reply)
 
+    # IMPORTED
     async def wl(self, message):
         """
         Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
@@ -3760,6 +3762,7 @@ class Commands:
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
+    # IMPORTED
     async def wlquery(self, message):
         """
         Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
@@ -3863,6 +3866,7 @@ class Commands:
             await self.client.edit_message(message=qout, new_content=oput)
             # return oput
 
+    # IMPORTED
     async def wlrefresh(self, message):
         """
         Force an immediate rebuild of both the PlayerDB and the Whitelist itself
@@ -3896,6 +3900,7 @@ class Commands:
 
         return refstat[refreshReturn]
 
+    # IMPORTED
     async def wlgone(self, message):
         """
         Checks the WL database for any users whose Discord ID is that of someone who has left the server
@@ -3943,6 +3948,7 @@ class Commands:
         oput = oput + "----({})----".format(leftnum)
         return oput
 
+    # IMPORTED
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
@@ -4031,6 +4037,7 @@ class Commands:
 
         return oput
 
+    # IMPORTED
     async def wlmod(self, message):
         """
         Flags a person to be given a level of operator status
@@ -4097,6 +4104,7 @@ class Commands:
             victim[0]["name"], level, "`, `".join([str(term) for term in rep])
         )
 
+    # IMPORTED
     async def wlnote(self, message):
         """
         Flags a person to be given a level of operator status

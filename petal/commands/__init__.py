@@ -42,7 +42,7 @@ class CommandRouter:
                 cmod = mod.CommandModule(client, self, *a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
-                self.log.info("{} commands loaded.".format(MODULE))
+                self.log.info("{} commands loaded.".format(MODULE.capitalize()))
             else:
                 self.log.warn("FAILED to load {} commands.".format(MODULE))
 

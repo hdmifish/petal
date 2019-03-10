@@ -177,7 +177,7 @@ class Petal(discord.Client):
             log.warn(
                 "No dbconf configuration in config.yml," + "motd features are disabled"
             )
-        await self.change_presence(game=discord.Game(name="with iso"))
+        await self.change_presence(game=discord.Game(name="with cats :3"))
         return
 
     async def send_message(
