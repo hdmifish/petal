@@ -24,9 +24,9 @@ class CommandsMod(core.Commands):
 
     async def cmd_kick(self, args, src, **_):
         """
-        Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
+        Kick a user from a server.
 
-        {p}kick <user tag/id>
+        Syntax: {p}kick <user tag/id>
         """
         if not args:
             return
@@ -112,9 +112,9 @@ class CommandsMod(core.Commands):
 
     async def cmd_ban(self, args, src, **_):
         """
-        Bans a user permenantly. Temp ban coming when member module works.
+        Ban a user permenantly.
 
-        {p}ban <user tag/id>
+        Syntax: {p}ban <user tag/id>
         """
         if not args:
             return
@@ -222,9 +222,9 @@ class CommandsMod(core.Commands):
 
     async def cmd_tempban(self, args, src, **_):
         """
-        Temporarily bans a user
+        Temporarily ban a user.
 
-        {p}tempban <user tag/id>
+        Syntax: {p}tempban <user tag/id>
         """
         if not args:
             return
@@ -315,9 +315,9 @@ class CommandsMod(core.Commands):
 
     async def cmd_warn(self, args, src, **_):
         """
-        Sends an official, logged, warning to a user.
+        Send an official and logged warning to a user.
 
-        {p}warn <user tag/id>
+        Syntax: {p}warn <user tag/id>
         """
         if not args:
             return
@@ -391,9 +391,9 @@ class CommandsMod(core.Commands):
 
     async def cmd_mute(self, args, src, **_):
         """
-        Toggles the mute tag on a user if your server supports that role.
+        Toggle the mute tag on a user if your server supports that role.
 
-        {p}mute <user tag/ id>
+        Syntax: {p}mute <user tag/ id>
         """
         if not args:
             return
@@ -497,7 +497,7 @@ class CommandsMod(core.Commands):
 
     async def cmd_purge(self, args, src, **_):
         """
-        purges up to 200 messages in the current channel
+        Purge up to 200 messages in the current channel.
 
         Syntax: {p}purge <number of messages to delete>
         """

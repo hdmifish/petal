@@ -56,7 +56,7 @@ class CommandsUtil(core.Commands):
 
     async def cmd_commands(self, **_):
         """
-        List all commands
+        List all commands.
         """
         formattedList = ""
         for f in self.router.get_all():

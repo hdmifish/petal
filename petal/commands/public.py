@@ -14,7 +14,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_hello(self, **_):
         """
-        This is a test, its a test
+        Echo.
         """
         # FIXME: Overshadows same command in dev.py.
         # Fix by allowing fallthrough on auth failure in commands.__init__.py. Later.
@@ -22,9 +22,9 @@ class CommandsPublic(core.Commands):
 
     async def cmd_choose(self, args, **_):
         """
-        Choose a random option from a list, separated by |
+        Choose a random option from a list
 
-        Syntax: `{p}choose foo | bar`
+        Syntax: `{p}choose <option> [<option> [<option> [...]]]`
         """
         response = "From what you gave me, I believe `{}` is the best choice".format(
             args[random.randint(0, len(args) - 1)]
@@ -35,13 +35,12 @@ class CommandsPublic(core.Commands):
         """
         Request a free hug from a hug donor
 
-        Syntax: `{p}freehug add | foo` - adds user to donor list
-        '{p}freehug del | foo' - removes user from donor list
-        '{p}freehug donate' - toggles your donor status, your request counter will reset if you un-donate
-        '{p}freehug status' - If you're a donor, see how many requests you have recieved
-        '{p}freehug' - requests a hug
+        Syntax: `{p}freehug` - requests a hug
+        `{p}freehug donate` - toggles your donor status. Your request counter will reset if you opt out.
+        `{p}freehug add <user-id>` - adds user to donor list
+        `{p}freehug del <user-id>` - removes user from donor list
+        `{p}freehug status` - If you're a donor, see how many requests you have recieved
         """
-
         if args[0] == "":
             valid = []
             for m in self.config.hugDonors:
@@ -127,7 +126,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_sub(self, args, **_):
         """
-        Returns a random image from a given subreddit.
+        Return a random image from a given subreddit.
 
         Syntax: '{p}sub <subreddit>'
         """
@@ -164,8 +163,10 @@ class CommandsPublic(core.Commands):
 
     async def cmd_void(self, args, src, **_):
         """
-        >void grabs a random item from the void and displays/prints it.
-        >void <link or text message> sends to void forever
+        Reach into The Void, a bottomless pit of various links and strings.
+
+        Syntax: `{p}void` - Grab a random item from the Void and display/print it.
+        `{p}void <link or text message>` - Drop an item into the Void to be randomly retrieved later.
         """
         if not args:
             response = self.client.db.get_void()

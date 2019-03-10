@@ -10,7 +10,7 @@ class CommandsMaintenance(core.Commands):
 
     async def cmd_list_connected_servers(self, src, **_):
         """
-        hello
+        Return a list of all servers Petal is in.
         """
         for s in self.client.servers:
             await self.client.send_message(
@@ -19,7 +19,7 @@ class CommandsMaintenance(core.Commands):
 
     async def cmd_hello(self, **_):
         """
-        This is a test, its a test
+        Echo.
         """
         return "Hello boss! How's it going?"
 
