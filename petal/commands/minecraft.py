@@ -405,15 +405,20 @@ class CommandsMinecraft(core.Commands):
         """Add a note to a user DB profile.
 
         Notes can be viewed with `{p}wlquery --verbose`.
+        A note **must** be provided in __quotes__. Quotes may be single, double, triple-single, or triple-double.
 
-        Syntax: `{p}wlnote <profile_identifier> <note>`
+        Syntax: `{p}wlnote <profile_identifier> "<note>"`
         """
         failure = self.check(src, 3)
         if failure:
             return failure
 
-        target = args[0]
-        note = src.content.split(" ", 2)[2]
+        if len(args) > 2:
+            return "Only one note can be added to a profile at a time."
+        elif len(args) < 2:
+            return "Provide one profile identifier and one (quoted) note."
+
+        target, note = args
 
         if not note:
             return
