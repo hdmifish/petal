@@ -144,65 +144,8 @@ class CommandRouter:
             full += mod.get_all()
         return full
 
-    def parse(self, command):
-        # TODO: Note to self: Remake this with getopt instead. Idiot.
-        pattern = r"(?<!-)(-\w(?=[^\w])|--\w{2,})( [^\s-]+)?"
-        # This regex works beautifully and I hate it deeply
-        flags = {}
-
-        # Get a list of strings where the --flags are separated out
-        exp = list(
-            [s.strip() if type(s) == str else s for s in re.split(pattern, command)]
-        )
-        # My IDE marks a bunch of fake errors if I dont re-encapsulate this; Ignore it
-
-        # Clean out the list
-        while "" in exp:
-            # Of empties...
-            exp.remove("")
-        while None in exp:
-            # ...and Nones
-            exp.remove(None)
-
-        # Make two iterables, one for the "current" position and one for the "next"
-        base, ahead = itertools.tee(iter(exp))
-        next(ahead)
-
-        for i in range(len(exp)):
-            # Get the next word
-            possible_flag = next(base)
-            try:
-                # Get the **next** next word
-                flag_arg = next(ahead)
-            except StopIteration:
-                # If there isnt one, then if this one is a flag, it is True
-                flag_arg = True
-            if exp[i] == possible_flag and str(possible_flag).startswith("-"):
-                # This word is a flag; Eat it because we pass it separately
-                exp[i] = None
-                if str(flag_arg).startswith("-"):
-                    # The next word is another flag; not an arg of this one
-                    flag_arg = True
-                else:
-                    # The next word is an argument of this flag
-                    try:
-                        # Eat it so it isnt taken by anything else
-                        exp[i + 1] = None
-                    except IndexError:
-                        # Oh it doesnt exist, nvm it doesnt matter
-                        pass
-                # Set the flag in the dict
-                flags[str(possible_flag).lstrip("-")] = flag_arg
-
-        # Now that all that is done, clean out the list again
-        while None in exp:
-            exp.remove(None)
-
-        # Return a final string of all non-flags with a dict of flags
-        return " ".join(exp), flags
-
-    def parse2(self, cline: list) -> (list, dict):
-        """Replacement of parse() above.
+    def parse(self, cline: list) -> (list, dict):
+        """
         $cline is a list of strings. Figure out which strings, if any, are meant
             to be options/flags. If an option has a related value, add it to the
             options dict with the value as its value. Otherwise, do the same but
@@ -262,7 +205,7 @@ class CommandRouter:
             return
         else:
             # Parse it
-            args, opts = self.parse2(cline)
+            args, opts = self.parse(cline)
             # And execute it
             return await func(args=args, **opts, src=src)
 
