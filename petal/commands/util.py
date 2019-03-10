@@ -60,7 +60,7 @@ class CommandsUtil(core.Commands):
         """
         formattedList = ""
         for f in self.router.get_all():
-            formattedList += str(f) + "\n"
+            formattedList += self.config.prefix + f.__name__[4:] + "\n"
 
         return "```\n" + formattedList + "```"
 
