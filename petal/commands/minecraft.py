@@ -65,19 +65,13 @@ class CommandsMinecraft(core.Commands):
             )
 
         submission = args[0]
-        reply, uuid = self.minecraft.WLRequest(
-            submission, src.author.id
-        )  # Send the submission through the new function
+        reply, uuid = self.minecraft.WLRequest(submission, src.author.id)
 
         if reply == 0:
-
-            try:  # For now, just gonna do this just in case
-                self.log.f(
-                    "wl+",
-                    f"{src.author.name}#{src.author.discriminator} ({src.author.id}) creates NEW ENTRY for '{src.content[len(self.config.prefix) + 4:]}'",
-                )
-            except:
-                pass
+            self.log.f(
+                "wl+",
+                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) creates NEW ENTRY for '{src.content[len(self.config.prefix) + 4:]}'",
+            )
 
             wlreq = await self.client.send_message(
                 channel=self.config.mc_channel, message="`<request loading...>`"
@@ -138,13 +132,10 @@ class CommandsMinecraft(core.Commands):
         )
 
         if reply == 0:
-            try:  # For now, just gonna do this just in case
-                self.log.f(
-                    "wl+",
-                    f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
-                )
-            except:
-                pass
+            self.log.f(
+                "wl+",
+                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
+            )
             if doSend:
                 recipientobj = self.client.get_server(
                     self.config.get("mainServer")
@@ -310,50 +301,38 @@ class CommandsMinecraft(core.Commands):
         oput = oput + "----({})----".format(leftnum)
         return oput
 
-    async def cmd_wlsuspend(self, src, **_):
+    async def cmd_wlsuspend(self, args, src, help, h, **_):
         """Flag a person to be removed from the whitelist.
 
-        Syntax: `{p}wlsuspend help`
-        `{p}wlsuspend <profile_identifier> <code>`
+        Syntax: `{p}wlsuspend [OPTIONS] <profile_identifier> <code>`
+
+        Options: `--help`, `-h` :: Return the list of Suspension Codes and stop
         """
         failure = self.check(src, 3)
         if failure:
             return failure
 
-        wordPos = ["true", "on", "yes", "active", "enable"]
-        wordNeg = ["false", "off", "no", "inactive", "disable"]
-        submission = src.content[
-            len(self.config.prefix) + 9 :
-        ].strip()  # separated this for simplicity
-
-        sub0 = submission.lower().split()
-        # ["username", "rest", "of", "the", "message"]
-        sub1 = sub0[0]  # "username"
-        if len(sub0) > 1:
-            sub2 = sub0[1]  # "rest"
-        else:
-            sub2 = ""
-
-        if sub1.lower() == "help":
+        if True in [help, h]:
+            # Command was invoked with --help or -h
             return "Suspension codes:\n" + "\n".join(
                 ["{}: {}".format(k, v) for k, v in self.minecraft.suspend_table.items()]
             )
 
-        victim = self.minecraft.WLQuery(sub1)
-        if victim == -7:
-            return "Could not access database file"
-        if not victim:
-            return "No results"
+        if len(args) != 2:
+            return "No Change: Provide one profile identifier and one code"
 
-        # A far more reasonable argument processor
-        if sub2.isnumeric():
-            interp = int(sub2)
-        elif sub2 in wordPos:
-            interp = True
-        elif sub2 in wordNeg:
-            interp = 0
+        target, code = args
+
+        victim = self.minecraft.WLQuery(target)
+        if victim == -7:
+            return "No Change: Could not access database file"
+        if not victim:
+            return "No Change: Target not found in database"
+
+        if code.isnumeric():
+            interp = int(code)
         else:
-            return "As the great Eddie Izzard once said, 'I'm not sure what you're trying to do...'"
+            return "No Change: Suspension code must be numeric"
 
         rep, wlwin = self.minecraft.WLSuspend(victim, interp)
         codes = {
@@ -370,22 +349,19 @@ class CommandsMinecraft(core.Commands):
         oput = "WLSuspend Results:\n"
         for ln in rep:
             oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
-            try:  # For now, just gonna do this just in case
-                self.log.f(
-                    "wl+",
-                    f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}",
-                )
-            except:
-                pass
+            self.log.f(
+                "wl+",
+                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}",
+            )
         oput = oput + wcode[wlwin]
 
         return oput
 
-    async def cmd_wlmod(self, src, **_):
+    async def cmd_wlmod(self, args, src, **_):
         """Flag a person to be given a level of operator status.
 
         Level 1 can: Bypass spawn protection.
-        Level 2 can: Use `/clear`, `/difficulty`, `/effect`, `/gamemode`, `/gamerule`, `/give`, `/summon`, `/setblock `and `/tp`, and can edit command blocks.
+        Level 2 can: Use `/clear`, `/difficulty`, `/effect`, `/gamemode`, `/gamerule`, `/give`, `/summon`, `/setblock`, and `/tp`, and can edit command blocks.
         Level 3 can: Use `/ban`, `/deop`, `/whitelist`, `/kick`, and `/op`.
         Level 4 can: Use `/stop`.
         (<https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do>)
@@ -396,22 +372,17 @@ class CommandsMinecraft(core.Commands):
         if failure:
             return failure
 
-        # separated this for simplicity
-        submission = src.content[len(self.config.prefix) + 5 :].strip()
-
-        sub0 = submission.lower().split(" ")
-        # ["username", "rest", "of", "the", "message"]
-        sub1 = sub0[0]  # "username"
+        target = args[0]
         try:
-            level = int(sub0[1])  # "rest"
+            level = int(args[1])
         except:
             level = -1
         if not 0 <= level <= 4:
-            return "You need to specify an op level for {} between `0` and `4` D:".format(
-                sub1
+            return "You need to specify an op level for {} between `0` and `4`.".format(
+                target
             )
 
-        victim = self.minecraft.WLQuery(sub1)
+        victim = self.minecraft.WLQuery(target)
         if victim == -7:
             return "Could not access database file."
         elif not victim:
@@ -430,37 +401,30 @@ class CommandsMinecraft(core.Commands):
             victim[0]["name"], level, "`, `".join([str(term) for term in rep])
         )
 
-    async def cmd_wlnote(self, src, **_):
+    async def cmd_wlnote(self, args, src, **_):
         """Add a note to a user DB profile.
 
-        Syntax: `{p}wlnote`
+        Notes can be viewed with `{p}wlquery --verbose`.
+
+        Syntax: `{p}wlnote <profile_identifier> <note>`
         """
         failure = self.check(src, 3)
         if failure:
             return failure
 
-        # separated this for simplicity
-        submission = src.content[len(self.config.prefix) + 6 :].strip()
+        target = args[0]
+        note = src.content.split(" ", 2)[2]
 
-        sub0 = submission.lower().split(" ", 1)
-        # ["username", "rest of the message"]
-        sub1 = sub0[0]  # "username"
-        try:
-            note = int(sub0[1])  # "rest of the message"
-        except:
-            note = ""
         if not note:
             return
 
-        victim = self.minecraft.WLQuery(sub1)
+        victim = self.minecraft.WLQuery(target)
         if victim == -7:
             return "Could not access database file."
         elif not victim:
             return "No valid target found."
         elif len(victim) > 1:
-            return "Ambiguous command: {} possible targets found.".format(
-                str(len(victim))
-            )
+            return "Ambiguous command: {} possible targets found.".format(len(victim))
 
         rep = self.minecraft.WLNote(victim[0]["discord"], note)
 
