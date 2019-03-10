@@ -4,6 +4,8 @@ from petal.dbhandler import m2id
 
 
 class Commands:
+    auth_fail = "This command is implemented incorrectly."
+
     def __init__(self, client, router, *a, **kw):
         self.client = client
         self.config = client.config

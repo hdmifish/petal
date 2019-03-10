@@ -122,18 +122,21 @@ class CommandRouter:
             self.log.warn("No Tumblr keys found.")
         self.log.ready("Command Module Loaded!")
 
-    def find_command(self, kword):
+    def find_command(self, kword, src=None):
         """
-        Find and return a class method whose name matches kword
+        Find and return a class method whose name matches kword.
         """
-        # TODO: Allow search fallthrough on auth failure.
+        denied = ""
         for mod in self.engines:
             func = mod.get_command(kword)
             if not func:
                 continue
             else:
-                return mod, func
-        return None, None
+                if not src or mod.authenticate(src):
+                    return mod, func, False
+                else:
+                    denied = mod.auth_fail
+        return None, None, denied
 
     def get_all(self):
         full = []
@@ -245,27 +248,18 @@ class CommandRouter:
         Route a command (and the source message) to the correct method of the correct module.
         By this point, the prefix should have been stripped away already, leaving a plaintext command.
         """
-        # # 'ban badperson666 evilness'
-        # # Separate the first word from the rest
-        # command_components = command.split(" ", 1)
-        # if len(command_components) > 1:
-        #     command_word, command_components = command_components
-        # else:
-        #     command_word = command_components[0]
-        #     command_components = ""
-        # # 'ban'; 'badperson666 evilness'
-
         # Split the full command line into a list of tokens; Each is its own arg
         cline = list(shlex.shlex(command, posix=True, punctuation_chars=True))
         # Extract the first word, the command itself
         cword = cline.pop(0)
 
         # Find the method
-        engine, func = self.find_command(cword)
-        if not func:
-            return "Command '{}' not found.".format(cword)
-        elif not engine.authenticate(src):
-            return "Authentication failure."
+        engine, func, denied = self.find_command(cword, src)
+        if denied:
+            return "Authentication failure: " + denied
+        elif not func:
+            # return "Command '{}' not found.".format(cword)
+            return
         else:
             # Parse it
             args, opts = self.parse2(cline)

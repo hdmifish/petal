@@ -5,6 +5,8 @@ from . import core
 
 
 class CommandsMinecraft(core.Commands):
+    auth_fail = "This command requires Operator status on the Minecraft server."
+
     def authenticate(self, *_):
         return False
 

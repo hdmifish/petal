@@ -11,6 +11,8 @@ from . import core
 
 
 class CommandsMod(core.Commands):
+    auth_fail = "This command requires the Mod role."
+
     def authenticate(self, src):
         target = discord.utils.get(src.author.server.roles, name="mod")
         if target is None:

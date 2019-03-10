@@ -5,6 +5,8 @@ from . import core
 
 
 class CommandsMaintenance(core.Commands):
+    auth_fail = "This command is whitelisted."
+
     def authenticate(self, src):
         return src.author.id in (self.config.get("bot_maintainers") or [])
 

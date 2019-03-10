@@ -5,6 +5,8 @@ from . import core
 
 
 class CommandsSocial(core.Commands):
+    auth_fail = "This command requires the Social Media role."
+
     def authenticate(self, *_):
         return False
 

@@ -7,6 +7,8 @@ import discord
 
 
 class CommandsUtil(core.Commands):
+    auth_fail = "This command is public. If you are reading this, something went wrong."
+
     def authenticate(self, *_):
         return True
 
@@ -25,7 +27,7 @@ class CommandsUtil(core.Commands):
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
             return "`<Default helptext goes here>`\n`#BlameIso`"
 
-        mod, cmd = self.router.find_command(args[0])
+        mod, cmd, denied = self.router.find_command(args[0], src)
         if cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)

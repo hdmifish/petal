@@ -7,6 +7,8 @@ from . import core
 
 
 class CommandsListener(core.Commands):
+    auth_fail = "This command requires the Listener role."
+
     def authenticate(self, src):
         target = discord.utils.get(src.author.server.roles, name="Listener")
         if target is None:

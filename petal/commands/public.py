@@ -9,6 +9,8 @@ from . import core
 
 
 class CommandsPublic(core.Commands):
+    auth_fail = "This command is public. If you are reading this, something went wrong."
+
     def authenticate(self, *_):
         return True
 
@@ -16,8 +18,6 @@ class CommandsPublic(core.Commands):
         """
         Echo.
         """
-        # FIXME: Overshadows same command in dev.py.
-        # Fix by allowing fallthrough on auth failure in commands.__init__.py. Later.
         return "Hey there!"
 
     async def cmd_choose(self, args, **_):
