@@ -33,7 +33,7 @@ class CommandsUtil(core.Commands):
             doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
 
             summary = doc.pop(0)
-            em = discord.Embed(title=cmd.__name__[4:], description=summary, colour=0x0ACDFF)
+            em = discord.Embed(title=self.config.prefix + cmd.__name__[4:].capitalize(), description=summary, colour=0x0ACDFF)
 
             details = ""
             syntax = ""

@@ -22,7 +22,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_choose(self, args, **_):
         """
-        Choose a random option from a list
+        Choose a random option from a list.
 
         Syntax: `{p}choose <option> [<option> [<option> [...]]]`
         """
@@ -33,7 +33,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_freehug(self, args, src, **_):
         """
-        Request a free hug from a hug donor
+        Request a free hug from a hug donor.
 
         Syntax: `{p}freehug` - requests a hug
         `{p}freehug donate` - toggles your donor status. Your request counter will reset if you opt out.
@@ -126,9 +126,9 @@ class CommandsPublic(core.Commands):
 
     async def cmd_sub(self, args, **_):
         """
-        Return a random image from a given subreddit.
+        Return a random image from a given subreddit. Defaults to /r/cats.
 
-        Syntax: '{p}sub <subreddit>'
+        Syntax: '{p}sub [<subreddit>]'
         """
         sr = args[0] if args else "cats"
         # if force is not None:
@@ -163,7 +163,11 @@ class CommandsPublic(core.Commands):
 
     async def cmd_void(self, args, src, **_):
         """
-        Reach into The Void, a bottomless pit of various links and strings.
+        Reach into the Void, a bottomless pit of various links and strings.
+
+        The Void contains countless entries of all types. Images, Youtube videos, poetry, quips, puns, memes, and best of all, dead links. Anything is possible with the power of the Void.
+
+        *Note that you will be held accountable if you add malicious content or user pings of any type.*
 
         Syntax: `{p}void` - Grab a random item from the Void and display/print it.
         `{p}void <link or text message>` - Drop an item into the Void to be randomly retrieved later.

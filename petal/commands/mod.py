@@ -26,7 +26,7 @@ class CommandsMod(core.Commands):
         """
         Kick a user from a server.
 
-        Syntax: {p}kick <user tag/id>
+        Syntax: `{p}kick <user tag/id>`
         """
         if not args:
             return
@@ -114,7 +114,7 @@ class CommandsMod(core.Commands):
         """
         Ban a user permenantly.
 
-        Syntax: {p}ban <user tag/id>
+        Syntax: `{p}ban <user tag/id>`
         """
         if not args:
             return
@@ -224,7 +224,7 @@ class CommandsMod(core.Commands):
         """
         Temporarily ban a user.
 
-        Syntax: {p}tempban <user tag/id>
+        Syntax: `{p}tempban <user tag/id>`
         """
         if not args:
             return
@@ -317,7 +317,7 @@ class CommandsMod(core.Commands):
         """
         Send an official and logged warning to a user.
 
-        Syntax: {p}warn <user tag/id>
+        Syntax: `{p}warn <user tag/id>`
         """
         if not args:
             return
@@ -393,7 +393,7 @@ class CommandsMod(core.Commands):
         """
         Toggle the mute tag on a user if your server supports that role.
 
-        Syntax: {p}mute <user tag/ id>
+        Syntax: `{p}mute <user tag/ id>`
         """
         if not args:
             return
@@ -499,7 +499,7 @@ class CommandsMod(core.Commands):
         """
         Purge up to 200 messages in the current channel.
 
-        Syntax: {p}purge <number of messages to delete>
+        Syntax: `{p}purge <number of messages to delete>`
         """
         if len(args) < 1:
             return "Please provide a number between 1 and 200"
