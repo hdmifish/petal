@@ -28,7 +28,9 @@ class CommandsUtil(core.Commands):
             return "`<Default helptext goes here>`\n`#BlameIso`"
 
         mod, cmd, denied = self.router.find_command(args[0], src)
-        if cmd.__doc__:
+        if denied:
+            return denied
+        elif cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)
             # Split the docstring up by double-newlines
@@ -66,10 +68,12 @@ class CommandsUtil(core.Commands):
         List all commands.
         """
         formattedList = ""
-        for f in self.router.get_all():
-            formattedList += self.config.prefix + f.__name__[4:] + "\n"
+        cmd = list(set([method.__name__[4:] for method in self.router.get_all()]))
+        cmd.sort()
+        for f in cmd:
+            formattedList += self.config.prefix + f + "\n"
 
-        return "```\n" + formattedList + "```"
+        return "Commands list: ```\n" + formattedList + "```"
 
     async def cmd_argtest(self, args, src, **opts):
         """Display details on how the command was parsed.
