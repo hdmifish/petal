@@ -15,16 +15,12 @@ class CommandsMinecraft(core.Commands):
         self.minecraft = Minecraft(self.client)
 
     def authenticate(self, src):
-        return True #self.minecraft.WLAuthenticate(src, self.config.minecraftCommandOpLevel)
+        # For now, commands in this module authenticate individually.
+        return True
 
-    # TODO: Rewrite all MC commands fully
-
-    async def cmd_wlme(self, args, src, **_):
-        """Submit your Minecraft username to be whitelisted on the community server.
-
-        The whitelist is curated and managed by Petal for convenience, security, and consistency.
-
-        Syntax: `{p}wlme <minecraft_username>`
+    def check(self, src, level):
+        """
+        Check that the MC config is valid, and that the user has clearance.
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -45,6 +41,23 @@ class CommandsMinecraft(core.Commands):
             return (
                 "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
             )
+        if level != -1 and not self.minecraft.WLAuthenticate(src, level):
+            return "Authentication failure: This command requires Minecraft Operator level {}.".format(
+                level
+            )
+
+    # TODO: Rewrite all MC commands fully
+
+    async def cmd_wlme(self, args, src, **_):
+        """Submit your Minecraft username to be whitelisted on the community server.
+
+        The whitelist is curated and managed by Petal for convenience, security, and consistency.
+
+        Syntax: `{p}wlme <minecraft_username>`
+        """
+        failure = self.check(src, -1)
+        if failure:
+            return failure
 
         if not args:
             return "You need to include your Minecraft username, or I will not be able to find you! Like this: `{}wlme Notch` :D".format(
@@ -67,7 +80,7 @@ class CommandsMinecraft(core.Commands):
                 pass
 
             wlreq = await self.client.send_message(
-                channel=mcchan, message="`<request loading...>`"
+                channel=self.config.mc_channel, message="`<request loading...>`"
             )
 
             await self.client.edit_message(
@@ -92,7 +105,7 @@ class CommandsMinecraft(core.Commands):
         elif reply == -2:
             return "That username has already been submitted for whitelisting :o"
         # elif reply == -:
-        # return "Error (No Description Provided)"
+        #     return "Error (No Description Provided)"
         elif reply == -7:
             return "Could not access the database file D:"
         elif reply == -8:
@@ -113,27 +126,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlaccept <profile_identifier>`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 3):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 3)
+        if failure:
+            return failure
 
         # separated this for simplicity
         submission = args[0]
@@ -192,27 +187,9 @@ class CommandsMinecraft(core.Commands):
 
         Options: `--verbose`, `-v` :: Provide more detailed information about the user.
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 2):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 2)
+        if failure:
+            return failure
 
         submission = [arg.lower() for arg in args]
         verbose = True in [verbose, v]
@@ -294,27 +271,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlrefresh`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 2):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 2)
+        if failure:
+            return failure
 
         await self.client.send_typing(src.channel)
         refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
@@ -327,27 +286,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlgone`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 2):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 2)
+        if failure:
+            return failure
 
         uList = self.minecraft.etc.WLDump()
         idList = []
@@ -375,27 +316,9 @@ class CommandsMinecraft(core.Commands):
         Syntax: `{p}wlsuspend help`
         `{p}wlsuspend <profile_identifier> <code>`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 3):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 3)
+        if failure:
+            return failure
 
         wordPos = ["true", "on", "yes", "active", "enable"]
         wordNeg = ["false", "off", "no", "inactive", "disable"]
@@ -469,27 +392,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlmod <profile_identifier> (0|1|2|3|4)`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 4):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 4)
+        if failure:
+            return failure
 
         # separated this for simplicity
         submission = src.content[len(self.config.prefix) + 5 :].strip()
@@ -530,27 +435,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlnote`
         """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if not self.minecraft.WLAuthenticate(src, 4):
-            return "You have insufficient security clearance to do that D:"
+        failure = self.check(src, 3)
+        if failure:
+            return failure
 
         # separated this for simplicity
         submission = src.content[len(self.config.prefix) + 6 :].strip()

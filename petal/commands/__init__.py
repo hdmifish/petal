@@ -1,6 +1,4 @@
 import importlib
-import itertools
-import re
 import shlex
 import sys
 
