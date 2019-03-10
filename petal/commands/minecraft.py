@@ -406,6 +406,7 @@ class CommandsMinecraft(core.Commands):
 
         Notes can be viewed with `{p}wlquery --verbose`.
         A note **must** be provided in __quotes__. Quotes may be single, double, triple-single, or triple-double.
+        Quote characters may be escaped with a backslash (`\\`), or nested within quotes of a different type ("like 'this'", or 'like "this"').
 
         Syntax: `{p}wlnote <profile_identifier> "<note>"`
         """
