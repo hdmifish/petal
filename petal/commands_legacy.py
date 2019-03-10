@@ -4166,6 +4166,7 @@ class Commands:
         else:
             return errors.get(rep, "Unknown Error ('{}')".format(rep))
 
+    # IMPORTED
     async def spookyclock(self, message):
         """
         Be careful, Skeletons are closer than you think
@@ -4182,6 +4183,7 @@ class Commands:
             str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
         )
 
+    # IMPORTED
     async def santaclock(self, message):
         """
         How long is it till you have to buy people nerdy tshirts?

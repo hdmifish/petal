@@ -1,6 +1,7 @@
 """Commands module for PUBLIC COMMANDS.
 Access: Public"""
 
+from datetime import datetime as dt
 import random
 
 import discord
@@ -201,6 +202,36 @@ class CommandsPublic(core.Commands):
 
             if count is not None:
                 return "Added item number " + str(count) + " to the void"
+
+    async def cmd_spookyclock(self, **_):
+        """
+        Be careful, Skeletons are closer than you think...
+        """
+        td = (dt(2019, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
+        if td < 0:
+            return ":ghost: Beware! The skeletons are already here! :ghost:"
+        d = divmod(td, 86400)
+        h = divmod(d[1], 3600)
+        m = divmod(h[1], 60)
+        s = int(m[1])
+        return ":ghost: **Spooky Clock Says:** Skeletons are `{} days, {} hours, {} minutes, and {} seconds` away :ghost:".format(
+            str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
+        )
+
+    async def cmd_santaclock(self, **_):
+        """
+        How long is it till you have to buy people nerdy tshirts?
+        """
+        td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
+        if td < 0:
+            return "Christmas already happened...Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now."
+        d = divmod(td, 86400)
+        h = divmod(d[1], 3600)
+        m = divmod(h[1], 60)
+        s = int(m[1])
+        return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes, and {} seconds` away :christmas_tree:".format(
+            str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
+        )
 
 
 # Keep the actual classname unique from this common identifier
