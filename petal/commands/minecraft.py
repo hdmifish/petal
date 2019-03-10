@@ -24,7 +24,7 @@ class CommandsMinecraft(core.Commands):
 
         The whitelist is curated and managed by Petal for convenience, security, and consistency.
 
-        Syntax: {p}wlme <your_minecraft_username>
+        Syntax: `{p}wlme <minecraft_username>`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -106,12 +106,12 @@ class CommandsMinecraft(core.Commands):
         else:
             return "Nondescript Error ({})".format(reply)
 
-    async def cmd_wl(self, src, **_):
+    async def cmd_wlaccept(self, args, src, **_):
         """Mark a PlayerDB entry as "approved", to be added to the whitelist.
 
         Same methods of specification as {p}WLQuery; See `{p}help wlquery` for more information.
 
-        Syntax: {p}wl <profile_identifier>
+        Syntax: `{p}wlaccept <profile_identifier>`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -136,7 +136,7 @@ class CommandsMinecraft(core.Commands):
             return "You have insufficient security clearance to do that D:"
 
         # separated this for simplicity
-        submission = src.content[len(self.config.prefix) + 2 :].strip()
+        submission = args[0]
         # Send the submission through the function
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
             submission, src.author.id
@@ -182,13 +182,15 @@ class CommandsMinecraft(core.Commands):
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
-    async def cmd_wlquery(self, src, **_):
-        """Takes a string and finds any database entry that references it.
+    async def cmd_wlquery(self, args, src, verbose=False, v=False, **_):
+        """Take a string and finds any database entry that references it.
 
         Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once.
         Special search terms: `pending`, `suspended`
 
-        Syntax: {p}wlquery <search_term>
+        Syntax: `{p}wlquery [OPTIONS] <profile_identifier> [<profile_identifier> [...]]`
+
+        Options: `--verbose`, `-v` :: Provide more detailed information about the user.
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -212,30 +214,29 @@ class CommandsMinecraft(core.Commands):
         if not self.minecraft.WLAuthenticate(src, 2):
             return "You have insufficient security clearance to do that D:"
 
-        # separated this for simplicity
-        submission = src.content[len(self.config.prefix) + 7 :].strip()
-        verbose = "-v" in submission
+        submission = [arg.lower() for arg in args]
+        verbose = True in [verbose, v]
 
-        if "pending" in submission.lower():
+        if "pending" in submission:
             searchres = []
-            noresult = "No requests are currently {}"
+            noresult = "No requests are currently pending."
             pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if not entry["approved"]:
                     searchres.append(entry)
-        elif "suspended" in submission.lower() or "restricted" in submission.lower():
+        elif "suspended" in submission or "restricted" in submission:
             searchres = []
-            noresult = "No users are currently {}"
+            noresult = "No users are currently suspended."
             pList = self.minecraft.etc.WLDump()
             for entry in pList:
                 if entry["suspended"]:
                     searchres.append(entry)
         else:
-            searchres = self.minecraft.WLQuery(submission.replace("-v", ""))
-            noresult = "No database entries matching `{}` found"
+            searchres = self.minecraft.WLQuery(" ".join(submission))
+            noresult = "No database entries matching `{}` found."
 
         if not searchres:
-            return noresult.format(submission.lower().replace("-v", "").strip())
+            return noresult.format(submission)
         else:
             qout = await self.client.send_message(
                 channel=src.channel, message="<query loading...>"
@@ -291,7 +292,7 @@ class CommandsMinecraft(core.Commands):
     async def cmd_wlrefresh(self, src, **_):
         """Force an immediate rebuild of both the PlayerDB and the whitelist itself.
 
-        Syntax: {p}wlrefresh
+        Syntax: `{p}wlrefresh`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -324,7 +325,7 @@ class CommandsMinecraft(core.Commands):
     async def cmd_wlgone(self, src, **_):
         """Check the WL database for any users whose Discord ID is that of someone who has left the server.
 
-        Syntax: {p}wlgone
+        Syntax: `{p}wlgone`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -371,8 +372,8 @@ class CommandsMinecraft(core.Commands):
     async def cmd_wlsuspend(self, src, **_):
         """Flag a person to be removed from the whitelist.
 
-        Syntax: {p}wlsuspend help
-        {p}wlsuspend <bad_person> <code>
+        Syntax: `{p}wlsuspend help`
+        `{p}wlsuspend <profile_identifier> <code>`
         """
         mclists = (
             self.config.get("minecraftDB"),
@@ -460,11 +461,11 @@ class CommandsMinecraft(core.Commands):
     async def cmd_wlmod(self, src, **_):
         """Flag a person to be given a level of operator status.
 
-        Level 1 can: bypass spawn protection
-        Level 2 can: use /clear, /difficulty, /effect, /gamemode, /gamerule, /give, /summon, /setblock and /tp, and can edit command blocks
-        Level 3 can: use /ban, /deop, /whitelist, /kick, and /op
-        Level 4 can: use /stop
-        ( https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do )
+        Level 1 can: Bypass spawn protection.
+        Level 2 can: Use `/clear`, `/difficulty`, `/effect`, `/gamemode`, `/gamerule`, `/give`, `/summon`, `/setblock `and `/tp`, and can edit command blocks.
+        Level 3 can: Use `/ban`, `/deop`, `/whitelist`, `/kick`, and `/op`.
+        Level 4 can: Use `/stop`.
+        (<https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do>)
 
         Syntax: `{p}wlmod <profile_identifier> (0|1|2|3|4)`
         """
@@ -526,6 +527,8 @@ class CommandsMinecraft(core.Commands):
 
     async def cmd_wlnote(self, src, **_):
         """Add a note to a user DB profile.
+
+        Syntax: `{p}wlnote`
         """
         mclists = (
             self.config.get("minecraftDB"),
