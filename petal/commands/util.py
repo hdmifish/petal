@@ -52,7 +52,7 @@ class CommandsUtil(core.Commands):
             em.set_thumbnail(url=self.client.user.avatar_url)
             await self.client.embed(src.channel, em)
         else:
-            return "No help for `{}` available".format(cmd.__name__)
+            return "No help for `{}` available".format(self.config.prefix + cmd.__name__[4:])
 
     async def cmd_commands(self, **_):
         """
@@ -63,6 +63,19 @@ class CommandsUtil(core.Commands):
             formattedList += self.config.prefix + f.__name__[4:] + "\n"
 
         return "```\n" + formattedList + "```"
+
+    async def cmd_argtest(self, args, src, **opts):
+        """Display details on how the command was parsed.
+
+        Used for testing, or personal experimentation to help you to understand options and flags.
+
+        Syntax: `{p}argtest [-<abcd...>=<value>] [--<flag>=<value>]`
+        """
+        print(args, opts, src)
+        out = ["ARGS:", *args, "OPTS:"]
+        for opt, val in opts.items():
+            out.append(str(opt) + "==" + str(val))
+        return "\n".join(out)
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
