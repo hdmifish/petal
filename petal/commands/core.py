@@ -41,9 +41,16 @@ class Commands:
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
-    # def separate(self, string):
-    #     # Multiple arguments are expected to have been passed. Split them to a list.
-    #     return [i.strip() for i in string.split("|")]
+    def check_user_has_role(self, user, role):
+        target = discord.utils.get(user.server.roles, name=role)
+        if target is None:
+            self.log.err("Role '" + role + "' does not exist.")
+            return False
+        else:
+            if target in user.roles:
+                return True
+            else:
+                return False
 
     def get_member(self, message, member):
         if isinstance(message, discord.Server):

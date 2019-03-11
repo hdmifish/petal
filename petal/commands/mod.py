@@ -14,15 +14,7 @@ class CommandsMod(core.Commands):
     auth_fail = "This command requires the Mod role."
 
     def authenticate(self, src):
-        target = discord.utils.get(src.author.server.roles, name="mod")
-        if target is None:
-            self.log.err("Moderator role does not exist")
-            return False
-        else:
-            if target in src.author.roles:
-                return True
-            else:
-                return False
+        return self.check_user_has_role(src.author, "mod")
 
     async def cmd_kick(self, args, src, **_):
         """

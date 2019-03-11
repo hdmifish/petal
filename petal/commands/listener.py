@@ -13,15 +13,7 @@ class CommandsListener(core.Commands):
     auth_fail = "This command requires the Listener role."
 
     def authenticate(self, src):
-        target = discord.utils.get(src.author.server.roles, name="Listener")
-        if target is None:
-            self.log.err("Listener role does not exist")
-            return False
-        else:
-            if target in src.author.roles:
-                return True
-            else:
-                return False
+        return self.check_user_has_role(src.author, "Listener")
 
     async def lpromote(self, message, user=None):
 

@@ -7,8 +7,8 @@ from . import core
 class CommandsSocial(core.Commands):
     auth_fail = "This command requires the Social Media role."
 
-    def authenticate(self, *_):
-        return False
+    def authenticate(self, src):
+        return self.check_user_has_role(src.author, "Social Media")
 
 
 # Keep the actual classname unique from this common identifier
