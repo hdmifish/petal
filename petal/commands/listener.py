@@ -15,17 +15,17 @@ class CommandsListener(core.Commands):
     def authenticate(self, src):
         return self.check_user_has_role(src.author, "Listener")
 
-    async def lpromote(self, message, user=None):
+    async def cmd_lpromote(self, src, user=None, **_):
 
         if user is None:
             await self.client.send_message(
-                message.author, message.channel, "Who would you like to promote?"
+                src.author, src.channel, "Who would you like to promote?"
             )
             response = await self.client.wait_for_message(
-                channel=message.channel, author=message.author, timeout=60
+                channel=src.channel, author=src.author, timeout=60
             )
             response = response.content
-            user = self.get_member(message, response.strip())
+            user = self.get_member(src, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -36,8 +36,8 @@ class CommandsListener(core.Commands):
 
         if user.id in cb:
             if (cb[user.id]["timeout"] - dt.utcnow()).total_seconds() >= 0:
-                if message.author.id not in cb[user.id]["votes"]:
-                    cb[user.id]["votes"][message.author.id] = 1
+                if src.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][src.author.id] = 1
                     return "You have voted to promote, " + user.name
                 else:
                     return "You already voted..."
@@ -52,8 +52,8 @@ class CommandsListener(core.Commands):
                 return "This user is already a Helping Hands..."
             now = dt.utcnow() + timedelta(days=2)
             cb[user.id] = {
-                "votes": {message.author.id: 1},
-                "started_by": message.author.id,
+                "votes": {src.author.id: 1},
+                "started_by": src.author.id,
                 "timeout": now,
                 "server_id": user.server.id,
             }
@@ -66,16 +66,16 @@ class CommandsListener(core.Commands):
                 + "lcancel (not to be confused with smash bros)"
             )
 
-    async def ldemote(self, message, user=None):
+    async def cmd_ldemote(self, src, user=None, **_):
         if user is None:
             await self.client.send_message(
-                message.author, message.channel, "Who would you like to demote?"
+                src.author, src.channel, "Who would you like to demote?"
             )
             response = await self.client.wait_for_message(
-                channel=message.channel, author=message.author, timeout=60
+                channel=src.channel, author=src.author, timeout=60
             )
             response = response.content
-            user = self.get_member(message, response.strip())
+            user = self.get_member(src, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -85,8 +85,8 @@ class CommandsListener(core.Commands):
         cb = self.config.get("choppingBlock")
         if user.id in cb:
             if (cb[user.id]["timeout"] - dt.utcnow()).total_seconds() >= 0:
-                if message.author.id not in cb[user.id]["votes"]:
-                    cb[user.id]["votes"][message.author.id] = -1
+                if src.author.id not in cb[user.id]["votes"]:
+                    cb[user.id]["votes"][src.author.id] = -1
                     return "You have voted to demote, " + user.name
                 else:
                     return "You already voted..."
@@ -103,8 +103,8 @@ class CommandsListener(core.Commands):
                 )
             now = dt.utcnow() + timedelta(days=2)
             cb[user.id] = {
-                "votes": {message.author.id: -1},
-                "started_by": message.author.id,
+                "votes": {src.author.id: -1},
+                "started_by": src.author.id,
                 "timeout": now,
                 "server_id": user.server.id,
             }
@@ -117,7 +117,7 @@ class CommandsListener(core.Commands):
                 + "lcancel (not to be confused with smash bros)"
             )
 
-    async def lvote(self, message):
+    async def cmd_lvote(self, args, src, **_):
         """
         ITs back boooyyyysssss!!!!
         !lvote
@@ -125,41 +125,38 @@ class CommandsListener(core.Commands):
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.check_user_has_role(message.author, "Listener"):
-            return "You must be a Listener to vote on Helping Hands"
-        args = self.clean_input(message.content)
         user = None
         if args[0] != "":
-            user = self.get_member(message, args[0])
+            user = self.get_member(src, args[0])
             if user is None:
                 return "No member with that id..."
 
         while 1:
             await self.client.send_message(
-                message.author, message.channel, "Are we calling to promote or demote?"
+                src.author, src.channel, "Are we calling to promote or demote?"
             )
             response = await self.client.wait_for_message(
-                channel=message.channel, author=message.author, timeout=20
+                channel=src.channel, author=src.author, timeout=20
             )
 
             if response is None:
                 return "You didn't reply so I timed out..."
             response = response.content
             if response.lower() in ["promote", "p"]:
-                response = await self.lpromote(message, user)
+                response = await self.cmd_lpromote(src, user)
                 self.config.save()
                 return response
             elif response.lower() in ["demote", "d"]:
-                response = await self.ldemote(message, user)
+                response = await self.cmd_ldemote(src, user)
                 self.config.save()
                 return response
             else:
                 await self.client.send_message(
-                    message.author, message.channel, "Type promote or type demote [pd]"
+                    src.author, src.channel, "Type [p]romote or type [d]emote."
                 )
                 await asyncio.sleep(1)
 
-    async def lcancel(self, message):
+    async def cmd_lcancel(self, src, **_):
         """
         Cancels all lvotes you started. Does not validate them.
         !lcancel
@@ -168,17 +165,15 @@ class CommandsListener(core.Commands):
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.check_user_has_role(message.author, "Listener"):
-            return "You are not a Listener You cannot use this feature"
         if cb is None:
-            return "lvotes are disabled in config, why are you even running this command...?"
+            return "lvotes are disabled in config."
 
         temp = {}
         for entry in cb:
             try:
-                if cb["started_by"] == message.author.id:
+                if cb["started_by"] == src.author.id:
                     temp[entry] = cb[entry]
-            except KeyError as e:
+            except KeyError:
                 temp[entry] = cb[entry]
 
         for e in temp:
@@ -188,7 +183,7 @@ class CommandsListener(core.Commands):
         self.config.save()
         return "Deleted all lvotes if you had started any"
 
-    async def lvalidate(self, message, user=None):
+    async def cmd_lvalidate(self, src, user=None, **_):
         """
         Ends a vote and promotes/demotes user. Can be used prematurely
         !lvalidate <optional: tagged user>
@@ -198,19 +193,15 @@ class CommandsListener(core.Commands):
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if not self.check_user_has_role(message.author, "Listener"):
-            return "You are not a Listener You cannot use this feature"
         if user is None:
             await self.client.send_message(
-                message.author,
-                message.channel,
-                "Which user would you like to validate?",
+                src.author, src.channel, "Which user would you like to validate?"
             )
             response = await self.client.wait_for_message(
-                channel=message.channel, author=message.author, timeout=60
+                channel=src.channel, author=src.author, timeout=60
             )
             response = response.content
-            user = self.get_member(message, response.strip())
+            user = self.get_member(src, response.strip())
             if response is None:
                 return "Timed out after 1 minute..."
 
@@ -219,10 +210,7 @@ class CommandsListener(core.Commands):
 
         if user.id not in cb:
 
-            return (
-                "That user is not in the list, therefore I can't do anything. Here's a cat though.\n"
-                + await self.cat(message)
-            )
+            return "That user is not in the list, therefore I can't do anything."
 
         else:
             votelist = cb[user.id]["votes"]
@@ -246,12 +234,11 @@ class CommandsListener(core.Commands):
             elif len(votelist) == 2 and score in [-2, 2]:
                 if score == -2:
                     await self.client.remove_roles(
-                        user,
-                        discord.utils.get(message.server.roles, name="Helping Hands"),
+                        user, discord.utils.get(src.server.roles, name="Helping Hands")
                     )
                     try:
                         await self.client.send_message(
-                            message.author,
+                            src.author,
                             user,
                             "Following a vote by the listeners: "
                             "you have been removed from helping hands for now",
@@ -264,12 +251,12 @@ class CommandsListener(core.Commands):
                         return user.name + " has been removed from Helping Hands"
                 else:
                     cb[user.id]["pending"] = True
-                    cb[user.id]["server_id"] = message.server.id
-                    cb[user.id]["channel_id"] = message.channel.id
+                    cb[user.id]["server_id"] = src.server.id
+                    cb[user.id]["channel_id"] = src.channel.id
 
                     try:
-                        mop = await self.client.send_message(
-                            message.author,
+                        await self.client.send_message(
+                            src.author,
                             user,
                             "Following a vote by the listeners: you have been chosen "
                             "to be a Helping Hands! Reply !Laccept or !Lreject",
@@ -295,12 +282,11 @@ class CommandsListener(core.Commands):
 
                 elif avg < -0.85:
                     await self.client.remove_roles(
-                        user,
-                        discord.utils.get(message.server.roles, name="Helping Hands"),
+                        user, discord.utils.get(src.server.roles, name="Helping Hands")
                     )
                     try:
                         await self.client.send_message(
-                            message.author,
+                            src.author,
                             user,
                             "Following a vote by your fellow Helping Handss,"
                             " you have been demoted for the time being.",
@@ -318,7 +304,7 @@ class CommandsListener(core.Commands):
                     cb[user.id]["pending"] = True
                     try:
                         await self.client.send_message(
-                            message.author,
+                            src.author,
                             user,
                             "Following a vote by your fellow members you have been chosen "
                             "to be a Helping Hands! Type !Laccept in any channel. "
@@ -336,7 +322,7 @@ class CommandsListener(core.Commands):
                             " the invite by following the instruction I just sent them"
                         )
 
-    async def laccept(self, message):
+    async def cmd_laccept(self, src, **_):
         """
         If you were voted to be a Helping Hands, running this command will accept the offer. Otherwise, run !Lreject
         !laccept
@@ -345,30 +331,30 @@ class CommandsListener(core.Commands):
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if not message.channel.is_private:
+        if not src.channel.is_private:
             return "You must reply only in PMs with petal. Not in a channel"
-        if message.author.id in cb:
-            if "pending" in cb[message.author.id]:
-                svr = self.client.get_server(cb[message.author.id]["server_id"])
+        if src.author.id in cb:
+            if "pending" in cb[src.author.id]:
+                svr = self.client.get_server(cb[src.author.id]["server_id"])
                 if svr is None:
                     return (
                         "Error fetching server with ID: "
-                        + cb[message.author.id]["server_id"]
+                        + cb[src.author.id]["server_id"]
                         + " ask who promoted you to do it manually"
                     )
-                member = svr.get_member(message.author.id)
+                member = svr.get_member(src.author.id)
                 await self.client.add_roles(
                     member, discord.utils.get(svr.roles, name="Helping Hands")
                 )
 
-                chan = svr.get_channel(cb[message.author.id]["channel_id"])
-                del self.config.doc["choppingBlock"][message.author.id]
+                chan = svr.get_channel(cb[src.author.id]["channel_id"])
+                del self.config.doc["choppingBlock"][src.author.id]
                 self.config.save()
                 if chan is None:
                     return "You will need to tell them you have accepted as I could not notify them"
                 else:
                     await self.client.send_message(
-                        message.author,
+                        src.author,
                         chan,
                         "Just letting y'all know that "
                         + member.name
@@ -379,7 +365,7 @@ class CommandsListener(core.Commands):
             else:
                 return "You don't have a pending invite to join the Helping Hands at this time"
 
-    async def lreject(self, message):
+    async def cmd_lreject(self, src, **_):
         """
         If you were voted to be a Helping Hands, running this command will reject the offer.
         !lreject
@@ -389,31 +375,31 @@ class CommandsListener(core.Commands):
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if message.author.id in cb:
-            if "pending" in cb[message.author.id]:
+        if src.author.id in cb:
+            if "pending" in cb[src.author.id]:
 
-                svr = self.client.get_server(cb[message.author.id]["server_id"])
+                svr = self.client.get_server(cb[src.author.id]["server_id"])
                 if svr is not None:
-                    chan = svr.get_channel(cb[message.author.id]["channel_id"])
+                    chan = svr.get_channel(cb[src.author.id]["channel_id"])
                 else:
                     chan = None
                 if chan is None:
                     return "You will need to tell them you have accepted as I could not notify them"
                 else:
                     await self.client.send_message(
-                        message.author,
+                        src.author,
                         chan,
                         "Just letting y'all know that "
-                        + message.author.name
+                        + src.author.name
                         + " has rejected their role",
                     )
-                del self.config.doc["choppingBlock"][message.author.id]
+                del self.config.doc["choppingBlock"][src.author.id]
                 self.config.save()
                 return "You have rejected to join the helping hands. If this was on accident, let a listener know"
             else:
                 return "You don't have a pending invite to join the Helping Handss at this time"
 
-    async def lshow(self, message):
+    async def cmd_lshow(self, src, **_):
         """
        If you were voted to be a Helping Hands, running this command will reject the offer.
        !lreject
@@ -423,15 +409,12 @@ class CommandsListener(core.Commands):
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
 
-        if not self.check_user_has_role(message.author, "Listener"):
-            return "You are not a Listener. You cannot use this feature"
-
         msg = ""
         for entry in cb:
-            mem = self.get_member(message, entry)
+            mem = self.get_member(src, entry)
             if mem is None:
                 continue
-            starter = self.get_member(message, cb[entry]["started_by"])
+            starter = self.get_member(src, cb[entry]["started_by"])
             if starter is None:
                 continue
             msg += (
