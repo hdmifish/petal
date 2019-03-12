@@ -12,14 +12,23 @@ from petal.grasslands import Giraffe, Octopus, Peacock
 
 
 # List of modules to load; All Command-providing modules should be included (NOT "core").
-# Order of this list is the order in which commands will be searched. First occurrence runs.
-LoadModules = ["admin", "dev", "mod", "listener", "minecraft", "public", "util"]
+# Order of this list is the order in which commands will be searched. First occurrence
+#     the user is permitted to access will be run.
+LoadModules = [
+    "dev",
+    "admin",
+    "mod",
+    "listener",
+    "event",
+    "minecraft",
+    "util",
+    "public",
+    "custom",
+]
 
 for module in LoadModules:
     # Import everything in the list above
     importlib.import_module("." + module, package=__name__)
-
-__all__ = ["CommandRouter"]
 
 
 class CommandRouter:
@@ -37,7 +46,7 @@ class CommandRouter:
         # Load all command engines
         for MODULE in LoadModules:
             # Get the module
-            self.log.info("Loading {}...".format(MODULE))
+            self.log.info("Loading {} commands...".format(MODULE.capitalize()))
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
                 # Instantiate its command engine
@@ -46,7 +55,7 @@ class CommandRouter:
                 setattr(self, MODULE, cmod)
                 self.log.info("{} commands loaded.".format(MODULE.capitalize()))
             else:
-                self.log.warn("FAILED to load {} commands.".format(MODULE))
+                self.log.warn("FAILED to load {} commands.".format(MODULE.capitalize()))
 
         # Execute legacy initialization
         # TODO: Move this elsewhere
