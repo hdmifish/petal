@@ -481,6 +481,7 @@ class Commands:
 
     #   return self.cb.ask(self.remove_prefix(message.content))
 
+    # IMPORTED
     async def osu(self, message):
         """
         Gets information for an osu player
@@ -3224,6 +3225,7 @@ class Commands:
 
         return "Heres what votes are goin on: \n" + msg
 
+    # IMPORTED
     async def setosu(self, message):
         """
         Sets a users preferred osu account

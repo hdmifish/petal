@@ -9,6 +9,7 @@ class Commands:
     def __init__(self, client, router, *a, **kw):
         self.client = client
         self.config = client.config
+        self.db = client.db
 
         self.router = router
         self.log = self.router.log

@@ -1,9 +1,9 @@
 """Commands module for BOT-RELATED UTILITIES.
 Access: Public"""
 
-from . import core
-
 import discord
+
+from . import core
 
 
 class CommandsUtil(core.Commands):
@@ -74,6 +74,39 @@ class CommandsUtil(core.Commands):
             formattedList += self.config.prefix + f + "\n"
 
         return "Commands list: ```\n" + formattedList + "```"
+
+    async def cmd_statsfornerds(self, src, **_):
+        """
+        Displays stats for nerds
+        !statsfornerds
+        """
+        truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
+
+        em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
+        em.add_field(name="Version", value=self.router.version)
+        em.add_field(name="Uptime", value=self.router.get_uptime())
+        # em.add_field(name="Void Count", value=str(self.db.void.count()))
+        em.add_field(name="Servers", value=str(len(self.client.servers)))
+        em.add_field(
+            name="Total Number of Commands run",
+            value=str(self.config.get("stats")["comCount"]),
+        )
+        em.add_field(name="Average Ping", value=str(truedelta))
+        mc = sum(1 for _ in self.client.get_all_members())
+        em.add_field(name="Total Members", value=str(mc))
+        role = discord.utils.get(
+            self.client.get_server(self.config.get("mainServer")).roles,
+            name=self.config.get("mainRole"),
+        )
+        c = 0
+        if role is not None:
+            for m in self.client.get_all_members():
+
+                if role in m.roles:
+                    c += 1
+            em.add_field(name="Total Validated Members", value=str(c))
+
+        await self.client.embed(src.channel, em)
 
     async def cmd_argtest(self, args, src, **opts):
         """Display details on how the command was parsed.

@@ -32,6 +32,78 @@ class CommandsPublic(core.Commands):
         )
         return response
 
+    async def cmd_osu(self, args, src, **_):
+        """
+        Display information about an Osu player.
+
+        A username to search may be provided to this command. If no username is provided, the command will try to display your profile instead. If you have not provided your username, your Discord username will be used.
+        Your Osu username may be provided with `{p}setosu`.
+
+        Syntax: `{p}osu [<username>]`
+        """
+        if not self.router.osu:
+            return "Osu Support is not configured."
+        if not args:
+            # No username specified; Print info for invoker
+            if self.db.useDB:
+                # Check whether the user has provided a specific name
+                username = self.db.get_attribute(src.author, "osu") or src.author.name
+            else:
+                # Otherwise, try their Discord username
+                username = src.author.name
+
+            user = self.router.osu.get_user(username)
+
+            if user is None:
+                return "You have not set an Osu username, and no data was found under your Discord username."
+        else:
+            user = self.router.osu.get_user(args[0])
+            if user is None:
+                return "No user found with Osu! name: " + args[0]
+
+        em = discord.Embed(
+            title=user.name,
+            description="https://osu.ppy.sh/u/{}".format(user.id),
+            colour=0x0ACDFF,
+        )
+
+        em.set_author(name="Osu Data", icon_url=self.client.user.avatar_url)
+        em.set_thumbnail(url="http://a.ppy.sh/" + user.id)
+        em.add_field(name="Maps Played", value="{:,}".format(int(user.playcount)))
+        em.add_field(name="Total Score", value="{:,}".format(int(user.total_score)))
+        em.add_field(name="Level", value=str(round(float(user.level), 2)), inline=False)
+        em.add_field(name="Accuracy", value=str(round(float(user.accuracy), 2)))
+        em.add_field(name="PP Rank", value="{:,}".format(int(user.rank)), inline=False)
+        em.add_field(
+            name="Local Rank ({})".format(user.country),
+            value="{:,}".format(int(user.country_rank)),
+        )
+        await self.client.embed(src.channel, embedded=em)
+        return None
+
+    async def setosu(self, args, src, **_):
+        """
+        Sets a users preferred osu account
+        !setosu <name>
+        """
+        osu = args[0] if args else src.author.name
+
+        if not self.db.useDB:
+            return (
+                "Database is not enabled, so you can't save an osu name.\n"
+                + "You can still use `{}osu <name>` though.".format(self.config.prefix)
+            )
+
+        self.db.update_member(src.author, {"osu": osu})
+
+        return (
+            "You have set `"
+            + osu
+            + "` as your preferred OSU account. "
+            + "You can now run `{}osu` and it ".format(self.config.prefix)
+            + "will use this name automatically!"
+        )
+
     async def cmd_freehug(self, args, src, **_):
         """
         Request a free hug from a hug donor.
