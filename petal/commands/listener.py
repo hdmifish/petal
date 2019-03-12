@@ -1,7 +1,6 @@
 """Commands module for LISTENER-RELATED UTILITIES.
 Access: Role-based"""
 
-import asyncio
 from datetime import datetime as dt, timedelta
 
 import discord
@@ -116,45 +115,6 @@ class CommandsListener(core.Commands):
                 + self.config.prefix
                 + "lcancel (not to be confused with smash bros)"
             )
-
-    async def cmd_lvote(self, args, src, **_):
-        """
-        ITs back boooyyyysssss!!!!
-        !lvote
-        """
-        if "choppingBlock" not in self.config.doc:
-            return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-
-        user = None
-        if args[0] != "":
-            user = self.get_member(src, args[0])
-            if user is None:
-                return "No member with that id..."
-
-        while 1:
-            await self.client.send_message(
-                src.author, src.channel, "Are we calling to promote or demote?"
-            )
-            response = await self.client.wait_for_message(
-                channel=src.channel, author=src.author, timeout=20
-            )
-
-            if response is None:
-                return "You didn't reply so I timed out..."
-            response = response.content
-            if response.lower() in ["promote", "p"]:
-                response = await self.cmd_lpromote(src, user)
-                self.config.save()
-                return response
-            elif response.lower() in ["demote", "d"]:
-                response = await self.cmd_ldemote(src, user)
-                self.config.save()
-                return response
-            else:
-                await self.client.send_message(
-                    src.author, src.channel, "Type [p]romote or type [d]emote."
-                )
-                await asyncio.sleep(1)
 
     async def cmd_lcancel(self, src, **_):
         """
