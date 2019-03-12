@@ -19,6 +19,8 @@ from .dbhandler import DBHandler
 # from random import randint
 log = Peacock()
 
+version = "0.5.7"
+
 
 class Petal(discord.Client):
     logLock = False
@@ -35,6 +37,7 @@ class Petal(discord.Client):
         self.config = Config()
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
+        self.commands.version = version
         self.tempBanFlag = False
 
         self.dev_mode = devmode

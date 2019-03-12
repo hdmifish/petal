@@ -1,3 +1,4 @@
+from datetime import datetime as dt
 import importlib
 import shlex
 import sys
@@ -22,6 +23,8 @@ __all__ = ["CommandRouter"]
 
 
 class CommandRouter:
+    version = ""
+
     def __init__(self, client, *a, **kw):
         self.client = client
         self.config = client.config
@@ -29,6 +32,7 @@ class CommandRouter:
 
         self.log = Peacock()
         self.log.info("Loading Command modules...")
+        self.startup = dt.utcnow()
 
         # Load all command engines
         for MODULE in LoadModules:
@@ -47,77 +51,82 @@ class CommandRouter:
         # Execute legacy initialization
         # TODO: Move this elsewhere
 
-        self.osuKey = self.config.get("osu")
-        if self.osuKey is not None:
-            self.o = Octopus(self.osuKey)
-
+        key_osu = self.config.get("osu")
+        if key_osu:
+            self.osu = Octopus(key_osu)
         else:
+            self.osu = None
             self.log.warn("No OSU! key found.")
 
-        self.imgurKey = self.config.get("imgur")
-        if self.imgurKey is not None:
-            self.i = Giraffe(self.imgurKey)
+        key_imgur = self.config.get("imgur")
+        if key_imgur:
+            self.imgur = Giraffe(key_imgur)
         else:
+            self.imgur = None
             self.log.warn("No imgur key found.")
-        if self.config.get("reddit") is not None:
-            reddit = self.config.get("reddit")
-            self.r = praw.Reddit(
+
+        reddit = self.config.get("reddit")
+        if reddit:
+            self.reddit = praw.Reddit(
                 client_id=reddit["clientID"],
                 client_secret=reddit["clientSecret"],
                 user_agent=reddit["userAgent"],
                 username=reddit["username"],
                 password=reddit["password"],
             )
-            if self.r.read_only:
+            if self.reddit.read_only:
                 self.log.warn(
                     "This account is in read only mode. "
                     + "You may have done something wrong. "
                     + "This will disable reddit functionality."
                 )
-                self.r = None
+                self.reddit = None
                 return
             else:
                 self.log.ready("Reddit support enabled!")
         else:
+            self.reddit = None
             self.log.warn("No Reddit keys found")
 
-        if self.config.get("twitter") is not None:
-            tweet = self.config.get("twitter")
-            self.t = twitter.Api(
+        tweet = self.config.get("twitter")
+        if tweet:
+            self.twit = twitter.Api(
                 consumer_key=tweet["consumerKey"],
                 consumer_secret=tweet["consumerSecret"],
                 access_token_key=tweet["accessToken"],
                 access_token_secret=tweet["accessTokenSecret"],
                 tweet_mode="extended",
             )
-            # tweet te
-            if "id" not in str(self.t.VerifyCredentials()):
+            if "id" not in str(self.twit.VerifyCredentials()):
                 self.log.warn(
                     "Your Twitter authentication is invalid, "
                     + " Twitter posting will not work"
                 )
-                self.t = None
+                self.twit = None
                 return
         else:
+            self.twit = None
             self.log.warn("No Twitter keys found.")
 
-        if self.config.get("facebook") is not None:
-            fb = self.config.get("facebook")
+        fb = self.config.get("facebook")
+        if fb:
             self.fb = facebook.GraphAPI(
                 access_token=fb["graphAPIAccessToken"], version=fb["version"]
             )
 
-        if self.config.get("tumblr") is not None:
-            tumble = self.config.get("tumblr")
-            self.tb = pytumblr.TumblrRestClient(
-                tumble["consumerKey"],
-                tumble["consumerSecret"],
-                tumble["oauthToken"],
-                tumble["oauthTokenSecret"],
+        tumblr = self.config.get("tumblr")
+        if tumblr:
+            self.tumblr = pytumblr.TumblrRestClient(
+                tumblr["consumerKey"],
+                tumblr["consumerSecret"],
+                tumblr["oauthToken"],
+                tumblr["oauthTokenSecret"],
             )
             self.log.ready("Tumblr support Enabled!")
         else:
+            self.tumblr = None
             self.log.warn("No Tumblr keys found.")
+
         self.log.ready("Command Module Loaded!")
 
     def find_command(self, kword, src=None):
@@ -220,3 +229,14 @@ class CommandRouter:
             command = src.content[len(prefix) :]
             return await self.route(command, src)
             # Remove the prefix and route the command
+
+    def get_uptime(self):
+        delta = dt.utcnow() - self.startup
+        delta = delta.total_seconds()
+
+        d = divmod(delta, 86400)  # days
+        h = divmod(d[1], 3600)  # hours
+        m = divmod(h[1], 60)  # minutes
+        s = m[1]  # seconds
+
+        return "%d days, %d hours, %d minutes, %d seconds" % (d[0], h[0], m[0], s)
