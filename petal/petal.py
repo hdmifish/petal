@@ -692,7 +692,6 @@ class Petal(discord.Client):
         #             await self.send_message(message.author, message.channel, response)
         #             return
         #
-        #     # TODO: Implement CommandRouter.parseCustom()
         #     # if com.split()[0] in self.config.commands:
         #     #     response = await self.commands.parseCustom(com, message)
         #     #     await self.send_message(message.author, message.channel, response)
