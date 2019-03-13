@@ -63,7 +63,10 @@ class CommandsUtil(core.Commands):
             em.set_thumbnail(url=self.client.user.avatar_url)
             await self.client.embed(src.channel, em)
         else:
-            return "No help for `{}` available".format(self.config.prefix + cmd.__name__[4:])
+            if cmd:
+                return "No help for `{}` available.".format(self.config.prefix + cmd.__name__[4:])
+            else:
+                return "Command not found."
 
     async def cmd_commands(self, **_):
         """
@@ -77,10 +80,9 @@ class CommandsUtil(core.Commands):
 
         return "Commands list: ```\n" + formattedList + "```"
 
-    async def ping(self, src, **_):
+    async def cmd_ping(self, src, **_):
         """
-        Shows the round trip time from this bot to you and back
-        Syntax: `>ping`
+        Show the round trip time from this bot to Discord (not you) and back.
         """
         msg = await self.client.send_message(src.author, src.channel, "*hugs*")
         delta = int((dt.now() - msg.timestamp).microseconds / 1000)
@@ -96,8 +98,7 @@ class CommandsUtil(core.Commands):
 
     async def cmd_statsfornerds(self, src, **_):
         """
-        Displays stats for nerds
-        !statsfornerds
+        Display more detailed statistics (for nerds).
         """
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 

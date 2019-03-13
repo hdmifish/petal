@@ -81,7 +81,7 @@ class CommandsPublic(core.Commands):
         await self.client.embed(src.channel, embedded=em)
         return None
 
-    async def setosu(self, args, src, **_):
+    async def cmd_setosu(self, args, src, **_):
         """
         Sets a users preferred osu account
         !setosu <name>
