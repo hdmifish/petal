@@ -15,15 +15,6 @@ class CommandsSocial(core.Commands):
     def authenticate(self, src):
         return self.check_user_has_role(src.author, self.config.get("socialMediaRole"))
 
-    @staticmethod
-    def validate_channel(chanlist, msg):
-        for i in range(len(msg.content)):
-            try:
-                chanlist[int(msg.content[int(i)])]
-            except AttributeError:
-                return False
-        return True
-
     async def cmd_update(
         self,
         src,

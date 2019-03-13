@@ -1,6 +1,10 @@
 """Commands module for EVENTS UTILITIES.
 Access: Role-based"""
 
+import asyncio
+
+import discord
+
 from petal.commands import core
 
 
@@ -10,21 +14,11 @@ class CommandsEvent(core.Commands):
     def authenticate(self, src):
         return self.check_user_has_role(src.author, self.config.get("xPostRole"))
 
-    async def event(self, src, **_):
+    async def cmd_event(self, src, **_):
         """
         Dialog-styled event poster
         >event
         """
-        if not self.check_user_has_role(
-            src.author, self.config.get("xPostRole")
-        ) and not self.level4(src.author):
-
-            return (
-                "You need the: "
-                + self.config.get("xPostRole")
-                + " role to use this command"
-            )
-
         chanList = []
         msg = ""
         for chan in self.config.get("xPostList"):
@@ -40,9 +34,10 @@ class CommandsEvent(core.Commands):
                 chanList.append(channel)
             else:
                 self.log.warn(
-                    chan + " is not a valid channel. " + " I'd remove it if I were you."
+                    chan + " is not a valid channel. I'd remove it if I were you."
                 )
 
+        # Get channels to send to.
         while True:
             await self.client.send_message(
                 src.author,
@@ -50,8 +45,8 @@ class CommandsEvent(core.Commands):
                 "Hi there, "
                 + src.author.name
                 + "! Please select the number of "
-                + " each server you want to post "
-                + " to. (dont separate the numbers) ",
+                + "each server you want to post "
+                + "to. (dont separate the numbers)",
             )
 
             await self.client.send_message(src.author, src.channel, msg)
@@ -59,25 +54,25 @@ class CommandsEvent(core.Commands):
             chans = await self.client.wait_for_message(
                 channel=src.channel,
                 author=src.author,
-                check=self.check_is_numeric,
                 timeout=20,
             )
 
             if chans is None:
                 return (
                     "Sorry, the request timed out. Please make sure you"
-                    + " type a valid sequence of numbers"
+                    + " type a valid sequence of numbers."
                 )
             if self.validate_channel(chanList, chans):
                 break
             else:
                 await self.client.send_message(
-                    src.author, src.channel, "Invalid channel choices"
+                    src.author, src.channel, "Invalid channel choices. You may try again immediately."
                 )
+
         await self.client.send_message(
             src.author,
             src.channel,
-            "What do you want to send?" + " (remember: {e} = @ev and {h} = @her)",
+            "What do you want to send? (remember: {e} = @ev and {h} = @her)",
         )
 
         msg = await self.client.wait_for_message(
@@ -128,31 +123,29 @@ class CommandsEvent(core.Commands):
             src.author, src.channel, "Messages have been posted"
         )
 
-        subkey, friendly = self.get_event_subscription(msgstr)
+        subkey, subname = self.get_event_subscription(msgstr)
 
         if subkey is None:
             await self.client.send_message(
                 src.author,
                 src.channel,
-                "I was unable to auto-detect "
-                + "any game titles in your post. "
-                + "No subscribers will not be notified for this event.",
+                "I was unable to auto-detect any game titles in your post. "
+                + "No subscribers will be notified for this event.",
             )
         else:
             tempm = await self.client.send_message(
                 src.author,
                 src.channel,
                 "I auto-detected a possible game in your announcement: **"
-                + friendly
-                + "**. Would you like to notify subscribers?[yes/no]",
+                + subname
+                + "**. Would you like to notify subscribers? [yes/no]",
             )
             n = await self.client.wait_for_message(
                 channel=tempm.channel,
                 author=src.author,
-                check=self.check_yes_no,
                 timeout=20,
             )
-            if n is None:
+            if n.content.lower() != "yes":
                 return "Timed out..."
 
             if n.content == "yes":
@@ -160,7 +153,6 @@ class CommandsEvent(core.Commands):
                     src.channel, posted[0], subkey
                 )
                 todelete = "[{}]".format(subkey)
-                ecount = 0
                 for post in posted:
                     content = post.content
                     #    print(content)
