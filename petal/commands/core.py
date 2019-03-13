@@ -53,10 +53,13 @@ class Commands:
             else:
                 return False
 
-    def get_member(self, message, member):
-        if isinstance(message, discord.Server):
-            return message.get_member(m2id(member))
+    def get_member(self, src, uuid):
+        """
+        Get a Discord Member object from an ID.
+        """
+        if isinstance(src, discord.Server):
+            return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                message.server.members, id=member.lstrip("<@!").rstrip(">")
+                src.server.members, id=uuid.lstrip("<@!").rstrip(">")
             )

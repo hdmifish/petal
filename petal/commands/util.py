@@ -1,6 +1,8 @@
 """Commands module for BOT-RELATED UTILITIES.
 Access: Public"""
 
+from datetime import datetime as dt
+
 import discord
 
 from . import core
@@ -74,6 +76,23 @@ class CommandsUtil(core.Commands):
             formattedList += self.config.prefix + f + "\n"
 
         return "Commands list: ```\n" + formattedList + "```"
+
+    async def ping(self, src, **_):
+        """
+        Shows the round trip time from this bot to you and back
+        Syntax: `>ping`
+        """
+        msg = await self.client.send_message(src.author, src.channel, "*hugs*")
+        delta = int((dt.now() - msg.timestamp).microseconds / 1000)
+        self.config.stats["pingScore"] += delta
+        self.config.stats["pingCount"] += 1
+
+        self.config.save(vb=0)
+        truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
+
+        return "Current Ping: {}ms\nPing till now: {}ms of {} pings".format(
+            str(delta), str(truedelta), str(self.config.stats["pingCount"])
+        )
 
     async def cmd_statsfornerds(self, src, **_):
         """
