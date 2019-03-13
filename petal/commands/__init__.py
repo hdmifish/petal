@@ -28,7 +28,7 @@ LoadModules = [
 ]
 
 for module in LoadModules:
-    # Import everything in the list above
+    # Import everything in the list above.
     importlib.import_module("." + module, package=__name__)
 
 
@@ -44,13 +44,13 @@ class CommandRouter:
         self.log.info("Loading Command modules...")
         self.startup = dt.utcnow()
 
-        # Load all command engines
+        # Load all command engines.
         for MODULE in LoadModules:
-            # Get the module
+            # Get the module.
             self.log.info("Loading {} commands...".format(MODULE.capitalize()))
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
-                # Instantiate its command engine
+                # Instantiate its command engine.
                 cmod = mod.CommandModule(client, self, *a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
@@ -58,7 +58,7 @@ class CommandRouter:
             else:
                 self.log.warn("FAILED to load {} commands.".format(MODULE.capitalize()))
 
-        # Execute legacy initialization
+        # Execute legacy initialization.
         # TODO: Move this elsewhere
 
         key_osu = self.config.get("osu")
@@ -165,11 +165,11 @@ class CommandRouter:
         return full
 
     def parse(self, cline: list) -> (list, dict):
-        """
-        $cline is a list of strings. Figure out which strings, if any, are meant
-            to be options/flags. If an option has a related value, add it to the
-            options dict with the value as its value. Otherwise, do the same but
-            with True instead. Return what args remain with the options dict.
+        """$cline is a list of strings. Figure out which strings, if any, are
+            meant to be options/flags. If an option has a related value, add it
+            to the options dict with the value as its value. Otherwise, do the
+            same but with True instead. Return what args remain with the options
+            dict.
         """
         args = cline.copy()
         opts = {}
@@ -180,58 +180,58 @@ class CommandRouter:
             if arg.startswith("-"):
                 # This arg is an option key
                 key = arg.lstrip("-")
+                args[i] = None
+
+                if key in ("self", "args", "src"):
+                    # Do not allow flags that mimic important values.
+                    continue
 
                 if "=" in key:
-                    # A specific value was given
+                    # A specific value was given.
                     key, val = key.split("=", 1)
                 else:
-                    # Unspecified value defaults to generic True
+                    # Unspecified value defaults to generic True.
                     val = True
 
                 if arg.startswith("--"):
-                    # This arg is a long opt; The whole word is one key
+                    # This arg is a long opt; The whole word is one key.
                     opts[key] = val
                 else:
-                    # This is a short opt cluster; Each letter is a key
+                    # This is a short opt cluster; Each letter is a key.
                     for char in key:
                         opts[char] = True
                     opts[key[-1]] = val
 
-                # Replace processed options with a placeholder
-                args[i] = None
-
-        # Remove all placeholders now that position no longer matters
+        # Remove all placeholders now that position no longer matters.
         while None in args:
             args.remove(None)
 
         return args, opts
 
     async def route(self, command: str, src=None):
+        """Route a command (and the source message) to the correct method of the
+            correct module. By this point, the prefix should have been stripped
+            away already, leaving a plaintext command.
         """
-        Route a command (and the source message) to the correct method of the correct module.
-        By this point, the prefix should have been stripped away already, leaving a plaintext command.
-        """
-        # Split the full command line into a list of tokens; Each is its own arg
+        # Split the full command line into a list of tokens, each its own arg.
         cline = list(shlex.shlex(command, posix=True, punctuation_chars=True))
-        # Extract the first word, the command itself
         cword = cline.pop(0)
 
-        # Find the method
+        # Find the method, if one exists.
         engine, func, denied = self.find_command(cword, src)
         if denied:
             return "Authentication failure: " + denied
         elif not func:
-            # return "Command '{}' not found.".format(cword)
             return
         else:
-            # Parse it
+            # Extract option flags from the argument list.
             args, opts = self.parse(cline)
-            # And execute it
+            # Execute the method, passing the arguments as a list and the options
+            #     as keyword arguments.
             return await func(args=args, **opts, src=src)
 
     async def run(self, src):
-        """
-        Given a message, determine whether it is a command;
+        """Given a message, determine whether it is a command;
         If it is, route it accordingly.
         """
         if src.author == self.client.user:
@@ -243,7 +243,8 @@ class CommandRouter:
             return await self.route(command, src)
             # Remove the prefix and route the command
 
-    def get_uptime(self):
+    @property
+    def uptime(self):
         delta = dt.utcnow() - self.startup
         delta = delta.total_seconds()
 

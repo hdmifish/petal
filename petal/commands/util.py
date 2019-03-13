@@ -104,7 +104,7 @@ class CommandsUtil(core.Commands):
 
         em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
         em.add_field(name="Version", value=self.router.version)
-        em.add_field(name="Uptime", value=self.router.get_uptime())
+        em.add_field(name="Uptime", value=self.router.uptime)
         # em.add_field(name="Void Count", value=str(self.db.void.count()))
         em.add_field(name="Servers", value=str(len(self.client.servers)))
         em.add_field(
