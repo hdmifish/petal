@@ -99,7 +99,7 @@ class CommandsSocial(core.Commands):
                 + ", here are the enabled social media services:\n"
                 + "\n".join(names)
                 + "\n\nPlease select which one(s) you want to use (e.g. `023`).",
-                )
+            )
 
             sendto = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=20
@@ -141,7 +141,7 @@ class CommandsSocial(core.Commands):
                 + "below. Limit to 280 characters for "
                 + "Twitter posts. This process will "
                 + "time out after 2 minutes.",
-                )
+            )
             content = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=120
             )
@@ -188,13 +188,13 @@ class CommandsSocial(core.Commands):
                     + "ratelimited. Please wait for"
                     + " about 8-10 minutes before "
                     + "posting again",
-                    )
+                )
             else:
                 await self.client.send_message(
                     src.author,
                     src.channel,
                     "Submitted post to " + self.config.get("reddit")["targetSR"],
-                    )
+                )
                 await asyncio.sleep(2)
 
         # Post to Twitter
@@ -249,7 +249,7 @@ class CommandsSocial(core.Commands):
                 src.author,
                 src.channel,
                 "Posted to tumblr: " + self.config.get("tumblr")["targetBlog"],
-                )
+            )
 
         return "Done posting"
 
