@@ -19,6 +19,7 @@ LoadModules = [
     "admin",
     "mod",
     "listener",
+    "social",
     "event",
     "minecraft",
     "util",
@@ -53,7 +54,7 @@ class CommandRouter:
                 cmod = mod.CommandModule(client, self, *a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
-                self.log.info("{} commands loaded.".format(MODULE.capitalize()))
+                self.log.ready("{} commands loaded.".format(MODULE.capitalize()))
             else:
                 self.log.warn("FAILED to load {} commands.".format(MODULE.capitalize()))
 
@@ -122,6 +123,9 @@ class CommandRouter:
             self.fb = facebook.GraphAPI(
                 access_token=fb["graphAPIAccessToken"], version=fb["version"]
             )
+        else:
+            self.fb = None
+            self.log.warn("No Facebook keys found.")
 
         tumblr = self.config.get("tumblr")
         if tumblr:
