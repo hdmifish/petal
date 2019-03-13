@@ -1,7 +1,7 @@
 """SPECIALIZED commands module for USER-DEFINED COMMANDS.
 Access: Public"""
 
-from . import core
+from petal.commands import core
 
 
 class CommandsCustom(core.Commands):

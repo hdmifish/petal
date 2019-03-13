@@ -5,7 +5,7 @@ from datetime import datetime as dt
 
 import discord
 
-from . import core
+from petal.commands import core
 
 
 class CommandsUtil(core.Commands):

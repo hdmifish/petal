@@ -6,7 +6,7 @@ import asyncio
 import facebook
 from praw.exceptions import APIException
 
-from . import core
+from petal.commands import core
 
 
 class CommandsSocial(core.Commands):

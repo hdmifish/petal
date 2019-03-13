@@ -7,7 +7,7 @@ import time
 
 import discord
 
-from . import core
+from petal.commands import core
 
 
 class CommandsMod(core.Commands):

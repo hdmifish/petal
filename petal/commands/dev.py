@@ -1,7 +1,7 @@
 """Commands module for BOT ADMINISTRATION.
 Access: Config Whitelist"""
 
-from . import core
+from petal.commands import core
 
 
 class CommandsMaintenance(core.Commands):

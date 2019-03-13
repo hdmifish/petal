@@ -3,7 +3,7 @@ Access: Server Operators"""
 
 import discord
 
-from . import core
+from petal.commands import core
 from petal.mcutil import Minecraft
 
 

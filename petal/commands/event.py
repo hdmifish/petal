@@ -1,7 +1,7 @@
 """Commands module for EVENTS UTILITIES.
 Access: Role-based"""
 
-from . import core
+from petal.commands import core
 
 
 class CommandsEvent(core.Commands):

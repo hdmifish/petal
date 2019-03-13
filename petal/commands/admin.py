@@ -1,7 +1,7 @@
 """Commands module for SERVER ADMINISTRATION.
 Access: Config Whitelist"""
 
-from . import core
+from petal.commands import core
 
 
 class CommandsAdmin(core.Commands):

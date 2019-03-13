@@ -6,7 +6,7 @@ import random
 
 import discord
 
-from . import core
+from petal.commands import core
 
 
 class CommandsPublic(core.Commands):
