@@ -19,14 +19,11 @@ class CommandsPublic(core.Commands):
         return True
 
     async def cmd_hello(self, **_):
-        """
-        Echo.
-        """
+        """Echo."""
         return "Hey there!"
 
     async def cmd_choose(self, args, **_):
-        """
-        Choose a random option from a list.
+        """Choose a random option from a list.
 
         Syntax: `{p}choose <option> [<option> [<option> [...]]]`
         """
@@ -36,8 +33,7 @@ class CommandsPublic(core.Commands):
         return response
 
     async def cmd_osu(self, args, src, **_):
-        """
-        Display information about an Osu player.
+        """Display information about an Osu player.
 
         A username to search may be provided to this command. If no username is provided, the command will try to display your profile instead. If you have not provided your username, your Discord username will be used.
         Your Osu username may be provided with `{p}setosu`.
@@ -85,9 +81,9 @@ class CommandsPublic(core.Commands):
         return None
 
     async def cmd_setosu(self, args, src, **_):
-        """
-        Sets a users preferred osu account
-        !setosu <name>
+        """Specify your Osu username so that `{p}osu` can find you automatically.
+
+        Syntax: `{p}setosu <name>`
         """
         osu = args[0] if args else src.author.name
 
@@ -108,14 +104,15 @@ class CommandsPublic(core.Commands):
         )
 
     async def cmd_freehug(self, args, src, **_):
-        """
-        Request a free hug from a hug donor.
+        """Request a free hug from, or register as, a hug donor.
 
-        Syntax: `{p}freehug` - requests a hug
-        `{p}freehug donate` - toggles your donor status. Your request counter will reset if you opt out.
-        `{p}freehug add <user-id>` - adds user to donor list
-        `{p}freehug del <user-id>` - removes user from donor list
-        `{p}freehug status` - If you're a donor, see how many requests you have recieved
+        When this command is run with no arguments, a randomly selected online user from the Hug Donors database will be messaged with a notification that a hug has been requested. That user can then descend upon whoever invoked the command and initiate mutual arm enclosure.
+
+        Syntax: `{p}freehug` - Request a hug.
+        `{p}freehug donate` - Toggle your donor status. Your request counter will reset if you opt out.
+        `{p}freehug add <user-id>` - Add another user to donor list.
+        `{p}freehug del <user-id>` - Remove another user from donor list.
+        `{p}freehug status` - If you are a donor, see how many requests you have recieved.
         """
         if args[0] == "":
             valid = []
@@ -294,11 +291,9 @@ class CommandsPublic(core.Commands):
         embed.set_footer(text=resp["alt"])
 
         await self.client.embed(src.channel, embed)
-        # return "link: " + resp["img"]
 
     async def cmd_sub(self, args, **_):
-        """
-        Return a random image from a given subreddit. Defaults to /r/cats.
+        """Return a random image from a given subreddit. Defaults to /r/cats.
 
         Syntax: '{p}sub [<subreddit>]'
         """
@@ -334,8 +329,7 @@ class CommandsPublic(core.Commands):
             return ob.link
 
     async def cmd_void(self, args, src, **_):
-        """
-        Reach into the Void, a bottomless pit of various links and strings.
+        """Reach into the Void, a bottomless pit of various links and strings.
 
         The Void contains countless entries of all types. Images, Youtube videos, poetry, quips, puns, memes, and best of all, dead links. Anything is possible with the power of the Void.
 
@@ -375,9 +369,7 @@ class CommandsPublic(core.Commands):
                 return "Added item number " + str(count) + " to the void"
 
     async def cmd_spookyclock(self, **_):
-        """
-        Be careful, Skeletons are closer than you think...
-        """
+        """Be careful, Skeletons are closer than you think..."""
         td = (dt(2019, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return ":ghost: Beware! The skeletons are already here! :ghost:"
@@ -390,9 +382,7 @@ class CommandsPublic(core.Commands):
         )
 
     async def cmd_santaclock(self, **_):
-        """
-        How long is it till you have to buy people nerdy tshirts?
-        """
+        """How long is it till you have to buy people nerdy tshirts?"""
         td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return "Christmas already happened...Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now."
