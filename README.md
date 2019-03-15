@@ -65,14 +65,16 @@ To get this updated project and future updates, we need to link it with GitHub (
 Some versions of Ubuntu/Debian come with Git preinstalled. However, if yours did not, try running the following:
 `sudo apt-get install git -y`
 
-To download petal without creating a new directory:
+To download petal without creating a new directory called petal:
 `sudo git clone https://github.com/hdmifish/petal.git`
 
 If you want to customize where petal will go:
-1. `mkdir your_directory_name`
-2. `cd your_directory_name`
-3. `git clone https://github.com/hdmifish/petal.git .` (the dot is important)
-4. `ls`
+`git clone https://github.com/hdmifish/petal.git your_directory_name` (replace your_direcotry_name with the directory of your choosing)
+
+Then you should cd into the directory, with either:
+`cd petal`
+or if you chose a custom directory:
+`cd your_directory_name`
 
 When you run `ls` you should see something like this:
 ![What it "should" look like](https://i.imgur.com/Y9wICtz.png)
