@@ -9,6 +9,7 @@ import requests
 import discord
 
 from petal.commands import core
+from petal.grasslands import Pidgeon
 
 
 class CommandsPublic(core.Commands):
@@ -198,6 +199,43 @@ class CommandsPublic(core.Commands):
                 del self.config.hugDonors[src.author.id]
                 self.config.save()
                 return "You have been removed from the donor list."
+
+    async def cmd_wiki(self, args, src, **_):
+        """Retrieve information about a query from Wikipedia.
+
+        Syntax: `{p}wiki <query>`
+        """
+        if not args:
+            return "Wikipedia, the Free Encyclopedia\nhttps://en.wikipedia.org/"
+        query = " ".join(args)
+        self.log.f("wiki", "Query string: " + query)
+
+        response = Pidgeon(query, version=self.router.version).get_summary()
+        title = response[1]["title"]
+        url = "https://en.wikipedia.org/wiki/" + title
+        if response[0] == 0:
+            return response[1]
+        else:
+            if "may refer to:" in response[1]["content"]:
+                em = discord.Embed(color=0xFFCC33)
+                em.add_field(
+                    name="Developer Note",
+                    value="It looks like this entry may have multiple results, "
+                    "try to refine your search for better accuracy.",
+                )
+
+            else:
+                em = discord.Embed(
+                    color=0xF8F9FA,
+                    description=response[1]["content"],
+                )
+                em.set_author(
+                    name="'{}' on Wikipedia".format(title),
+                    url=url,
+                    icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
+                )
+
+            await self.client.embed(src.channel, em)
 
     async def cmd_xkcd(self, args, src, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
