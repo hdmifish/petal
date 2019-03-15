@@ -62,7 +62,7 @@ class CommandsEvent(core.Commands):
                     "Sorry, the request timed out. Please make sure you"
                     + " type a valid sequence of numbers."
                 )
-            if self.validate_channel(chanList, chans):
+            if self.validate_channel(chanList, chans.content):
                 break
             else:
                 await self.client.send_message(

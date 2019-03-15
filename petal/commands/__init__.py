@@ -158,7 +158,7 @@ class CommandRouter:
                     denied = mod.auth_fail
 
         # This command is not "real". Check whether it is an alias.
-        if recursive and kword in self.config.get("aliases", []):
+        if recursive and kword in (self.config.get("aliases") or []):
             return self.find_command(kword, src, False)
 
         return None, None, denied
