@@ -142,7 +142,7 @@ class CommandRouter:
 
         self.log.ready("Command Module Loaded!")
 
-    def find_command(self, kword, src=None):
+    def find_command(self, kword, src=None, recursive=True):
         """
         Find and return a class method whose name matches kword.
         """
@@ -156,6 +156,11 @@ class CommandRouter:
                     return mod, func, False
                 else:
                     denied = mod.auth_fail
+
+        # This command is not "real". Check whether it is an alias.
+        if recursive and kword in self.config.get("aliases", []):
+            return self.find_command(kword, src, False)
+
         return None, None, denied
 
     def get_all(self):
