@@ -16,6 +16,49 @@ class CommandsMod(core.Commands):
     def authenticate(self, src):
         return self.check_user_has_role(src.author, "mod")
 
+    async def cmd_alias(self, args, src, **_):
+        """Return a list of all previous names a user has had.
+
+        Syntax: `{p}alias <tag/id>`
+        """
+        if not args:
+            member = src.author
+        else:
+            member = self.get_member(src, args[0])
+
+        if not self.db.useDB:
+            return (
+                "Database is not configured correctly (or at all). "
+                "Contact your bot developer and tell them if you think "
+                "this is an error"
+            )
+
+        if member is None:
+            return (
+                "Could not find that member in the server.\n\nJust a note, "
+                "I may have record of them, but it's Iso's policy to not "
+                "display userinfo without consent. If you are staff and "
+                "have a justified reason for this request, please "
+                "ask whoever hosts this bot to manually look up the "
+                "records in their database."
+            )
+
+        self.db.add_member(member)
+
+        alias = self.db.get_attribute(member, "aliases")
+        if not alias:
+            return "This member has no known aliases."
+        else:
+            await self.client.send_message(
+                src.author, src.channel, "__Aliases for " + member.id + "__"
+            )
+            msg = ""
+
+            for a in alias:
+                msg += "**" + a + "**\n"
+
+            return msg
+
     async def cmd_kick(self, args, src, **_):
         """
         Kick a user from a server.
