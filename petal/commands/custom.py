@@ -12,14 +12,14 @@ class CommandsCustom(core.Commands):
         Build and return a method returning the configured response to this keyword.
         """
         # Step Zero is to make sure that the name does not belong to a REAL command.
-        zero = super().get_command(kword)
+        zero, mod = super().get_command(kword)
         if zero:
-            return zero
+            return zero, mod
 
         # Otherwise, first, ensure that the keyword does in fact exist in the custom list.
         command = self.config.commands.get(kword, None)
         if not command:
-            return None
+            return None, None
         response = command["com"]
 
         # Build the function to return the response. Note that "self" exists already.
@@ -32,7 +32,7 @@ class CommandsCustom(core.Commands):
 
             nsfw = command.get("nsfw", False)
             if nsfw and src.channel.id not in self.config.get("nsfwChannels"):
-                return None
+                return None, None
 
             # Replace tags where needed.
             try:
@@ -42,9 +42,9 @@ class CommandsCustom(core.Commands):
                     tag=tag or src.author.mention,
                 )
             except KeyError:
-                return None
+                return None, None
             else:
-                return output
+                return output, None
 
         # Specify the docstring and name so that !help will work on this.
         cmd_custom.__doc__ = (
@@ -61,7 +61,7 @@ class CommandsCustom(core.Commands):
         )
         cmd_custom.__name__ = "cmd_" + kword.lower()
 
-        return cmd_custom
+        return cmd_custom, None
 
     def authenticate(self, *_):
         return True

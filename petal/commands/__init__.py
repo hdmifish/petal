@@ -152,10 +152,18 @@ class CommandRouter:
             if not func:
                 continue
             else:
-                if not src or mod.authenticate(src):
-                    return mod, func, False
+                mod_src = submod or mod
+                if not src or mod_src.authenticate(src):
+                    return mod_src, func, False
                 else:
-                    denied = mod.auth_fail
+                    denied = mod_src.auth_fail.format(
+                        op=mod_src.op,
+                        role=(
+                            self.config.get(mod_src.role)
+                            if mod_src.role
+                            else "!! ERROR !!"
+                        ),
+                    )
 
         # This command is not "real". Check whether it is an alias.
         alias = dict(self.config.get("aliases")) or {}

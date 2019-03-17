@@ -10,10 +10,11 @@ from petal.commands import core
 
 
 class CommandsSocial(core.Commands):
-    auth_fail = "This command requires the Social Media role."
+    auth_fail = "This command requires the `{role}` role."
+    role = "socialMediaRole"
 
     def authenticate(self, src):
-        return self.check_user_has_role(src.author, self.config.get("socialMediaRole"))
+        return self.check_user_has_role(src.author, self.config.get(self.role))
 
     async def cmd_update(
         self,

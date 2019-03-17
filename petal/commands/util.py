@@ -68,17 +68,28 @@ class CommandsUtil(core.Commands):
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, **_):
-        """
-        List all commands.
+    async def cmd_commands(self, src, all=False, a=False, **_):
+        """List all commands.
+
+        Options: `--all`, `-a` :: List ***all*** built-in commands, even ones you cannot use.
         """
         formattedList = ""
-        cmd = list(set([method.__name__[4:] for method in self.router.get_all()]))
-        cmd.sort()
-        for f in cmd:
-            formattedList += self.config.prefix + f + "\n"
+        cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
+        cmd_list.sort()
+        if True not in (all, a):
+            # Unless --all or -a, remove any restricted commands.
+            for cmd in cmd_list.copy():
+                mod, func, denied = self.router.find_command(kword=cmd, src=src)
+                # print(f"{cmd}: {func}/{denied}")
+                if denied is not False:
+                    cmd_list.remove(cmd)
+        for cmd in cmd_list:
+            formattedList += "\n" + self.config.prefix + cmd
 
-        return "Commands list: ```\n" + formattedList + "```"
+        if True in (all, a):
+            return "List of all commands: ```" + formattedList + "```"
+        else:
+            return "List of commands you can access: ```" + formattedList + "```"
 
     async def cmd_ping(self, src, **_):
         """

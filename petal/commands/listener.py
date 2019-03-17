@@ -9,10 +9,11 @@ from petal.commands import core
 
 
 class CommandsListener(core.Commands):
-    auth_fail = "This command requires the Listener role."
+    auth_fail = "This command requires the `{role}` role."
+    role = "RoleListener"
 
     def authenticate(self, src):
-        return self.check_user_has_role(src.author, "Listener")
+        return self.check_user_has_role(src.author, self.config.get(self.role))
 
     async def cmd_lpromote(self, src, user=None, **_):
 

@@ -7,6 +7,8 @@ from petal.dbhandler import m2id
 
 class Commands:
     auth_fail = "This command is implemented incorrectly."
+    op = -1  # Used for Minecraft commands
+    role = ""
 
     def __init__(self, client, router, *a, **kw):
         self.client = client
@@ -22,7 +24,7 @@ class Commands:
     def get_command(self, kword: str):
         if "__" not in kword:
             # Refuse to fetch anything with a dunder
-            return getattr(self, "cmd_" + kword, None)
+            return getattr(self, "cmd_" + kword, None), None
 
     def get_all(self) -> list:
         full = [

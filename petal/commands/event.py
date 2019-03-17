@@ -9,10 +9,11 @@ from petal.commands import core
 
 
 class CommandsEvent(core.Commands):
-    auth_fail = "This command requires the Events role."
+    auth_fail = "This command requires the `{role}` role."
+    role = "xPostRole"
 
     def authenticate(self, src):
-        return self.check_user_has_role(src.author, self.config.get("xPostRole"))
+        return self.check_user_has_role(src.author, self.config.get(self.role))
 
     async def cmd_event(self, src, **_):
         """

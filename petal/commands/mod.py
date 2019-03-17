@@ -11,10 +11,11 @@ from petal.commands import core
 
 
 class CommandsMod(core.Commands):
-    auth_fail = "This command requires the Mod role."
+    auth_fail = "This command requires the `{role}` role."
+    role = "RoleMod"
 
     def authenticate(self, src):
-        return self.check_user_has_role(src.author, "mod")
+        return self.check_user_has_role(src.author, self.config.get(self.role))
 
     async def cmd_alias(self, args, src, **_):
         """Return a list of all previous names a user has had.
