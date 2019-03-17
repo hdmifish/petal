@@ -3,115 +3,11 @@ Access: Server Operators"""
 
 import discord
 
-from petal.commands import core
-from petal.mcutil import Minecraft
+from petal.commands.minecraft import auth
 
 
-class CommandsMinecraft(core.Commands):
-    auth_fail = "This command requires Operator status on the Minecraft server."
-
-    def __init__(self, *a, **kw):
-        super().__init__(*a, **kw)
-        self.minecraft = Minecraft(self.client)
-
-    def authenticate(self, src):
-        # For now, commands in this module authenticate individually.
-        return True
-
-    def check(self, src, level):
-        """
-        Check that the MC config is valid, and that the user has clearance.
-        """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if level != -1 and not self.minecraft.WLAuthenticate(src, level):
-            return "Authentication failure: This command requires Minecraft Operator level {}.".format(
-                level
-            )
-
-    # TODO: Rewrite all MC commands fully
-
-    async def cmd_wlme(self, args, src, **_):
-        """Submit your Minecraft username to be whitelisted on the community server.
-
-        The whitelist is curated and managed by Petal for convenience, security, and consistency.
-
-        Syntax: `{p}wlme <minecraft_username>`
-        """
-        failure = self.check(src, -1)
-        if failure:
-            return failure
-
-        if not args:
-            return "You need to include your Minecraft username, or I will not be able to find you! Like this: `{}wlme Notch` :D".format(
-                self.config.prefix
-            )
-
-        submission = args[0]
-        reply, uuid = self.minecraft.WLRequest(submission, src.author.id)
-
-        if reply == 0:
-            self.log.f(
-                "wl+",
-                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) creates NEW ENTRY for '{src.content[len(self.config.prefix) + 4:]}'",
-            )
-
-            wlreq = await self.client.send_message(
-                channel=self.config.mc_channel, message="`<request loading...>`"
-            )
-
-            await self.client.edit_message(
-                message=wlreq,
-                new_content="Whitelist Request from: `"
-                + src.author.name
-                + "#"
-                + src.author.discriminator
-                + "` with request: "
-                + src.content[len(self.config.prefix) + 4 :]
-                + "\nTaggable: <@"
-                + src.author.id
-                + ">\nDiscord ID:  "
-                + src.author.id
-                + "\nMojang UID:  "
-                + uuid,
-            )
-
-            return "Your whitelist request has been successfully submitted :D"
-        elif reply == -1:
-            return "No need, you are already whitelisted :D"
-        elif reply == -2:
-            return "That username has already been submitted for whitelisting :o"
-        # elif reply == -:
-        #     return "Error (No Description Provided)"
-        elif reply == -7:
-            return "Could not access the database file D:"
-        elif reply == -8:
-            return (
-                "That does not seem to be a valid Minecraft username D: "
-                + "DEBUG: "
-                + submission
-            )
-        elif reply == -9:
-            return "Sorry, iso and/or dav left in an unfinished function >:l"
-        else:
-            return "Nondescript Error ({})".format(reply)
+class CommandsMCMod(auth.CommandsMCAuth):
+    op = 3
 
     async def cmd_wlaccept(self, args, src, **_):
         """Mark a PlayerDB entry as "approved", to be added to the whitelist.
@@ -120,11 +16,9 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlaccept <profile_identifier>`
         """
-        failure = self.check(src, 3)
-        if failure:
-            return failure
+        if not args:
+            return
 
-        # separated this for simplicity
         submission = args[0]
         # Send the submission through the function
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
@@ -178,10 +72,6 @@ class CommandsMinecraft(core.Commands):
 
         Options: `--verbose`, `-v` :: Provide more detailed information about the user.
         """
-        failure = self.check(src, 2)
-        if failure:
-            return failure
-
         submission = [arg.lower() for arg in args]
         verbose = True in [verbose, v]
 
@@ -262,43 +152,35 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlrefresh`
         """
-        failure = self.check(src, 2)
-        if failure:
-            return failure
-
         await self.client.send_typing(src.channel)
         refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
         refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
 
         return refstat[refreshReturn]
 
-    async def cmd_wlgone(self, src, **_):
+    async def cmd_wlgone(self, **_):
         """Check the WL database for any users whose Discord ID is that of someone who has left the server.
 
         Syntax: `{p}wlgone`
         """
-        failure = self.check(src, 2)
-        if failure:
-            return failure
-
         uList = self.minecraft.etc.WLDump()
         idList = []
         for entry in uList:
-            idList.append(entry["discord"])
+            idList.append((entry["discord"], entry["name"]))
         oput = "Registered users who have left the server:\n"
         leftnum = 0
-        for userid in idList:
+        for userid, username in [(entry["discord"], entry["name"]) for entry in uList]:
             try:
                 user = self.client.get_server(self.config.get("mainServer")).get_member(
                     userid
                 )
                 if user is None:
-                    oput = oput + userid + "\n"
+                    oput += "`{}` - {}\n".format(userid, username)
                     leftnum += 1
-            except:  # Dont log an error here; An error here means a success
-                oput = oput + userid + "\n"
+            except:  # Do not log an error here; An error here means a success
+                oput += "`{}` - {}\n".format(userid, username)
                 leftnum += 1
-        oput = oput + "----({})----".format(leftnum)
+        oput += "----({})----".format(leftnum)
         return oput
 
     async def cmd_wlsuspend(self, args, src, help, h, **_):
@@ -308,10 +190,6 @@ class CommandsMinecraft(core.Commands):
 
         Options: `--help`, `-h` :: Return the list of Suspension Codes and stop
         """
-        failure = self.check(src, 3)
-        if failure:
-            return failure
-
         if True in [help, h]:
             # Command was invoked with --help or -h
             return "Suspension codes:\n" + "\n".join(
@@ -348,60 +226,16 @@ class CommandsMinecraft(core.Commands):
 
         oput = "WLSuspend Results:\n"
         for ln in rep:
-            oput = oput + "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
+            oput += "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
             self.log.f(
                 "wl+",
                 f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}",
             )
-        oput = oput + wcode[wlwin]
+        oput += wcode[wlwin]
 
         return oput
 
-    async def cmd_wlmod(self, args, src, **_):
-        """Flag a person to be given a level of operator status.
-
-        Level 1 can: Bypass spawn protection.
-        Level 2 can: Use `/clear`, `/difficulty`, `/effect`, `/gamemode`, `/gamerule`, `/give`, `/summon`, `/setblock`, and `/tp`, and can edit command blocks.
-        Level 3 can: Use `/ban`, `/deop`, `/whitelist`, `/kick`, and `/op`.
-        Level 4 can: Use `/stop`.
-        (<https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do>)
-
-        Syntax: `{p}wlmod <profile_identifier> (0|1|2|3|4)`
-        """
-        failure = self.check(src, 4)
-        if failure:
-            return failure
-
-        target = args[0]
-        try:
-            level = int(args[1])
-        except:
-            level = -1
-        if not 0 <= level <= 4:
-            return "You need to specify an op level for {} between `0` and `4`.".format(
-                target
-            )
-
-        victim = self.minecraft.WLQuery(target)
-        if victim == -7:
-            return "Could not access database file."
-        elif not victim:
-            return "No valid target found."
-        elif len(victim) > 1:
-            return "Ambiguous command: {} possible targets found.".format(
-                str(len(victim))
-            )
-        elif src.author.id == victim[0]["discord"]:
-            return "You cannot change your own Operator status."
-
-        # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)
-        rep = self.minecraft.WLMod(victim[0]["discord"], level)
-
-        return "{} has been granted __Level {} Operator__ status. Return values: `{}`".format(
-            victim[0]["name"], level, "`, `".join([str(term) for term in rep])
-        )
-
-    async def cmd_wlnote(self, args, src, **_):
+    async def cmd_wlnote(self, args, **_):
         """Add a note to a user DB profile.
 
         Notes can be viewed with `{p}wlquery --verbose`.
@@ -410,10 +244,6 @@ class CommandsMinecraft(core.Commands):
 
         Syntax: `{p}wlnote <profile_identifier> "<note>"`
         """
-        failure = self.check(src, 3)
-        if failure:
-            return failure
-
         if len(args) > 2:
             return "Only one note can be added to a profile at a time."
         elif len(args) < 2:
@@ -449,4 +279,4 @@ class CommandsMinecraft(core.Commands):
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
-CommandModule = CommandsMinecraft
+CommandModule = CommandsMCMod

@@ -148,7 +148,7 @@ class CommandRouter:
         """
         denied = ""
         for mod in self.engines:
-            func = mod.get_command(kword)
+            func, submod = mod.get_command(kword)
             if not func:
                 continue
             else:
