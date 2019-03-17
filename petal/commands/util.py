@@ -39,7 +39,11 @@ class CommandsUtil(core.Commands):
             doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
 
             summary = doc.pop(0)
-            em = discord.Embed(title=self.config.prefix + cmd.__name__[4:], description=summary, colour=0x0ACDFF)
+            em = discord.Embed(
+                title=self.config.prefix + cmd.__name__[4:],
+                description=summary,
+                colour=0x0ACDFF,
+            )
 
             details = ""
             syntax = ""
@@ -64,32 +68,46 @@ class CommandsUtil(core.Commands):
             await self.client.embed(src.channel, em)
         else:
             if cmd:
-                return "No help for `{}` available.".format(self.config.prefix + cmd.__name__[4:])
+                return "No help for `{}` available.".format(
+                    self.config.prefix + cmd.__name__[4:]
+                )
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, src, all=False, a=False, **_):
+    async def cmd_commands(self, src, all=False, a=False, custom=False, c=False, **_):
         """List all commands.
 
-        Options: `--all`, `-a` :: List ***all*** built-in commands, even ones you cannot use.
+        Syntax: `{p}commands [OPTIONS]`
+
+        Options: `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
+        `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
         """
         formattedList = ""
         cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
+        if True in (custom, c):
+            line_2 = ", including custom commands"
+            cust_list = self.config.get("commands") or {}
+            cmd_list += [f"{k} -> '{cust_list[k]['com']}'" for k in cust_list]
+        else:
+            line_2 = ""
         cmd_list.sort()
+
         if True not in (all, a):
             # Unless --all or -a, remove any restricted commands.
             for cmd in cmd_list.copy():
-                mod, func, denied = self.router.find_command(kword=cmd, src=src)
-                # print(f"{cmd}: {func}/{denied}")
+                mod, func, denied = self.router.find_command(
+                    kword=cmd.split()[0], src=src
+                )
                 if denied is not False:
                     cmd_list.remove(cmd)
+            line_1 = "List of commands you can access"
+        else:
+            line_1 = "List of all commands"
+
         for cmd in cmd_list:
             formattedList += "\n" + self.config.prefix + cmd
 
-        if True in (all, a):
-            return "List of all commands: ```" + formattedList + "```"
-        else:
-            return "List of commands you can access: ```" + formattedList + "```"
+        return line_1 + line_2 + ": ```" + formattedList + "```"
 
     async def cmd_ping(self, src, **_):
         """
@@ -151,6 +169,7 @@ class CommandsUtil(core.Commands):
         for opt, val in opts.items():
             out.append(str(opt) + "==" + str(val))
         return "\n".join(out)
+
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
