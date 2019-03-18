@@ -32,7 +32,7 @@ class CommandsCustom(core.Commands):
 
             nsfw = command.get("nsfw", False)
             if nsfw and src.channel.id not in self.config.get("nsfwChannels"):
-                return None, None
+                return None
 
             # Replace tags where needed.
             try:
@@ -42,9 +42,9 @@ class CommandsCustom(core.Commands):
                     tag=tag or src.author.mention,
                 )
             except KeyError:
-                return None, None
+                return None
             else:
-                return output, None
+                return output
 
         # Specify the docstring and name so that !help will work on this.
         cmd_custom.__doc__ = (
