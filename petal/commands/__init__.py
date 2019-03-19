@@ -229,7 +229,9 @@ class CommandRouter:
             away already, leaving a plaintext command.
         """
         # Split the full command line into a list of tokens, each its own arg.
-        cline = list(shlex.shlex(command, posix=True, punctuation_chars=True))
+        div = shlex.shlex(command, posix=True, punctuation_chars=True)
+        div.wordchars += "+"  # Additionally allow these characters in args.
+        cline = list(div)
         cword = cline.pop(0)
 
         # Find the method, if one exists.
