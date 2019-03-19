@@ -185,16 +185,19 @@ class CommandRouter:
             same but with True instead. Return what args remain with the options
             dict.
         """
-        args = cline.copy()
+        args = []
         opts = {}
 
-        # Loop through given arguments
-        for i, arg in enumerate(args):
-            # Find args that begin with a dash
+        # Loop through given arguments.
+        for i, arg in enumerate(cline):
+            # Stop parsing if a semicolon is found.
+            if not arg.strip(";"):
+                break
+
+            # Find args that begin with a dash.
             if arg.startswith("-"):
-                # This arg is an option key
+                # This arg is an option key.
                 key = arg.lstrip("-")
-                args[i] = None
 
                 if key in ("self", "args", "src"):
                     # Do not allow flags that mimic important values.
@@ -215,10 +218,8 @@ class CommandRouter:
                     for char in key:
                         opts[char] = True
                     opts[key[-1]] = val
-
-        # Remove all placeholders now that position no longer matters.
-        while None in args:
-            args.remove(None)
+            else:
+                args.append(arg)
 
         return args, opts
 
