@@ -8,9 +8,7 @@ class CommandsCustom(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
     def get_command(self, kword: str):
-        """
-        Build and return a method returning the configured response to this keyword.
-        """
+        """Build and return a method returning the configured response to this keyword."""
         # Step Zero is to make sure that the name does not belong to a REAL command.
         zero, mod = super().get_command(kword)
         if zero:
@@ -67,8 +65,7 @@ class CommandsCustom(core.Commands):
         return True
 
     async def cmd_new(self, args, src, nsfw=False, **_):
-        """
-        That awesome custom command command.
+        """That awesome custom command command.
 
         Create a custom Petal command that will print a specific text when run. This text can be anything, from a link to a copypasta to your own poetry. Just try not to be obnoxious with it, yeah?
 
@@ -83,6 +80,9 @@ class CommandsCustom(core.Commands):
 
         invoker = args[0].strip()
         command = args[1].strip()
+
+        if invoker in self.config.aliases:
+            return "Cannot define this command because it would shadow an alias."
 
         if invoker in self.config.commands:
             await self.client.send_message(
