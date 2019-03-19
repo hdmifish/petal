@@ -104,8 +104,7 @@ class CommandsUtil(core.Commands):
         cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
         if True in (custom, c):
             line_2 = ", including custom commands"
-            cust_list = self.config.get("commands") or {}
-            cmd_list += [f"{k} -> '{cust_list[k]['com']}'" for k in cust_list]
+            cmd_list += list(self.config.get("commands")) or []
         else:
             line_2 = ""
         cmd_list.sort()
@@ -114,7 +113,7 @@ class CommandsUtil(core.Commands):
             # Unless --all or -a, remove any restricted commands.
             for cmd in cmd_list.copy():
                 mod, func, denied = self.router.find_command(
-                    kword=cmd.split()[0], src=src
+                    kword=cmd, src=src
                 )
                 if denied is not False:
                     cmd_list.remove(cmd)
