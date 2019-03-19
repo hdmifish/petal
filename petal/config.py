@@ -81,7 +81,7 @@ class Config(object):
     # def flip(self):
     #    self.lockLog = not self.lockLog
 
-    def get(self, field):
+    def get(self, field, default=None):
         if field is None:
             return "<poof>"
         else:
@@ -89,7 +89,7 @@ class Config(object):
                 return self.doc[field]
             except KeyError:
                 log.err(field + " is not found in config")
-                return None
+                return default
 
     def save(self, vb=False):
         if vb:
