@@ -10,6 +10,7 @@ import discord
 
 from petal.commands import core
 from petal.grasslands import Pidgeon
+from petal.util import dice
 
 
 class CommandsPublic(core.Commands):
@@ -291,6 +292,62 @@ class CommandsPublic(core.Commands):
         embed.set_footer(text=resp["alt"])
 
         await self.client.embed(src.channel, embed)
+
+    async def cmd_roll(self, args, total=False, t=False, sums=False, s=False, **_):
+        """Roll the dice and try your luck.
+
+        This function uses the strongest source of randomness available to the system, with a quality generally considered to be sufficient for use in cryptographic applications. While the fairness of these dice cannot be *guaranteed*, it is as good as it possibly could be on the hardware running this bot.
+
+        A roll specification should be in the format `[n]d[s]`, where *n* is the number of dice to roll, *d* is a literal `d`, and *s* is the number of sides per die. For example, to roll one die with twenty sides, invoke `{p}roll 1d20`. To roll three dice with four sides, invoke `{p}roll 3d4`.
+        Omitting the number of dice, e.g. `{p}roll d20`, will default to rolling one.
+
+        Syntax: `{p}roll [options] (<number>d<sides>)...`
+
+        Options:
+        `--sums`, `-s` :: Display only the sum of each group of dice, not every individual roll.
+        `--total`, `-t` :: Display ONLY the final, cumulative, total of all rolls. Overrides `--sums`/`-s`.
+        """
+        _total = True in (total, t)  # Print ONLY final cumulative total
+        _sums = True in (sums, s)  # Print ONLY sums of groups
+
+        dice_ = [dice.get_die(term) for term in args]
+
+        # Look for an excuse not to do anything.
+        count = [die.quantity for die in dice_]
+        if sum(count) > 100000:
+            # Number of dice might start to slow down the bot.
+            return "I may be a bot, but even I only have so many dice. Try rolling fewer at a time."
+        if sum(count) > 20 and not (_total or _sums):
+            # Number of dice would be spammy.
+            return "Nobody can hold that many dice at once. Try rolling fewer dice, or invoking with `--total` or `--sums`."
+        if len(count) > 6 and not _total:
+            # Number of groups would be spammy.
+            return "That is a lot of groups to display at once. You should invoke this command with `--total` to do that."
+
+        rolls = [die.roll() for die in dice_ if die]
+        if not rolls:
+            return
+        out = ["**__DICE OUTPUT:__**"]
+
+        cumulative = 0
+        for roll in rolls:
+            cumulative += roll.total
+            if not _total:
+                if not _sums:
+                    for single in roll.results:
+                        out.append("{}: `{}`".format(roll.src.one, single))
+                    if roll.add_sum:
+                        out.append("Added to total: `{}`".format(roll.add_sum))
+                out.append("**{} TOTAL:** `{}`\n".format(roll.src, roll.total))
+
+        if _total or len(rolls) > 1:
+            out.append("**__CUMULATIVE TOTAL: `{}`__**".format(cumulative))
+
+        report = "\n".join(out)
+        if len(report) > 2000:
+            return "Report was too long to send in one message. Try rolling fewer."
+        else:
+            return report
 
     async def cmd_sub(self, args, **_):
         """Return a random image from a given subreddit. Defaults to /r/cats.
