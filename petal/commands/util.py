@@ -170,6 +170,27 @@ class CommandsUtil(core.Commands):
 
         await self.client.embed(src.channel, em)
 
+    async def animalcrossing(self, src, **_):
+        """Toggle AnimalCrossing mode for your user.
+
+        This is more or less an easter egg.
+        All responses will end in an animal crossing styled ending.
+
+        Syntax: `{p}animalcrossing`
+        """
+        if not self.db.useDB:
+            return "Sorry, datbase is not enabled..."
+
+        if self.db.get_attribute(src.author, "ac") is None:
+            self.db.update_member(src.author, {"ac": True}, 2)
+            return "Enabled Animal Crossing Endings..."
+        elif self.db.get_attribute(src.author, "ac"):
+            self.db.update_member(src.author, {"ac": False}, 2)
+            return "Disabled Animal Crossing Endings..."
+        else:
+            self.db.update_member(src.author, {"ac": True}, 2)
+            return "Re-Enabled Animal Crossing Endings..."
+
     async def cmd_argtest(self, args, src, **opts):
         """Display details on how the command was parsed.
 
