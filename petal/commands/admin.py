@@ -16,7 +16,16 @@ class CommandsAdmin(core.Commands):
         await m.post()
 
         m.em.title = "Result: `{}`".format(
-            await m.get_option(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+            await m.get_choice(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        )
+        await m.close()
+
+    async def cmd_menu2(self, src, **_):
+        m = Menu(self.client, src.channel, src.author, "Choice")
+        await m.post()
+
+        m.em.title = "Results: `{}`".format(
+            await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
         )
         await m.close()
 

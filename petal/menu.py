@@ -30,6 +30,8 @@ buttons = [
     "🇿",
 ]
 stop = "🛑"
+cancel = "❌"
+done = "✅"
 
 
 class Menu:
@@ -64,24 +66,52 @@ class Menu:
         for opt in selection:
             await self.client.add_reaction(self.msg, opt)
 
-    async def get_option(self, opts: list, time=30) -> str:
+    async def get_choice(self, opts: list, time=30) -> str:
         onum = len(opts)
         if not self.msg or not 1 <= onum <= len(buttons):
             return ""
-        selection = buttons[:onum]
+        selection = [cancel, *buttons[:onum]]
 
-        self.em.description = "\n".join(
+        self.em.description = "Select One:\n" + "\n".join(
             ["{}: `{}`".format(buttons[i], opts[i]) for i in range(onum)]
         )
         await self.post()
         await self.add_buttons(selection)
 
-        result = await self.client.wait_for_reaction(
+        choice = await self.client.wait_for_reaction(
             selection, user=self.user, timeout=time, message=self.msg
         )
-        if not result:
-            return ""
-        result = opts[buttons.index(result.reaction.emoji)]
+        if not choice or choice.reaction.emoji == cancel:
+            result = ""
+        else:
+            result = opts[buttons.index(choice.reaction.emoji)]
 
         await self.client.clear_reactions(self.msg)
         return result
+
+    async def get_multi(self, opts: list, time=30) -> list:
+        onum = len(opts)
+        if not self.msg or not 1 <= onum <= len(buttons):
+            return []
+        selection = [cancel, *buttons[:onum], done]
+
+        self.em.description = "Select Multiple and Confirm:\n" + "\n".join(
+            ["{}: `{}`".format(buttons[i], opts[i]) for i in range(onum)]
+        )
+        await self.post()
+        await self.add_buttons(selection)
+
+        results = set()
+        while True:
+            choice = await self.client.wait_for_reaction(
+                selection, user=self.user, timeout=time, message=self.msg
+            )
+            if not choice or choice.reaction.emoji == cancel:
+                return []
+            elif choice.reaction.emoji == done:
+                break
+            else:
+                results.add(opts[buttons.index(choice.reaction.emoji)])
+
+        await self.client.clear_reactions(self.msg)
+        return list(results)
