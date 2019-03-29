@@ -385,12 +385,35 @@ class CommandsPublic(core.Commands):
         else:
             return ob.link
 
+    async def cmd_calm(self, args, src, **_):
+        """Bring up a random image from the "calm" gallery, or add one.
+
+        Syntax: `{p}calm [<link to add to calm>]`
+        """
+        gal = self.config.get("calmGallery")
+        if gal is None:
+            return "Sadly, calm hasn't been set up correctly"
+        if args:
+            await self.client.send_message(
+                src.author,
+                src.channel,
+                "You will be held accountable for whatever you post in here. Just a heads up ^_^",
+            )
+            gal.append(
+                {
+                    "author": src.author.name + " " + src.author.id,
+                    "content": args[0].strip(),
+                }
+            )
+            self.config.save()
+        else:
+            return gal[randint(0, len(gal) - 1)]["content"]
+
     async def cmd_comfypixel(self, args, src, **_):
         """Bring up a random image from the "comfypixel" gallery, or add one.
 
         Syntax: `{p}comfypixel [<link to add to comfypixel>]`
         """
-
         gal = self.config.get("comfyGallery")
         if gal is None:
             return "Sadly, comfypixel hasn't been set up correctly"
@@ -415,7 +438,6 @@ class CommandsPublic(core.Commands):
 
         Syntax: `{p}aww [<link to add to aww>]`
         """
-
         gal = self.config.get("cuteGallery")
         if gal is None:
             return "Sadly, aww hasn't been set up correctly"
