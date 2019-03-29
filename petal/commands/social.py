@@ -2,8 +2,11 @@
 Access: Role-based"""
 
 import asyncio
+import requests
 
+import discord
 import facebook
+from twitter import error as twitterror
 from praw.exceptions import APIException
 
 from petal.commands import core
@@ -244,6 +247,60 @@ class CommandsSocial(core.Commands):
             )
 
         return "Done posting"
+
+    async def cmd_retweet(self, args, src, **_):
+        """Retweet on behalf of the twitter account linked to Petal.
+
+        Syntax: `{p}retweet <tweet_id>`
+        """
+        if not args:
+            return "You cant retweet nothing, silly :P"
+
+        if not args[0].isnumeric():
+            return "Retweet ID must only be numbers"
+
+        try:
+            response = self.router.twit.PostRetweet(int(args[0]), trim_user=True)
+
+            self.log.f("TWEET", src.author.name + " posted a retweet!")
+            status = response.AsDict()
+            #            print("Stats: " + str(status))
+            #            if str(status) == "[{'code': 327, 'message': 'You have already retweeted this Tweet.'}]":
+            #                return "We've already retweeted this tweet"
+            user = self.router.twit.GetUser(user_id=status["user_mentions"][0]["id"]).AsDict()
+
+            embed = discord.Embed(
+                title="Re-tweeted from: " + status["user_mentions"][0]["name"],
+                description=status["retweeted_status"]["text"],
+                colour=0x1DA1F2,
+            )
+            #            print(user['profile_image_url'])
+            embed.set_author(
+                name=user["screen_name"], icon_url=user["profile_image_url"]
+            )
+            #            embed.add_field(name="Screen Name", value=status['user_mentions'][0]['screen_name'])
+            embed.add_field(name="Created At", value=status["created_at"])
+            rtc = status["retweet_count"]
+            if rtc == 1:
+                suf = " time"
+            else:
+                suf = " times"
+            embed.add_field(name="Retweeted", value=str(rtc) + suf)
+            await self.client.embed(src.channel, embedded=embed)
+        except twitterror.TwitterError as e:
+            print("ex:" + str(e))
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36"
+            }
+            res = requests.get("http://aws.random.cat/meow", headers=headers).json()[
+                "file"
+            ]
+            return (
+                "Oh :(. Im sorry to say that you've made a goof. As it turns out, we already retweeted this tweet. I'm sure the author would appreciate it if they knew you tried to retweet their post twice! It's gonna be ok though, we'll get through this. Hmmmm.....hold on, I have an idea.\n\n\nHere: "
+                + res
+            )
+        else:
+            return "Successfully retweeted!"
 
 
 # Keep the actual classname unique from this common identifier
