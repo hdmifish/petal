@@ -48,9 +48,6 @@ class Menu:
         self.msg = None
         self.user = user
 
-    def retitle(self, title):
-        self.em.title = title
-
     async def close(self):
         self.em.description = "[ Interaction Closed ]"
         await self.post()
@@ -62,22 +59,25 @@ class Menu:
         else:
             self.msg: Message = await self.client.embed(self.channel, self.em)
 
+    async def add_buttons(self, selection: list):
+        await self.client.clear_reactions(self.msg)
+        for opt in selection:
+            await self.client.add_reaction(self.msg, opt)
+
     async def get_option(self, opts: list, time=30) -> str:
         onum = len(opts)
         if not self.msg or not 1 <= onum <= len(buttons):
             return ""
-        await self.client.clear_reactions(self.msg)
+        selection = buttons[:onum]
 
         self.em.description = "\n".join(
             ["{}: `{}`".format(buttons[i], opts[i]) for i in range(onum)]
         )
         await self.post()
-
-        for opt in buttons[:onum]:
-            await self.client.add_reaction(self.msg, opt)
+        await self.add_buttons(selection)
 
         result = await self.client.wait_for_reaction(
-            buttons[:onum], user=self.user, timeout=time, message=self.msg
+            selection, user=self.user, timeout=time, message=self.msg
         )
         if not result:
             return ""
