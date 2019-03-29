@@ -170,7 +170,7 @@ class CommandsUtil(core.Commands):
 
         await self.client.embed(src.channel, em)
 
-    async def animalcrossing(self, src, **_):
+    async def cmd_animalcrossing(self, src, **_):
         """Toggle AnimalCrossing mode for your user.
 
         This is more or less an easter egg.
