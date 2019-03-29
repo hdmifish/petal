@@ -15,13 +15,15 @@ class Config(object):
             log.err("Could not open config.yml: " + str(e))
             exit()
         except Exception as e:
-            log.err(
-                "An unexcpected exception of type: "
-                + type(e).__name__
-                + "has occurred: "
-                + str(e)
-            )
-            exit()
+            # log.err(
+            #     "An unexpected exception of type: "
+            #     + type(e).__name__
+            #     + " has occurred:\n"
+            #     + str(e)
+            # )
+            # exit()
+            # Meh, if youre exiting anyway why not just raise it?
+            raise e
         else:
             if "token" in self.doc:
                 self.token = self.doc["token"]
@@ -79,7 +81,7 @@ class Config(object):
     # def flip(self):
     #    self.lockLog = not self.lockLog
 
-    def get(self, field):
+    def get(self, field, default=None):
         if field is None:
             return "<poof>"
         else:
@@ -87,7 +89,7 @@ class Config(object):
                 return self.doc[field]
             except KeyError:
                 log.err(field + " is not found in config")
-                return None
+                return default
 
     def save(self, vb=False):
         if vb:
@@ -101,9 +103,9 @@ class Config(object):
             log.err("Could not open config.yml: " + str(e))
         except Exception as e:
             log.err(
-                "An unexcpected exception of type: "
+                "An unexpected exception of type: "
                 + type(e).__name__
-                + "has occurred: "
+                + " has occurred:\n"
                 + str(e)
             )
         else:
@@ -119,9 +121,9 @@ class Config(object):
             log.err("Could not open config.yml: " + str(e))
         except Exception as e:
             log.err(
-                "An unexcpected exception of type: "
+                "An unexpected exception of type: "
                 + type(e).__name__
-                + "has occurred: "
+                + " has occurred:\n"
                 + str(e)
             )
         else:

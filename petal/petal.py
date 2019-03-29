@@ -5,6 +5,7 @@ written by isometricramen
 """
 
 import discord
+import random
 import re
 import asyncio
 import calendar
@@ -12,11 +13,13 @@ import time
 from datetime import datetime
 from .grasslands import Peacock
 from .config import Config
-from .commands import Commands
+from .commands import CommandRouter as Commands
 from .dbhandler import DBHandler
 
 # from random import randint
 log = Peacock()
+
+version = "0.5.7"
 
 
 class Petal(discord.Client):
@@ -34,6 +37,7 @@ class Petal(discord.Client):
         self.config = Config()
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
+        self.commands.version = version
         self.tempBanFlag = False
 
         self.dev_mode = devmode
@@ -83,16 +87,18 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def ask_patch_loop(self):
-        if self.dev_mode:
-            return
-        if self.config.get("motdInterval") is None:
-            log.f("PA", "not using MOTD stuff...")
-            return
-        interval = self.config.get("motdInterval")
-        while True:
-            await self.commands.check_pa_updates()
-
-            await asyncio.sleep(interval)
+        # TODO: Implement CommandRouter.check_pa_updates()
+        pass
+        # if self.dev_mode:
+        #     return
+        # if self.config.get("motdInterval") is None:
+        #     log.f("PA", "not using MOTD stuff...")
+        #     return
+        # interval = self.config.get("motdInterval")
+        # while True:
+        #     await self.commands.check_pa_updates()
+        #
+        #     await asyncio.sleep(interval)
 
     async def ban_loop(self):
         # if self.dev_mode:
@@ -174,7 +180,7 @@ class Petal(discord.Client):
             log.warn(
                 "No dbconf configuration in config.yml," + "motd features are disabled"
             )
-        await self.change_presence(game=discord.Game(name="with iso"))
+        await self.change_presence(game=discord.Game(name="with cats :3"))
         return
 
     async def send_message(
@@ -192,7 +198,9 @@ class Petal(discord.Client):
             if self.db.get_member(author) is not None:
                 if self.db.get_attribute(author, "ac", verbose=False) is not None:
                     if self.db.get_attribute(author, "ac"):
-                        message += " , " + self.commands.get_ac()
+                        # message += " , " + self.commands.get_ac()
+                        l = list(self.db.ac.find())
+                        message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
             return await super().send_message(channel, message)
         except discord.errors.InvalidArgument:
@@ -410,6 +418,7 @@ class Petal(discord.Client):
         if Petal.logLock:
             return
         gained = None
+        role = None
 
         for r in before.roles:
             if r not in after.roles:
@@ -419,6 +428,9 @@ class Petal(discord.Client):
             if r not in before.roles:
                 gained = "Gained"
                 role = r
+
+        if not role:
+            return
 
         if gained is not None:
             userEmbed = discord.Embed(
@@ -628,67 +640,78 @@ class Petal(discord.Client):
                     await self.send_message(None, message.channel, reply)
             return
 
-        if not content.startswith(self.config.prefix):
+        # For now, do all the above checks and then run/route it.
+        # This may result in repeating some checks, but these checks should
+        #     eventually be moved into the commands module itself.
+        response = await self.commands.run(message)
+        if response:
+            self.config.get("stats")["comCount"] += 1
+            await self.send_message(message.author, message.channel, response)
             return
-        com = content[len(self.config.prefix) :].lower().strip()
 
-        if com.split()[0] in dir(self.commands):
-            methodToCall = getattr(self.commands, com.split()[0])
-            if methodToCall.__doc__ is None:
-                log.warn(
-                    "All commands require a docstring to not be "
-                    + "ignored. If you don't know what caused this, "
-                    + "it's safe to ignore the warning."
-                )
-                return
-            log.com(
-                "[{0}] [{1}] [{1.id}] [{2}] ".format(
-                    message.channel, message.author, com
-                )
-            )
-            if not message.channel.is_private:
-                self.db.update_member(
-                    message.author,
-                    {
-                        "aliases": message.author.name,
-                        "servers": message.author.server.id,
-                        "last_message_channel": message.channel.id,
-                        "last_active": message.timestamp,
-                        "last_message": message.timestamp,
-                    },
-                    type=2,
-                )
-            response = await methodToCall(message)
-            if response:
-                self.config.get("stats")["comCount"] += 1
-                await self.send_message(message.author, message.channel, response)
-                return
+        # # # # LEGACY COMMAND SYSTEM # # #
 
-        else:
-            if com.split()[0] in self.config.aliases:
-                aliased = self.config.aliases[com.split()[0]]
-                methodToCall = getattr(self.commands, aliased)
-                log.com(
-                    "[{0}] [{1}] [{1.id}] [{2}] ".format(
-                        message.channel, message.author, com
-                    )
-                )
-                response = await methodToCall(message)
-                if response:
-                    self.config.get("stats")["comCount"] += 1
-                    await self.send_message(message.author, message.channel, response)
-                    return
-
-            if com.split()[0] in self.config.commands:
-                response = await self.commands.parseCustom(com, message)
-                await self.send_message(message.author, message.channel, response)
-
-            # else:
-            #    return
-            #
-            #    log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]"
-            #            .format(message.channel, message.author,
-            #                    message.content.lstrip(self.config.prefix)))
-            #    response = await self.commands.cleverbot(message)
-            #    await self.send_message(message.channel, response, )
-            return
+        # if not content.startswith(self.config.prefix):
+        #     return
+        # com = content[len(self.config.prefix) :].lower().strip()
+        #
+        # if com.split()[0] in dir(self.commands):
+        #     methodToCall = getattr(self.commands, com.split()[0])
+        #     if methodToCall.__doc__ is None:
+        #         log.warn(
+        #             "All commands require a docstring to not be "
+        #             + "ignored. If you don't know what caused this, "
+        #             + "it's safe to ignore the warning."
+        #         )
+        #         return
+        #     log.com(
+        #         "[{0}] [{1}] [{1.id}] [{2}] ".format(
+        #             message.channel, message.author, com
+        #         )
+        #     )
+        #     if not message.channel.is_private:
+        #         self.db.update_member(
+        #             message.author,
+        #             {
+        #                 "aliases": message.author.name,
+        #                 "servers": message.author.server.id,
+        #                 "last_message_channel": message.channel.id,
+        #                 "last_active": message.timestamp,
+        #                 "last_message": message.timestamp,
+        #             },
+        #             type=2,
+        #         )
+        #     response = await methodToCall(message)
+        #     if response:
+        #         self.config.get("stats")["comCount"] += 1
+        #         await self.send_message(message.author, message.channel, response)
+        #         return
+        #
+        # else:
+        #     if com.split()[0] in self.config.aliases:
+        #         aliased = self.config.aliases[com.split()[0]]
+        #         methodToCall = getattr(self.commands, aliased)
+        #         log.com(
+        #             "[{0}] [{1}] [{1.id}] [{2}] ".format(
+        #                 message.channel, message.author, com
+        #             )
+        #         )
+        #         response = await methodToCall(message)
+        #         if response:
+        #             self.config.get("stats")["comCount"] += 1
+        #             await self.send_message(message.author, message.channel, response)
+        #             return
+        #
+        #     # if com.split()[0] in self.config.commands:
+        #     #     response = await self.commands.parseCustom(com, message)
+        #     #     await self.send_message(message.author, message.channel, response)
+        #
+        #     # else:
+        #     #    return
+        #     #
+        #     #    log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]"
+        #     #            .format(message.channel, message.author,
+        #     #                    message.content.lstrip(self.config.prefix)))
+        #     #    response = await self.commands.cleverbot(message)
+        #     #    await self.send_message(message.channel, response, )
+        #     return
