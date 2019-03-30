@@ -52,10 +52,13 @@ class Menu:
         self.msg = None
         self.user = user
 
+    async def clear(self):
+        await self.client.clear_reactions(self.msg)
+
     async def close(self):
         self.em.description = "[ Interaction Closed ]"
         await self.post()
-        await self.client.clear_reactions(self.msg)
+        await self.clear()
 
     async def post(self):
         if self.msg:
