@@ -254,7 +254,7 @@ class Pidgeon:
         headers = {
             "User-Agent": "Petalbot/"
             + version
-            + " (http://leaf.drunkencode.net/; nullexistence180@gmail.com) Python 3.5.2"
+            + " (http://leaf.drunkencode.net/; nullexistence180@gmail.com) Python 3.6"
         }
         # Peacock().f("wiki", str(headers))
         req = requests.get(url, headers=headers)
@@ -262,7 +262,7 @@ class Pidgeon:
 
     def get_summary(self):
         if self.response is None:
-            return (0, "No data returned for: " + self.query)
+            return 0, "No data returned for: " + self.query
         try:
             page = self.response["query"]["pages"][
                 list(self.response["query"]["pages"].keys())[0]
@@ -274,8 +274,8 @@ class Pidgeon:
 
             Peacock().f("wiki", "Response: " + str(self.response))
             Peacock().f("wiki", "Error: " + str(e))
-            return (0, "Wikipedia didn't return any entries")
+            return 0, "Wikipedia didn't return any entries"
 
         else:
 
-            return (1, {"title": page["title"], "content": p, "id": page["pageid"]})
+            return 1, {"title": page["title"], "content": p, "id": page["pageid"]}

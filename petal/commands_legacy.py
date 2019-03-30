@@ -289,6 +289,11 @@ class Commands:
         self.log.f("event", "could not find subscription key in your announcement")
         return None, None
 
+
+    ### COMMANDS BEGIN ###
+
+
+    # IMPORTED
     async def list_connected_servers(self, message):
         """
         hello
@@ -446,6 +451,7 @@ class Commands:
     # You may write your own commands here by using the command as the
     # function name. Return is an optional final output (must be string)
 
+    # IMPORTED
     async def hello(self, message):
         """
         This is a test, its a test
@@ -455,6 +461,7 @@ class Commands:
         else:
             return "Hey there!"
 
+    # IMPORTED
     async def choose(self, message):
         """
         Chooses a random option from a list, separated by |
@@ -474,6 +481,7 @@ class Commands:
 
     #   return self.cb.ask(self.remove_prefix(message.content))
 
+    # IMPORTED
     async def osu(self, message):
         """
         Gets information for an osu player
@@ -578,6 +586,7 @@ class Commands:
             self.config.save()
             return "New Command `{}` Created!".format(invoker)
 
+    # REMADE
     async def help(self, message):
         """
         Congrats, You did it!
@@ -645,6 +654,7 @@ class Commands:
                     func, getattr(self, self.config.aliases[func]).__doc__
                 )
 
+    # IMPORTED
     async def freehug(self, message):
         """
         Requests a freehug from a hug donor
@@ -810,6 +820,7 @@ class Commands:
         else:
             return "You cannot promote this person"
 
+    # IMPORTED
     async def sub(self, message, force=None):
         """
         Returns a random image from a given subreddit.
@@ -1241,6 +1252,7 @@ class Commands:
             # url = ("http://api.openweathermap.org/data/2.5/weather/?APPID=" +
             # "{}&q={}&units={}".format(key, args[1], "c"))
 
+    # REMADE
     async def commands(self, message):
         """
         Lists all commands
@@ -1291,6 +1303,7 @@ class Commands:
         else:
             return "Submitted post to " + subredditstr
 
+    # IMPORTED
     async def kick(self, message):
         """
         Kick's a user from a server. User must have level 2 perms. (>help promote/demote)
@@ -1381,6 +1394,7 @@ class Commands:
                     + ") was successfully kicked"
                 )
 
+    # IMPORTED
     async def ban(self, message):
         """
         Bans a user permenantly. Temp ban coming when member module works.
@@ -1490,6 +1504,7 @@ class Commands:
                     )
                     return "Error occurred trying to generate webhook URI"
 
+    # IMPORTED
     async def tempban(self, message):
         """
         Temporarily bans a user
@@ -1582,6 +1597,7 @@ class Commands:
                     + str(dt.utcnow() + timedelta(days=int(msg2.content)))[:-7]
                 )
 
+    # IMPORTED
     async def warn(self, message):
         """
         Sends an official, logged, warning to a user.
@@ -1657,6 +1673,7 @@ class Commands:
                     + ") was successfully warned"
                 )
 
+    # IMPORTED
     async def mute(self, message):
         """
         Toggles the mute tag on a user if your server supports that role.
@@ -1766,6 +1783,7 @@ class Commands:
                     + ") was successfully {}d".format(muteswitch)
                 )
 
+    # IMPORTED
     async def purge(self, message):
         """
         purges up to 200 messages in the current channel
@@ -1832,6 +1850,7 @@ class Commands:
             petal.logLock = False
             return
 
+    # IMPORTED
     async def void(self, message):
         """
         >void grabs a random item from the void and displays/prints it.
@@ -3206,6 +3225,7 @@ class Commands:
 
         return "Heres what votes are goin on: \n" + msg
 
+    # IMPORTED
     async def setosu(self, message):
         """
         Sets a users preferred osu account
@@ -3426,6 +3446,7 @@ class Commands:
             self.db.update_member(message.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
+    # IMPORTED
     def get_ac(self):
         l = list(self.db.ac.find())
         return l[random.randint(0, len(l) - 1)]["ending"]
@@ -3580,6 +3601,7 @@ class Commands:
             )
             return "Thanks! you are now entered in the giveaway"
 
+    # IMPORTED
     async def wlme(self, message):
         """
         Submit your Minecraft username to be whitelisted on the community server. The whitelist is curated and managed by Petal for convenience, security, and consistency.
@@ -3667,6 +3689,7 @@ class Commands:
         else:
             return "Nondescript Error ({})".format(reply)
 
+    # IMPORTED
     async def wl(self, message):
         """
         Mark a PlayerDB entry as "approved", to be added to the whitelist. Same methods of specification as !WLQuery; See `!help wlquery` for more information.
@@ -3741,6 +3764,7 @@ class Commands:
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
+    # IMPORTED
     async def wlquery(self, message):
         """
         Takes a string and finds any database entry that references it. Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once. Special search terms: `pending`, `suspended`
@@ -3844,6 +3868,7 @@ class Commands:
             await self.client.edit_message(message=qout, new_content=oput)
             # return oput
 
+    # IMPORTED
     async def wlrefresh(self, message):
         """
         Force an immediate rebuild of both the PlayerDB and the Whitelist itself
@@ -3877,6 +3902,7 @@ class Commands:
 
         return refstat[refreshReturn]
 
+    # IMPORTED
     async def wlgone(self, message):
         """
         Checks the WL database for any users whose Discord ID is that of someone who has left the server
@@ -3924,6 +3950,7 @@ class Commands:
         oput = oput + "----({})----".format(leftnum)
         return oput
 
+    # IMPORTED
     async def wlsuspend(self, message):
         """
         Flags a person to be removed from the whitelist
@@ -4012,6 +4039,7 @@ class Commands:
 
         return oput
 
+    # IMPORTED
     async def wlmod(self, message):
         """
         Flags a person to be given a level of operator status
@@ -4078,6 +4106,7 @@ class Commands:
             victim[0]["name"], level, "`, `".join([str(term) for term in rep])
         )
 
+    # IMPORTED
     async def wlnote(self, message):
         """
         Adds a note string to a user profile, viewable via `!WLQuery -v`
@@ -4139,6 +4168,7 @@ class Commands:
         else:
             return errors.get(rep, "Unknown Error ('{}')".format(rep))
 
+    # IMPORTED
     async def spookyclock(self, message):
         """
         Be careful, Skeletons are closer than you think
@@ -4155,6 +4185,7 @@ class Commands:
             str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
         )
 
+    # IMPORTED
     async def santaclock(self, message):
         """
         How long is it till you have to buy people nerdy tshirts?

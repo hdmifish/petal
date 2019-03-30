@@ -1,4 +1,4 @@
-[![Python 3.7](https://img.shields.io/badge/python-3.6%20|%203.7-blue.svg?logoColor=white&logo=python&style=popout)](https://www.python.org/)
+[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg?logoColor=white&logo=python&style=popout)](https://www.python.org/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub contributors](https://img.shields.io/github/contributors/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/graphs/contributors)
@@ -20,7 +20,7 @@ This bot is designed for hosting on Ubuntu and has not been tested on other plat
 
 ##### Requirements:
 - 64-bit Ubuntu/Debian
-- `pip3.5 install --upgrade -r requirements.txt`
+- `pip3.6 install --upgrade -r requirements.txt`
 - A discord application token (register [here](https://discordapp.com/developers/applications/me))
 
 
@@ -30,28 +30,28 @@ This bot is designed for hosting on Ubuntu and has not been tested on other plat
 ##### Step 1: Get everything up to date
 This prevents problems later on
 `sudo apt-get update && sudo apt-get upgrade -y`
-##### Step 2: Install python3.5 and pip
-`sudo apt-get install python3.5 python3.5-dev -y`
-**Note:** To ensure python3.5 is installed, run the following:
-`python3.5 --version`
+##### Step 2: Install python3.6 and pip
+`sudo apt-get install python3.6 python3.6-dev -y`
+**Note:** To ensure python3.6 is installed, run the following:
+`python3.6 --version`
 
 
-##### Step 3: Download and Install pip for python 3.5+
-**Note:** You may skip this if you already have pip installed. You can verify this in the usual way of just typing `pip` or `pip3.5` and seeing if the command is recognized
+##### Step 3: Download and Install pip for python 3.6+
+**Note:** You may skip this if you already have pip installed. You can verify this in the usual way of just typing `pip` or `pip3.6` and seeing if the command is recognized
 
 
 In your home directory `cd ~` run the following:
 `sudo wget https://bootstrap.pypa.io/get-pip.py`
 then run:
-`sudo python3.5 get-pip.py`
+`sudo python3.6 get-pip.py`
 finally, verify the install:
-`python3.5 -m pip --version`
+`python3.6 -m pip --version`
 
 
 
-**Note**: If for some reason you get a __command not found__ error, replace `pip3.5` with `python3.5 -m pip`
+**Note**: If for some reason you get a __command not found__ error, replace `pip3.6` with `python3.6 -m pip`
 
-If you still get an error after that, make sure you built pip with python3.5 or higher. Sometimes it will even run as `pip` instead of `pip3.5`
+If you still get an error after that, make sure you built pip with python3.6 or higher. Sometimes it will even run as `pip` instead of `pip3.6`
 
 
 <br>
@@ -84,7 +84,7 @@ When you run `ls` you should see something like this:
 Now we need to install the other "stuff" that makes Petal work.
 That can be done via:
 
-`pip3.5 install --upgrade -r requirements.txt`
+`pip3.6 install --upgrade -r requirements.txt`
 
 ##### Step 6 (optional): Install GNU Screen:
 If you dont want to have to deal with terminal windows to keep your bot open, you can run a "Screen session" to run it in the background. This is a really good way to cleanly run your bot and doesnt require you to stay logged in to your current regular session. You can even lose connection to your terminal (e.g. your SSH session gets disconnected, times out) and your screen session will still be running
@@ -138,14 +138,14 @@ Congratulations, you have created a config file!
 
 ###### If using Screen:
 1. Navigate to the petal directory where *run.py* resides.
-2. run `screen -dmSL petal python3.5 run.py`
+2. run `screen -dmSL petal python3.6 run.py`
 3. To see your bot running, do `screen -r petal`
 4. All output from the bot, including errors is logged in `screenlog.0` in the directory in which you ran step 2
 5. To exit a screen session and leave the bot running do `CTRL + A` then press `d`
 
 ###### If not using Screen:
 1. Navigate to the petal directory where run.py resides.
-2. run python3.5 run.py
+2. run `python3.6 run.py`
 3. To stop the bot from executing, do `CTRL+C`
     **Note:** Only press CTRL+C once, as it does take a second for the bot to shutdown. If you repeatedly press it, it can wipe your config file.
 
