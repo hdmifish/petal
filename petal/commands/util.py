@@ -23,7 +23,7 @@ class CommandsUtil(core.Commands):
     def authenticate(self, *_):
         return True
 
-    async def cmd_help(self, args, src, **_):
+    async def cmd_help(self, args, src, short=False, s=False, **_):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -35,6 +35,8 @@ class CommandsUtil(core.Commands):
         For exhaustive help with Arguments and Options, invoke `{p}help extreme`.
 
         Syntax: `{p}help [(<command>|extreme)]`
+
+        Options: `--short`, `-s` :: Exclude the "details" section of printed help.
         """
         if not args:
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
@@ -58,7 +60,7 @@ class CommandsUtil(core.Commands):
 
             summary = doc.pop(0)
             em = discord.Embed(
-                title=self.config.prefix + cmd.__name__[4:],
+                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
                 description=summary,
                 colour=0x0ACDFF,
             )
@@ -74,15 +76,15 @@ class CommandsUtil(core.Commands):
                     opts = line.split(" ", 1)[1]
                 else:
                     details += line + "\n"
-            if details:
-                em.add_field(name="Details", value=details.strip())
+            if details and True not in (short, s):
+                em.add_field(name="Details:", value=details.strip())
             if syntax:
-                em.add_field(name="Syntax", value=syntax)
+                em.add_field(name="Syntax:", value=syntax)
             if opts:
-                em.add_field(name="Options", value=opts)
+                em.add_field(name="Options:", value=opts)
 
             em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
-            em.set_thumbnail(url=self.client.user.avatar_url)
+            # em.set_thumbnail(url=self.client.user.avatar_url)
             await self.client.embed(src.channel, em)
         else:
             if cmd:
@@ -97,7 +99,8 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}commands [OPTIONS]`
 
-        Options: `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
+        Options:
+        `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
         `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
         """
         formattedList = ""
