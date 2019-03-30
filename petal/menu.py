@@ -1,3 +1,5 @@
+from asyncio import sleep
+
 from discord import Embed, Channel, Message, User
 
 
@@ -30,7 +32,7 @@ buttons = [
     "🇿",
 ]
 stop = "🛑"
-cancel = "❌"
+cancel = "❎"
 done = "✅"
 
 
@@ -39,9 +41,9 @@ class Menu:
         self,
         client,
         channel: Channel,
-        user: User,
         title: str,
         desc: str = None,
+        user: User = None,
         color=0x0ACDFF,
     ):
         self.client = client
@@ -115,3 +117,32 @@ class Menu:
 
         await self.client.clear_reactions(self.msg)
         return list(results)
+
+    async def get_poll(self, opts: list, time=3600) -> dict:
+        onum = len(opts)
+        if not self.msg or not 1 <= onum <= len(buttons):
+            return {}
+        selection = buttons[:onum]
+        outcome = {key: 0 for key in opts}
+
+        self.em.description = "\n".join(
+            ["{}: `{}`".format(buttons[i], opts[i]) for i in range(onum)]
+        )
+        await self.add_buttons(selection)
+        await self.post()
+
+        await sleep(time)
+
+        votes = self.msg.reactions
+        for vote in votes:
+            if not vote.me and vote.emoji in opts:
+                key = opts[buttons.index(vote.emoji)]
+                outcome[key] += 1
+        await self.client.clear_reactions(self.msg)
+
+        self.em.description += "\n\n**__RESULTS:__**"
+        for k, v in outcome.items():
+            self.em.description += "\n**`{}`**: __`{}`__".format(k, v)
+        await self.post()
+
+        return outcome
