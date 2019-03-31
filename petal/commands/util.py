@@ -51,7 +51,7 @@ class CommandsUtil(core.Commands):
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            return denied
+            return "Cannot show help: " + denied
         elif cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)
