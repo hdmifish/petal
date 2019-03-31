@@ -199,10 +199,6 @@ class CommandRouter:
                 # This arg is an option key.
                 key = arg.lstrip("-")
 
-                if key in ("self", "args", "src"):
-                    # Do not allow flags that mimic important values.
-                    continue
-
                 if "=" in key:
                     # A specific value was given.
                     key, val = key.split("=", 1)
@@ -212,6 +208,9 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
+                    if key in ("self", "args", "src"):
+                        # Do not allow flags that mimic important values.
+                        continue
                     opts[key] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.
