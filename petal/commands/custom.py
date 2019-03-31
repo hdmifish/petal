@@ -64,7 +64,7 @@ class CommandsCustom(core.Commands):
         return cmd_custom, None
 
     def authenticate(self, *_):
-        return True
+        return True, None
 
     async def cmd_new(self, args, src, nsfw=False, **_):
         """That awesome custom command command.

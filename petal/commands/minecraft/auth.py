@@ -15,7 +15,7 @@ class CommandsMCAuth(core.Commands):
         if 0 <= self.op <= 4:
             return self.minecraft.WLAuthenticate(src, self.op)
         else:
-            return True
+            return True, None
 
     def check(self):
         """Check that the MC config is valid."""

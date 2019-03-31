@@ -21,7 +21,7 @@ class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
     def authenticate(self, *_):
-        return True
+        return True, None
 
     async def cmd_help(self, args, src, short=False, s=False, **_):
         """Print information regarding command usage.
