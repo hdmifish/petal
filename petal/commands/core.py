@@ -42,20 +42,23 @@ class Commands:
         Should be overwritten by modules providing secure functions
         (For example, moderation tools)
         """
-        return False
+        return False, "not implemented"
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
-        target = discord.utils.get(user.server.roles, name=role)
-        if target is None:
-            self.log.err("Role '" + role + "' does not exist.")
-            return False
-        else:
-            if target in user.roles:
-                return True
+        if type(user) == discord.Member:
+            target = discord.utils.get(user.server.roles, name=role)
+            if target is None:
+                self.log.err("Role '" + role + "' does not exist.")
+                return False, "bad role"
             else:
-                return False
+                if target in user.roles:
+                    return True, None
+                else:
+                    return False, "denied"
+        else:
+            return False, "private"
 
     def get_member(self, src, uuid):
         """

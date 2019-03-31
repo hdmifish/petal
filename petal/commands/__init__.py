@@ -153,17 +153,25 @@ class CommandRouter:
                 continue
             else:
                 mod_src = submod or mod
-                if not src or mod_src.authenticate(src):
+                permitted, reason = mod_src.authenticate(src)
+                if not src or permitted:
                     return mod_src, func, False
                 else:
-                    denied = mod_src.auth_fail.format(
-                        op=mod_src.op,
-                        role=(
-                            self.config.get(mod_src.role)
-                            if mod_src.role
-                            else "!! ERROR !!"
-                        ),
-                    )
+                    if reason == "bad role":
+                        denied = "Could not find the correct role."
+                    elif reason == "private":
+                        denied = "Command cannot be used in DM."
+                    elif reason == "denied":
+                        denied = mod_src.auth_fail.format(
+                            op=mod_src.op,
+                            role=(
+                                self.config.get(mod_src.role)
+                                if mod_src.role
+                                else "!! ERROR !!"
+                            ),
+                        )
+                    else:
+                        denied = "`{}`.".format(reason)
 
         # This command is not "real". Check whether it is an alias.
         alias = dict(self.config.get("aliases")) or {}
@@ -199,10 +207,6 @@ class CommandRouter:
                 # This arg is an option key.
                 key = arg.lstrip("-")
 
-                if key in ("self", "args", "src"):
-                    # Do not allow flags that mimic important values.
-                    continue
-
                 if "=" in key:
                     # A specific value was given.
                     key, val = key.split("=", 1)
@@ -212,6 +216,9 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
+                    if key in ("self", "args", "src"):
+                        # Do not allow flags that mimic important values.
+                        continue
                     opts[key] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.

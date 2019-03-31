@@ -21,7 +21,7 @@ class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
     def authenticate(self, *_):
-        return True
+        return True, None
 
     async def cmd_help(self, args, src, short=False, s=False, **_):
         """Print information regarding command usage.
@@ -51,7 +51,7 @@ class CommandsUtil(core.Commands):
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            return denied
+            return "Cannot show help: " + denied
         elif cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)
