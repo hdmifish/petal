@@ -69,7 +69,8 @@ class Commands:
         if not role:
             return "bad role"
         if type(user) == discord.Member:
-            target = discord.utils.get(user.server.roles, name=role)
+            server = self.client.get_server(self.config.get("mainServer"))
+            target = discord.utils.get(server.roles, name=role)
             if target is None:
                 self.log.err("Role '" + role + "' does not exist.")
                 return False, "bad role"
