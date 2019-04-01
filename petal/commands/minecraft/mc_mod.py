@@ -183,7 +183,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         oput += "----({})----".format(leftnum)
         return oput
 
-    async def cmd_wlsuspend(self, args, src, help, h, **_):
+    async def cmd_wlsuspend(self, args, src, help=False, h=False, **_):
         """Flag a person to be removed from the whitelist.
 
         Syntax: `{p}wlsuspend [OPTIONS] <profile_identifier> <code>`
