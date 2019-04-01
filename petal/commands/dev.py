@@ -6,9 +6,7 @@ from petal.commands import core
 
 class CommandsMaintenance(core.Commands):
     auth_fail = "This command is whitelisted."
-
-    def authenticate(self, src):
-        return src.author.id in (self.config.get("bot_maintainers") or []), "denied"
+    whitelist = "bot_maintainers"
 
     async def cmd_list_connected_servers(self, src, **_):
         """Return a list of all servers Petal is in."""

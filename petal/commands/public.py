@@ -16,9 +16,6 @@ from petal.util import dice
 class CommandsPublic(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    def authenticate(self, *_):
-        return True, None
-
     async def cmd_hello(self, **_):
         """Echo."""
         return "Hey there!"

@@ -8,7 +8,8 @@ from petal.dbhandler import m2id
 class Commands:
     auth_fail = "This command is implemented incorrectly."
     op = -1  # Used for Minecraft commands
-    role = ""
+    role = ""  # Name of the config field dictating the name of the needed role
+    whitelist = ""  # Name of the list of permitted IDs in the config file
 
     def __init__(self, client, router, *a, **kw):
         self.client = client
@@ -34,19 +35,39 @@ class Commands:
         ]
         return full
 
-    def authenticate(self, *_):
+    def authenticate(self, src):
         """
         Take a Discord message and return True if:
-          1. The author of the message is allowed to access this package
-          2. This command can be run in this channel
-        Should be overwritten by modules providing secure functions
-        (For example, moderation tools)
+          1. The author of the message is allowed to access this package.
+          2. This command can be run in this channel.
         """
-        return False, "not implemented"
+        try:
+            if self.whitelist and src.author.id not in self.config.get(
+                self.whitelist, []
+            ):
+                return False, "denied"
+            if self.role:
+                allow, denied = self.check_user_has_role(
+                    src.author, self.config.get(self.role)
+                )
+                if not allow:
+                    return allow, denied
+            if 0 <= self.op <= 4:
+                if hasattr(self, "minecraft"):
+                    return self.minecraft.WLAuthenticate(src, self.op)
+                else:
+                    return False, "bad op"
+        except Exception as e:
+            # For security, "fail closed".
+            return False, "Error: `{}`".format(e)
+        else:
+            return True, None
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
+        if not role:
+            return "bad role"
         if type(user) == discord.Member:
             target = discord.utils.get(user.server.roles, name=role)
             if target is None:

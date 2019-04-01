@@ -159,6 +159,8 @@ class CommandRouter:
                 else:
                     if reason == "bad role":
                         denied = "Could not find the correct role."
+                    elif reason == "bad op":
+                        denied = "Command wants MC Operator but is not integrated."
                     elif reason == "private":
                         denied = "Command cannot be used in DM."
                     elif reason == "denied":

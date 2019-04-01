@@ -14,9 +14,6 @@ class CommandsMod(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleMod"
 
-    def authenticate(self, src):
-        return self.check_user_has_role(src.author, self.config.get(self.role))
-
     async def cmd_alias(self, args, src, **_):
         """Return a list of all previous names a user has had.
 
@@ -78,9 +75,7 @@ class CommandsMod(core.Commands):
             )
 
         await self.client.send_message(
-            src.author,
-            src.channel,
-            "Please give a reason" + "(just reply below): ",
+            src.author, src.channel, "Please give a reason (just reply below): "
         )
 
         msg = await self.client.wait_for_message(
@@ -166,9 +161,7 @@ class CommandsMod(core.Commands):
             )
 
         await self.client.send_message(
-            src.author,
-            src.channel,
-            "Please give a reason" + " (just reply below): ",
+            src.author, src.channel, "Please give a reason (just reply below): "
         )
 
         msg = await self.client.wait_for_message(
@@ -275,9 +268,7 @@ class CommandsMod(core.Commands):
             )
 
         await self.client.send_message(
-            src.author,
-            src.channel,
-            "Please give a reason " + " (just reply below): ",
+            src.author, src.channel, "Please give a reason (just reply below): "
         )
         msg = await self.client.wait_for_message(
             channel=src.channel, author=src.author, timeout=30
@@ -285,14 +276,9 @@ class CommandsMod(core.Commands):
         if msg is None:
             return "Timed out while waiting for input"
 
-        await self.client.send_message(
-            src.author, src.channel, "How long? (days) "
-        )
+        await self.client.send_message(src.author, src.channel, "How long? (days) ")
         msg2 = await self.client.wait_for_message(
-            channel=src.channel,
-            author=src.author,
-            check=str.isnumeric,
-            timeout=30,
+            channel=src.channel, author=src.author, check=str.isnumeric, timeout=30
         )
         if msg2 is None:
             return "Timed out while waiting for input"
@@ -474,9 +460,7 @@ class CommandsMod(core.Commands):
                     await self.client.server_voice_state(userToWarn, mute=False)
                     warnEmbed = discord.Embed(
                         title="User Unmute",
-                        description="You have been "
-                        + "unmuted by"
-                        + src.author.name,
+                        description="You have been unmuted by" + src.author.name,
                         colour=0x00FF11,
                     )
 
@@ -557,10 +541,7 @@ class CommandsMod(core.Commands):
             + "is correct.",
         )
         msg = await self.client.wait_for_message(
-            channel=src.channel,
-            content="confirm",
-            author=src.author,
-            timeout=10,
+            channel=src.channel, content="confirm", author=src.author, timeout=10
         )
         if msg is None:
             return "Purge event cancelled"
