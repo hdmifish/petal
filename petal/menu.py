@@ -73,7 +73,7 @@ class Menu:
 
     async def get_choice(self, opts: list, time=30) -> str:
         onum = len(opts)
-        if not self.msg or not 1 <= onum <= len(buttons):
+        if not 1 <= onum <= len(buttons):
             return ""
         selection = [cancel, *buttons[:onum]]
 
@@ -96,7 +96,7 @@ class Menu:
 
     async def get_multi(self, opts: list, time=30) -> list:
         onum = len(opts)
-        if not self.msg or not 1 <= onum <= len(buttons):
+        if not 1 <= onum <= len(buttons):
             return []
         selection = [cancel, *buttons[:onum], done]
 
@@ -123,7 +123,7 @@ class Menu:
 
     async def get_poll(self, opts: list, time=3600) -> dict:
         onum = len(opts)
-        if not self.msg or not 1 <= onum <= len(buttons):
+        if not 1 <= onum <= len(buttons):
             return {}
         selection = buttons[:onum]
         outcome = {key: 0 for key in opts}
@@ -131,8 +131,8 @@ class Menu:
         self.em.description = "\n".join(
             ["{}: `{}`".format(buttons[i], opts[i]) for i in range(onum)]
         )
-        await self.add_buttons(selection)
         await self.post()
+        await self.add_buttons(selection)
 
         await sleep(time)
 

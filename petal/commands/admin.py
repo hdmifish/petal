@@ -13,7 +13,6 @@ class CommandsAdmin(core.Commands):
 
     async def cmd_menu(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
-        await m.post()
 
         m.em.title = "Result: `{}`".format(
             await m.get_choice(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
@@ -22,7 +21,6 @@ class CommandsAdmin(core.Commands):
 
     async def cmd_menu2(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
-        await m.post()
 
         m.em.title = "Results: `{}`".format(
             await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
@@ -52,7 +50,6 @@ class CommandsAdmin(core.Commands):
             return "Invalid Channel"
 
         poll = Menu(self.client, targ, title=title)
-        await poll.post()
         outcome = await poll.get_poll(args, duration)
         return str(outcome)
 
