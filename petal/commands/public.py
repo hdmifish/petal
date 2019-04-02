@@ -106,7 +106,8 @@ class CommandsPublic(core.Commands):
 
         When this command is run with no arguments, a randomly selected online user from the Hug Donors database will be messaged with a notification that a hug has been requested. That user can then descend upon whoever invoked the command and initiate mutual arm enclosure.
 
-        Syntax: `{p}freehug` - Request a hug.
+        Syntax:
+        `{p}freehug` - Request a hug.
         `{p}freehug donate` - Toggle your donor status. Your request counter will reset if you opt out.
         `{p}freehug add <user-id>` - Add another user to donor list.
         `{p}freehug del <user-id>` - Remove another user from donor list.
@@ -290,7 +291,7 @@ class CommandsPublic(core.Commands):
 
         await self.client.embed(src.channel, embed)
 
-    async def cmd_roll(self, args, total=False, t=False, sums=False, s=False, **_):
+    async def cmd_roll(self, args, _total=False, _t=False, _sums=False, _s=False, **_):
         """Roll the dice and try your luck.
 
         This function uses the strongest source of randomness available to the system, with a quality generally considered to be sufficient for use in cryptographic applications. While the fairness of these dice cannot be *guaranteed*, it is as good as it possibly could be on the hardware running this bot.
@@ -304,8 +305,8 @@ class CommandsPublic(core.Commands):
         `--sums`, `-s` :: Display only the sum of each group of dice, not every individual roll.
         `--total`, `-t` :: Display ONLY the final, cumulative, total of all rolls. Overrides `--sums`/`-s`.
         """
-        _total = True in (total, t)  # Print ONLY final cumulative total
-        _sums = True in (sums, s)  # Print ONLY sums of groups
+        _total = True in (_total, _t)  # Print ONLY final cumulative total
+        _sums = True in (_sums, _s)  # Print ONLY sums of groups
 
         dice_ = [dice.get_die(term) for term in args]
 

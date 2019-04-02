@@ -29,7 +29,7 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    async def cmd_help(self, args, src, short=False, s=False, **_):
+    async def cmd_help(self, args, src, _short=False, _s=False, **_):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -82,7 +82,7 @@ class CommandsUtil(core.Commands):
                     opts = line.split(" ", 1)[1]
                 else:
                     details += line + "\n"
-            if details and True not in (short, s):
+            if details and True not in (_short, _s):
                 em.add_field(name="Details:", value=details.strip())
             if syntax:
                 em.add_field(name="Syntax:", value=syntax)
@@ -100,7 +100,7 @@ class CommandsUtil(core.Commands):
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, src, all=False, a=False, custom=False, c=False, **_):
+    async def cmd_commands(self, src, _all=False, _a=False, _custom=False, _c=False, **_):
         """List all commands.
 
         Syntax: `{p}commands [OPTIONS]`
@@ -111,14 +111,14 @@ class CommandsUtil(core.Commands):
         """
         formattedList = ""
         cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
-        if True in (custom, c):
+        if True in (_custom, _c):
             line_2 = ", including custom commands"
             cmd_list += list(self.config.get("commands")) or []
         else:
             line_2 = ""
         cmd_list.sort()
 
-        if True not in (all, a):
+        if True not in (_all, _a):
             # Unless --all or -a, remove any restricted commands.
             for cmd in cmd_list.copy():
                 mod, func, denied = self.router.find_command(kword=cmd, src=src)
@@ -248,7 +248,7 @@ class CommandsUtil(core.Commands):
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
         for opt, val in opts.items():
-            out.append(str(opt) + "==" + str(val))
+            out.append(str(opt)[1:] + "==" + str(val))
         out.append("MSG: " + msg)
         return "\n".join(out)
 

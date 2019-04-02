@@ -19,13 +19,13 @@ class CommandsSocial(core.Commands):
     async def cmd_update(
         self,
         src,
-        title="",
-        content="",
-        platform="",
-        reddit=False,
-        twitter=False,
-        fb=False,
-        tumblr=False,
+        _title="",
+        _content="",
+        _platform="",
+        _reddit=False,
+        _twitter=False,
+        _fb=False,
+        _tumblr=False,
         **_
     ):
         """
@@ -49,13 +49,13 @@ class CommandsSocial(core.Commands):
             "tumblr": self.router.tumblr,
         }
         flagged = ""
-        if reddit:
+        if _reddit:
             flagged += "0"
-        if twitter:
+        if _twitter:
             flagged += "1"
-        if fb:
+        if _fb:
             flagged += "2"
-        if tumblr:
+        if _tumblr:
             flagged += "3"
 
         if table["reddit"]:
@@ -81,7 +81,7 @@ class CommandsSocial(core.Commands):
         # if not modes:
         #     return "No modules enabled for social media posting."
 
-        if True not in (reddit, twitter, fb, tumblr) and platform == "":
+        if True not in (_reddit, _twitter, _fb, _tumblr) and _platform == "":
             # No destinations have been sent as a flag. Ask the user.
             await self.client.send_message(
                 src.author,
@@ -104,27 +104,27 @@ class CommandsSocial(core.Commands):
             # ):
             sendto = sendto.content
         else:
-            sendto = flagged + platform
+            sendto = flagged + _platform
 
         # Check whether sendto contains anything illegal.
         if sendto.strip("0123") != "":
             return "Invalid platform set, please try again."
 
-        if not title:
+        if not _title:
             # A title has not been sent as a flag. Ask the user.
             await self.client.send_message(
                 src.author,
                 src.channel,
                 "Please type a title for your post (timeout after 1 minute).",
             )
-            title = await self.client.wait_for_message(
+            _title = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=60
             )
-            if title is None:
+            if _title is None:
                 return "The process timed out, you need a valid title."
-            title = title.content
+            _title = _title.content
 
-        if not content:
+        if not _content:
             # Post content has not been sent as a flag. Ask the user.
             await self.client.send_message(
                 src.author,
@@ -134,19 +134,19 @@ class CommandsSocial(core.Commands):
                 + "Twitter posts. This process will "
                 + "time out after 2 minutes.",
             )
-            content = await self.client.wait_for_message(
+            _content = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=120
             )
 
-            if content is None:
+            if _content is None:
                 return "The process timed out, you need content to post."
-            content = content.content
+            _content = _content.content
 
         # Make sure this would not be an overly long tweet.
         if "1" in sendto:
-            if len(content) > 280:
+            if len(_content) > 280:
                 return "This post is {} characters too long for Twitter.".format(
-                    len(content) - 280
+                    len(_content) - 280
                 )
 
         # Get final confirmation before sending.
@@ -168,7 +168,7 @@ class CommandsSocial(core.Commands):
             sub1 = self.router.reddit.subreddit(self.config.get("reddit")["targetSR"])
             try:
                 response = sub1.submit(
-                    title.content, selftext=content.clean_content, send_replies=False
+                    _title.content, selftext=_content.clean_content, send_replies=False
                 )
                 self.log.f("smupdate", "Reddit Response: " + str(response))
             except APIException:
@@ -191,7 +191,7 @@ class CommandsSocial(core.Commands):
 
         # Post to Twitter
         if "1" in sendto:
-            self.router.twit.PostUpdate(content.clean_content)
+            self.router.twit.PostUpdate(_content.clean_content)
             await self.client.send_message(src.author, src.channel, "Submitted tweet")
             await asyncio.sleep(2)
 
@@ -233,8 +233,8 @@ class CommandsSocial(core.Commands):
                 self.config.get("tumblr")["targetBlog"],
                 state="published",
                 slug="post from petalbot",
-                title=title.content,
-                body=content.clean_content,
+                title=_title.content,
+                body=_content.clean_content,
             )
 
             await self.client.send_message(

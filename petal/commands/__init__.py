@@ -246,15 +246,12 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
-                    if key in ("self", "args", "msg", "src"):
-                        # Do not allow flags that mimic important values.
-                        continue
-                    opts[key] = val
+                    opts["_" + key] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.
-                    for char in key:
-                        opts[char] = True
-                    opts[key[-1]] = val
+                    for char in key[:-1]:
+                        opts["_" + char] = True
+                    opts["_" + key[-1]] = val
             else:
                 args.append(arg)
 
