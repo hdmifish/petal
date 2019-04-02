@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime as dt
 
 import discord
 
@@ -120,80 +119,6 @@ class Commands:
             except AttributeError:
                 return False
         return True
-
-    @staticmethod
-    def get_member_name(server, member):
-        try:
-            m = server.get_member(member).name
-            if m is None:
-                m = member
-        except AttributeError:
-            m = member
-
-        return m
-
-    async def check_pa_updates(self, force=False):
-        if force:
-            self.config.doc["lastRun"] = dt.utcnow()
-            self.config.save()
-
-        else:
-            last_run = self.config.get("lastRun")
-            self.log.f("pa", "Last run at: " + str(last_run))
-            if last_run is None:
-                last_run = dt.utcnow()
-                self.config.doc["lastRun"] = last_run
-                self.config.save()
-            else:
-                difference = (
-                    dt.utcnow() - dt.strptime(str(last_run), "%Y-%m-%d %H:%M:%S.%f")
-                ).total_seconds()
-                self.log.f("pa", "Difference: " + str(difference))
-                if difference < 86400:
-                    return
-                else:
-                    self.config.doc["lastRun"] = dt.utcnow()
-                    self.config.save()
-
-        self.log.f("pa", "Searching for entries...")
-        response = self.db.get_motd_entry(update=True)
-
-        if response is None:
-            if force:
-                return "Could not find suitable entry, make sure you have added questions to the DB"
-
-            self.log.f("pa", "Could not find suitable entry")
-
-        else:
-            try:
-                em = discord.Embed(
-                    title="Patch Asks",
-                    description="Today Patch asks: \n " + response["content"],
-                    colour=0x0ACDFF,
-                )
-
-                msg = await self.client.embed(
-                    self.client.get_channel(self.config.get("motdChannel")), em
-                )
-
-                await self.client.send_message(
-                    msg.author,
-                    msg.channel,
-                    "*today's question was "
-                    + "written by "
-                    + self.get_member_name(msg.server, response["author"])
-                    + "*",
-                )
-                self.log.f(
-                    "pa",
-                    "Going with entry: "
-                    + str(response["num"])
-                    + " by "
-                    + self.get_member_name(msg.server, response["author"]),
-                )
-
-            except KeyError:
-                self.log.f("pa", "Malformed entry, dumping: " + str(response))
 
     async def notify_subscribers(self, source_channel, target_message, key):
         await self.client.send_message(None, source_channel, "Notifying subscribers...")
