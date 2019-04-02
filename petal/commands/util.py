@@ -4,10 +4,12 @@ Access: Public"""
 from datetime import datetime as dt
 
 import discord
+import pytz
 
 from petal.commands import core
 
-
+# Reference: strftime.org
+tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
 helptext = [
     """An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.""",
     """While spaces separate Arguments, sometimes an Argument is desired to be multiple words. In these cases, one can simply enclose the argument in quotes; For example:```{p}command "asdf qwert" zxcv```This would pass only *two* arguments to the command: `"asdf qwert"` and `"zxcv"`.""",
@@ -15,6 +17,13 @@ helptext = [
     """A __Flag__ is an Option passed without an explicit value, such as in:```{p}command --verbose```In this example, `verbose` is passed into the command with a **boolean** value of `True`, rather than any string value. This is often used by commands that may optionally return more information if requested.""",
     """Short Options may be grouped together as a single prefixed word, or cluster. This can save time when typing a command with a series of Flags, but it is less useful when values need to be passed, because only the final Short Option in a cluster will be assigned the value specified. For example:```{p}command -abc=23 --long1=xyz --long2```In this command, while `c` is passed with a value of `"23"`, `a` and `b` are simply passed with values of `True`. This is the same difference by which the Long Option `long1` is passed with the value `"xyz"` while `long2` is passed with the value `True`.""",
 ]
+
+
+def zone(tz: str):
+    try:
+        return pytz.timezone(tz)
+    except pytz.exceptions.UnknownTimeZoneError:
+        return None
 
 
 class CommandsUtil(core.Commands):
@@ -112,9 +121,7 @@ class CommandsUtil(core.Commands):
         if True not in (all, a):
             # Unless --all or -a, remove any restricted commands.
             for cmd in cmd_list.copy():
-                mod, func, denied = self.router.find_command(
-                    kword=cmd, src=src
-                )
+                mod, func, denied = self.router.find_command(kword=cmd, src=src)
                 if denied is not False:
                     cmd_list.remove(cmd)
             line_1 = "List of commands you can access"
@@ -139,6 +146,42 @@ class CommandsUtil(core.Commands):
         return "Current Ping: {}ms\nPing till now: {}ms of {} pings".format(
             str(delta), str(truedelta), str(self.config.stats["pingCount"])
         )
+
+    async def cmd_time(self, args, **_):
+        """Show the current time and date in a specific time zone or location.
+
+        This command will accept either a region/location pair, such as `US/Pacific`, or a time zone code, like `UTC` or `CET` or even ones such as `GMT-5`. Great efforts are taken to hopefully ensure that capitalization is not a concern. With no given input, default output is in UTC.
+        The time zones are defined by way of the PyTZ library, and can be found here: http://pytz.sourceforge.net/
+
+        Syntax:
+        `{p}time` - Show date/time in UTC.
+        `{p}time <tz code>` - Show d/t in the specified time zone.
+        `{p}time <region>/<location>` - Show d/t somewhere specific, such as `Europe/Rome`.
+        `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
+        """
+        tz = args[0] if args else "UTC"
+        # Try a bunch of different possibilities for what the user might have
+        #     meant. Use the first one found, if any. First, check it plain.
+        #     Then, check it in all caps and CamelCase. Then, look for the same,
+        #     but in 'Etc/*'. Finally, split it and capitalize each part before
+        #     finally giving up.
+        tzone = (
+            zone(tz)
+            or zone(tz.upper())
+            or zone(tz.capitalize())
+            or zone("Etc/" + tz)
+            or zone("Etc/" + tz.upper())
+            or zone("Etc/" + tz.capitalize())
+            or zone("/".join([term.capitalize() for term in tz.split("/")]))
+        )
+        if tzone:
+            return dt.now(tzone).strftime(tstring)
+        else:
+            return "Could not find the `{}` timezone.".format(tz)
+
+    async def cmd_utc(self, **_):
+        """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
+        return await self.cmd_time(["UTC"])
 
     async def cmd_statsfornerds(self, src, **_):
         """Display more detailed statistics (for nerds)."""
