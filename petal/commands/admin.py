@@ -11,30 +11,34 @@ class CommandsAdmin(core.Commands):
     whitelist = "server_admins"
 
     async def cmd_askpatch(self, args, src, **_):
-        """Access the AskPatch database.
+        """Access the AskPatch database. Functionality determined by subcommand.
 
         Syntax:
-        `{p}askpatch submit`
-        `{p}askpatch approve`
-        `{p}askpatch ignore`
-        `{p}askpatch list`
+        `{p}askpatch submit "<question>"` - Submit a question to Patch Asks. Should be quoted.
+        `{p}askpatch approve <question-id>` - Approve a submitted question and add it to the Patch Asks DB.
+        `{p}askpatch reject <question-id>` - Reject a submitted question from being added.
+        `{p}askpatch count` - Return the number of questions currently queued for use.
         """
         if not args:
             return "Subcommand required."
 
-        if src.channel.id != self.config.get("motdModChannel"):
-            self.log.f(
-                "ap",
-                str(src.server.id) + " != " + self.config.get("motdModChannel"),
-            )
-            return "Sorry, you are not permitted to use this"
-
         subcom = args.pop(0)
 
         if subcom == "submit":
-            response = self.db.submit_motd(src.author.id, " ".join(args[1:]))
+            # msg = msg.split(maxsplit=2)
+            # if len(msg) < 3:
+            #     return "Question cannot be empty."
+            # msg = msg[2]
+            if not args:
+                return "Question cannot be empty."
+            elif len(args) > 1:
+                return "Question should be put in quotes."
+            else:
+                msg = args[0]
+
+            response = self.db.submit_motd(src.author.id, msg)
             if response is None:
-                return "Unable to add to database, ask your bot owner as to why"
+                return "Unable to add to database, ask your bot owner as to why."
 
             newEmbed = discord.Embed(
                 title="Entry " + str(response["num"]),
@@ -46,18 +50,18 @@ class CommandsAdmin(core.Commands):
             chan = self.client.get_channel(self.config.get("motdModChannel"))
             await self.client.embed(chan, embedded=newEmbed)
 
-            return "Question added to database"
+            return "Question added to database."
 
         elif subcom == "approve":
             if src.channel.id != self.config.get("motdModChannel"):
                 return "You can't use that here"
 
             if not args:
-                return "You need to specify an entry"
+                return "You need to specify an entry."
             targ = args[0]
 
             if not targ.isnumeric():
-                return "Entry must be an integer"
+                return "Entry must be an integer."
 
             result = self.db.update_motd(int(args[1]))
             if result is None:
@@ -88,7 +92,7 @@ class CommandsAdmin(core.Commands):
                 return "No entries exist with id number: " + args[1]
 
             newEmbed = discord.Embed(
-                title="Rejected" + str(result["num"]),
+                title="Rejected " + str(result["num"]),
                 description=result["content"],
                 colour=0xFFA500,
             )
@@ -96,13 +100,12 @@ class CommandsAdmin(core.Commands):
             chan = self.client.get_channel(self.config.get("motdModChannel"))
             await self.client.embed(chan, newEmbed)
 
-        elif subcom == "list":
+        elif subcom == "count":
             count = self.db.motd.count({"approved": True, "used": False})
-            return (
-                "Patch Asks list is not a thing, scroll up in the channel to see whats up\n"
-                + str(count)
-                + " available in the queue."
-            )
+            return "Question queue currently contains `{}` entries.".format(count)
+
+        else:
+            return "Unrecognized subcommand."
 
     async def cmd_paforce(self, src, **_):
         """Initiate a forced AskPatch."""
