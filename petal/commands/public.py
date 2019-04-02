@@ -196,6 +196,50 @@ class CommandsPublic(core.Commands):
                 self.config.save()
                 return "You have been removed from the donor list."
 
+    async def cmd_askpatch(self, args, src, **_):
+        """Access the AskPatch database. Functionality determined by subcommand.
+
+        Syntax:
+        `{p}askpatch submit "<question>"` - Submit a question to Patch Asks. Should be quoted.
+        """
+        if not args:
+            return "Subcommand required."
+
+        subcom = args.pop(0)
+
+        if subcom == "submit":
+            # msg = msg.split(maxsplit=2)
+            # if len(msg) < 3:
+            #     return "Question cannot be empty."
+            # msg = msg[2]
+            if not args:
+                return "Question cannot be empty."
+            elif len(args) > 1:
+                return "Question should be put in quotes."
+            else:
+                msg = args[0]
+
+            response = self.db.submit_motd(src.author.id, msg)
+            if response is None:
+                return "Unable to add to database, ask your bot owner as to why."
+
+            newEmbed = discord.Embed(
+                title="Entry " + str(response["num"]),
+                description="New question from " + src.author.name,
+                colour=0x8738F,
+            )
+            newEmbed.add_field(name="content", value=response["content"])
+
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, embedded=newEmbed)
+
+            return "Question added to database."
+
+        elif subcom in ("approve", "reject", "count"):
+            return "Restricted subcommand."
+        else:
+            return "Unrecognized subcommand."
+
     async def cmd_wiki(self, args, src, **_):
         """Retrieve information about a query from Wikipedia.
 
