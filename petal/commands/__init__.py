@@ -246,7 +246,7 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
-                    opts["_" + key] = val
+                    opts["_" + key.strip("_")] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.
                     for char in key[:-1]:
