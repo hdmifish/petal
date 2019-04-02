@@ -75,10 +75,14 @@ class Commands:
                 self.log.err("Role '" + role + "' does not exist.")
                 return False, "bad role"
             else:
-                if target in user.roles:
-                    return True, None
+                user_there = server.get_member(user.id)
+                if user_there:
+                    if target in user_there.roles:
+                        return True, None
+                    else:
+                        return False, "denied"
                 else:
-                    return False, "denied"
+                    return False, "bad user"
         else:
             return False, "private"
 

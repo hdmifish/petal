@@ -157,7 +157,9 @@ class CommandRouter:
                 if not src or permitted:
                     return mod_src, func, False
                 else:
-                    if reason == "bad role":
+                    if reason == "bad user":
+                        denied = "Could not find you on the main server."
+                    elif reason == "bad role":
                         denied = "Could not find the correct role on the main server."
                     elif reason == "bad op":
                         denied = "Command wants MC Operator but is not integrated."
