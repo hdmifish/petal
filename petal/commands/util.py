@@ -234,7 +234,7 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
-    async def cmd_argtest(self, args, src, **opts):
+    async def cmd_argtest(self, args, msg, src, **opts):
         """Display details on how the command was parsed.
 
         Used for testing, or personal experimentation to help you to understand Arguments, Options and Flags.
@@ -249,6 +249,7 @@ class CommandsUtil(core.Commands):
         out = ["ARGS:", *args, "OPTS:"]
         for opt, val in opts.items():
             out.append(str(opt) + "==" + str(val))
+        out.append("MSG: " + msg)
         return "\n".join(out)
 
 
