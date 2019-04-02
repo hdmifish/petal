@@ -158,7 +158,9 @@ class CommandRouter:
                     return mod_src, func, False
                 else:
                     if reason == "bad role":
-                        denied = "Could not find the correct role."
+                        denied = "Could not find the correct role on the main server."
+                    elif reason == "bad op":
+                        denied = "Command wants MC Operator but is not integrated."
                     elif reason == "private":
                         denied = "Command cannot be used in DM."
                     elif reason == "denied":

@@ -12,9 +12,6 @@ class CommandsListener(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleListener"
 
-    def authenticate(self, src):
-        return self.check_user_has_role(src.author, self.config.get(self.role))
-
     async def cmd_lpromote(self, src, user=None, **_):
 
         if user is None:

@@ -12,9 +12,6 @@ class CommandsEvent(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "xPostRole"
 
-    def authenticate(self, src):
-        return self.check_user_has_role(src.author, self.config.get(self.role))
-
     async def cmd_event(self, src, **_):
         """
         Dialog-styled event poster

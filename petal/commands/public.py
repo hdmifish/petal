@@ -16,9 +16,6 @@ from petal.util import dice
 class CommandsPublic(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    def authenticate(self, *_):
-        return True, None
-
     async def cmd_hello(self, **_):
         """Echo."""
         return "Hey there!"
@@ -491,7 +488,7 @@ class CommandsPublic(core.Commands):
                 return response
         else:
             count = self.client.db.save_void(
-                src.split(" ", 1)[1], src.author.name, src.author.id
+                src.content.split(" ", 1)[1], src.author.name, src.author.id
             )
 
             if count is not None:
