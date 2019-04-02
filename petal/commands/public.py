@@ -488,7 +488,7 @@ class CommandsPublic(core.Commands):
                 return response
         else:
             count = self.client.db.save_void(
-                src.split(" ", 1)[1], src.author.name, src.author.id
+                src.content.split(" ", 1)[1], src.author.name, src.author.id
             )
 
             if count is not None:
