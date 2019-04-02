@@ -17,6 +17,16 @@ class CommandsMaintenance(core.Commands):
         """Echo."""
         return "Hello boss! How's it going?"
 
+    async def cmd_forcesave(self, **_):
+        """Force configuration file save."""
+        self.config.save(vb=1)
+        return "Saved."
+
+    async def cmd_forceload(self, **_):
+        """Force configuration file reload."""
+        self.config.load()
+        return "Loaded config file."
+
     async def cmd_calias(self, args, **_):
         """Manipulate command aliases.
 

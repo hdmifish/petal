@@ -32,6 +32,36 @@ for module in LoadModules:
     importlib.import_module("." + module, package=__name__)
 
 
+def split(line: str) -> (list, str):
+    """Break an input line into a list of tokens, and a "regular" message."""
+    # Split the full command line into a list of tokens, each its own arg.
+    tokens = shlex.shlex(line, posix=True)
+    tokens.quotes += "`"
+    # Split the string only on whitespace.
+    tokens.whitespace_split = True
+    # However, consider a comma to be whitespace so it splits on them too.
+    tokens.whitespace += ","
+    # Consider a semicolon to denote a comment; Everything after a semicolon
+    #   will then be ignored.
+    tokens.commenters = ";"
+
+    # Now, find the original string, but only up until the point of a semicolon.
+    # Therefore, the following command:
+    #   `help commands -v; @person, this is where to see the list`
+    # will return a list, ["help", "commands", "-v"], and a string, "help commands -v".
+    # This will allow commands to consider "the rest of the line" without going
+    #   beyond a semicolon, and without having to reconstruct the line from the
+    #   list of arguments, which may or may not have been separated by spaces.
+    original = shlex.shlex(line, posix=True)
+    original.quotes += "`"
+    original.whitespace_split = True
+    original.whitespace = ""
+    original.commenters = ";"
+
+    # Return a list of all the tokens, and the first part of the "original".
+    return list(tokens), original.read_token()
+
+
 class CommandRouter:
     version = ""
 
@@ -202,10 +232,6 @@ class CommandRouter:
 
         # Loop through given arguments.
         for i, arg in enumerate(cline):
-            # Stop parsing if a semicolon is found.
-            if not arg.strip(";"):
-                break
-
             # Find args that begin with a dash.
             if arg.startswith("-"):
                 # This arg is an option key.
@@ -220,15 +246,12 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
-                    if key in ("self", "args", "src"):
-                        # Do not allow flags that mimic important values.
-                        continue
-                    opts[key] = val
+                    opts["_" + key.strip("_")] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.
-                    for char in key:
-                        opts[char] = True
-                    opts[key[-1]] = val
+                    for char in key[:-1]:
+                        opts["_" + char] = True
+                    opts["_" + key[-1]] = val
             else:
                 args.append(arg)
 
@@ -239,10 +262,7 @@ class CommandRouter:
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
         """
-        # Split the full command line into a list of tokens, each its own arg.
-        div = shlex.shlex(command, posix=True, punctuation_chars=True)
-        div.wordchars += "+"  # Additionally allow these characters in args.
-        cline = list(div)
+        cline, msg = split(command)
         cword = cline.pop(0)
 
         # Find the method, if one exists.
@@ -256,7 +276,7 @@ class CommandRouter:
             args, opts = self.parse(cline)
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
-            return await func(args=args, **opts, src=src)
+            return await func(args=args, **opts, msg=msg, src=src)
 
     async def run(self, src):
         """Given a message, determine whether it is a command;

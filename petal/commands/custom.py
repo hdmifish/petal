@@ -63,7 +63,7 @@ class CommandsCustom(core.Commands):
 
         return cmd_custom, None
 
-    async def cmd_new(self, args, src, nsfw=False, **_):
+    async def cmd_new(self, args, src, _nsfw=False, **_):
         """That awesome custom command command.
 
         Create a custom Petal command that will print a specific text when run. This text can be anything, from a link to a copypasta to your own poetry. Just try not to be obnoxious with it, yeah?
@@ -74,7 +74,7 @@ class CommandsCustom(core.Commands):
         """
         if len(args) != 2:
             return "This command needs to be given 2 arguments."
-        if nsfw not in (True, False):
+        if _nsfw not in (True, False):
             return "`--nsfw` flag cannot be supplied with a value."
 
         invoker = args[0].strip()
@@ -96,11 +96,11 @@ class CommandsCustom(core.Commands):
             if str(response.content).lower() != "yes":
                 return "Command `" + self.config.prefix + invoker + "` was not changed."
             else:
-                self.config.commands[invoker] = {"com": command, "nsfw": nsfw}
+                self.config.commands[invoker] = {"com": command, "nsfw": _nsfw}
                 self.config.save()
                 return "Command `" + self.config.prefix + invoker + "` was redefined."
         else:
-            self.config.commands[invoker] = {"com": command, "nsfw": nsfw}
+            self.config.commands[invoker] = {"com": command, "nsfw": _nsfw}
             self.config.save()
             return "New Command `{}` Created!".format(self.config.prefix + invoker)
 
