@@ -109,7 +109,7 @@ class CommandsAdmin(core.Commands):
 
     async def cmd_paforce(self, src, **_):
         """Initiate a forced AskPatch."""
-        response = await self.check_pa_updates(force=True)
+        response = await self.router.check_pa_updates(force=True)
 
         self.log.f(
             "pa",
