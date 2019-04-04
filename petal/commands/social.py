@@ -10,6 +10,8 @@ from twitter import error as twitterror
 from praw.exceptions import APIException
 
 from petal.commands import core
+from petal.menu import Menu
+from petal.util.grammar import sequence_words
 
 
 class CommandsSocial(core.Commands):
@@ -78,31 +80,33 @@ class CommandsSocial(core.Commands):
             modes.append(self.router.tumblr)
             using.append("tumblr")
 
-        # if not modes:
-        #     return "No modules enabled for social media posting."
+        if not modes:
+            return "No modules enabled for social media posting."
 
         if True not in (_reddit, _twitter, _fb, _tumblr) and _platform == "":
             # No destinations have been sent as a flag. Ask the user.
-            await self.client.send_message(
-                src.author,
+            sendto = ""
+            ui = Menu(
+                self.client,
                 src.channel,
-                "Hello "
-                + src.author.name
-                + ", here are the enabled social media services:\n"
-                + "\n".join(names)
-                + "\n\nPlease select which one(s) you want to use (e.g. `023`).",
+                "Select platform(s) to publish on.",
+                user=src.author,
             )
+            await ui.post()
 
-            sendto = await self.client.wait_for_message(
-                channel=src.channel, author=src.author, timeout=20
+            platforms = await ui.get_multi(using)
+            platforms.sort()
+            ui.em.description += "\nSelection: " + sequence_words(
+                [x.capitalize() for x in platforms]
             )
-            if sendto is None:
-                return "The process timed out, please enter a valid string of numbers."
-            # if (
-            #     not self.validate_channel(modes, sendto)
-            #     or not sendto.content.isnumeric()
-            # ):
-            sendto = sendto.content
+            await ui.post()
+
+            for i, name in enumerate(using):
+                if name in platforms:
+                    sendto += str(i)
+            if not sendto:
+                await ui.close()
+                return "Cancelled"
         else:
             sendto = flagged + _platform
 
@@ -264,7 +268,9 @@ class CommandsSocial(core.Commands):
             #            print("Stats: " + str(status))
             #            if str(status) == "[{'code': 327, 'message': 'You have already retweeted this Tweet.'}]":
             #                return "We've already retweeted this tweet"
-            user = self.router.twit.GetUser(user_id=status["user_mentions"][0]["id"]).AsDict()
+            user = self.router.twit.GetUser(
+                user_id=status["user_mentions"][0]["id"]
+            ).AsDict()
 
             embed = discord.Embed(
                 title="Re-tweeted from: " + status["user_mentions"][0]["name"],

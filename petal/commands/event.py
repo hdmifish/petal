@@ -6,93 +6,113 @@ import asyncio
 import discord
 
 from petal.commands import core
+from petal.menu import Menu
 
 
 class CommandsEvent(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "xPostRole"
 
-    async def cmd_event(self, src, **_):
+    async def cmd_event(self, src, _message="", _channels="", _nomenu=False, **_):
+        """Post a message announcing the start of an event.
+
+        Define a message which will be sent to one or more predefined channels. The message may include mass pings by way of including tags `{{e}}` and `{{h}}` for substitution.
+        Destination channels may be selected conversationally or by way of a reaction-based menu.
+
+        Options:
+        `--message=<msg>` :: Define the message to send ahead of time. This will skip the step where Petal asks you what you want the message to say.
+        `--nomenu` :: Forsake the Reaction UI and determine destination channels conversationally.
         """
-        Dialog-styled event poster
-        >event
-        """
-        chanList = []
+        channels_list = []
+        channels_dict = {}
         msg = ""
         for chan in self.config.get("xPostList"):
             channel = self.client.get_channel(chan)
             if channel is not None:
                 msg += (
-                    str(len(chanList))
+                    str(len(channels_list))
                     + ". ("
                     + channel.name
                     + " [{}]".format(channel.server.name)
                     + ")\n"
                 )
-                chanList.append(channel)
+                channels_list.append(channel)
+                channels_dict[channel.server.name + "/#" + channel.name] = channel
             else:
                 self.log.warn(
                     chan + " is not a valid channel. I'd remove it if I were you."
                 )
 
         # Get channels to send to.
-        while True:
-            await self.client.send_message(
-                src.author,
-                src.channel,
-                "Hi there, "
-                + src.author.name
-                + "! Please select the number of "
-                + "each server you want to post "
-                + "to. (dont separate the numbers)",
-            )
-
-            await self.client.send_message(src.author, src.channel, msg)
-
-            chans = await self.client.wait_for_message(
-                channel=src.channel,
-                author=src.author,
-                timeout=20,
-            )
-
-            if chans is None:
-                return (
-                    "Sorry, the request timed out. Please make sure you"
-                    + " type a valid sequence of numbers."
-                )
-            if self.validate_channel(chanList, chans.content):
-                break
-            else:
+        if _nomenu:
+            # Do it only conversationally.
+            while True:
                 await self.client.send_message(
-                    src.author, src.channel, "Invalid channel choices. You may try again immediately."
+                    src.author,
+                    src.channel,
+                    "Hi there, "
+                    + src.author.name
+                    + "! Please select the number of "
+                    + "each server you want to post "
+                    + "to. (dont separate the numbers)",
                 )
+
+                await self.client.send_message(src.author, src.channel, msg)
+
+                chans = await self.client.wait_for_message(
+                    channel=src.channel, author=src.author, timeout=20
+                )
+
+                if chans is None:
+                    return (
+                        "Sorry, the request timed out. Please make sure you"
+                        + " type a valid sequence of numbers."
+                    )
+                if self.validate_channel(channels_list, chans.content):
+                    break
+                else:
+                    await self.client.send_message(
+                        src.author,
+                        src.channel,
+                        "Invalid channel choices. You may try again immediately.",
+                    )
+            post_to = []
+            for i in chans.content:
+                print(channels_list[int(i)])
+                post_to.append(channels_list[int(i)])
+        else:
+            # Use the ReactionUI.
+            menu = Menu(
+                self.client,
+                src.channel,
+                "Where shall the message be posted?",
+                user=src.author,
+            )
+            selection = await menu.get_multi(list(channels_dict))
+            if not selection:
+                return "No target channels selected; Post canceled."
+            post_to = [channels_dict[c] for c in selection]
 
         await self.client.send_message(
             src.author,
             src.channel,
-            "What do you want to send? (remember: {e} = @ev and {h} = @her)",
+            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
         )
 
-        msg = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, timeout=120
-        )
-
-        msgstr = msg.content.format(e="@everyone", h="@here")
-
-        toPost = []
-        for i in chans.content:
-            print(chanList[int(i)])
-            toPost.append(chanList[int(i)])
-
-        channames = []
-        for i in toPost:
-            channames.append(i.name + " [" + i.server.name + "]")
+        msgstr = (
+            _message
+            or (
+                await self.client.wait_for_message(
+                    channel=src.channel, author=src.author, timeout=120
+                )
+            ).content
+        ).format(e="@everyone", h="@here")
 
         embed = discord.Embed(
             title="Message to post", description=msgstr, colour=0x0ACDFF
         )
 
-        embed.add_field(name="Channels", value="\n".join(channames))
+        embed.add_field(name="Channels", value="\n".join([c.mention for c in post_to]))
 
         await self.client.embed(src.channel, embed)
         await self.client.send_message(
@@ -104,16 +124,13 @@ class CommandsEvent(core.Commands):
         )
 
         msg2 = await self.client.wait_for_message(
-            channel=src.channel,
-            author=src.author,
-            content="confirm",
-            timeout=10,
+            channel=src.channel, author=src.author, content="confirm", timeout=10
         )
         if msg2 is None:
             return "Event post timed out"
 
         posted = []
-        for i in toPost:
+        for i in post_to:
             posted.append(await self.client.send_message(src.author, i, msgstr))
             await asyncio.sleep(2)
 
@@ -139,17 +156,13 @@ class CommandsEvent(core.Commands):
                 + "**. Would you like to notify subscribers? [yes/no]",
             )
             n = await self.client.wait_for_message(
-                channel=tempm.channel,
-                author=src.author,
-                timeout=20,
+                channel=tempm.channel, author=src.author, timeout=20
             )
             if n.content.lower() != "yes":
                 return "Timed out..."
 
             if n.content == "yes":
-                response = await self.notify_subscribers(
-                    src.channel, posted[0], subkey
-                )
+                response = await self.notify_subscribers(src.channel, posted[0], subkey)
                 todelete = "[{}]".format(subkey)
                 for post in posted:
                     content = post.content

@@ -2,6 +2,7 @@
 Access: Config Whitelist"""
 
 from petal.commands import core
+from petal.menu import Menu
 
 
 class CommandsMaintenance(core.Commands):
@@ -118,6 +119,48 @@ class CommandsMaintenance(core.Commands):
                     report.append(mem.name + " was blacklisted.")
             self.config.save()
             return "\n".join(report)
+
+    async def cmd_menu(self, src, **_):
+        m = Menu(self.client, src.channel, "Choice", user=src.author)
+
+        m.em.title = "Result: `{}`".format(
+            await m.get_choice(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        )
+        await m.close()
+
+    async def cmd_menu2(self, src, **_):
+        m = Menu(self.client, src.channel, "Choice", user=src.author)
+
+        m.em.title = "Results: `{}`".format(
+            await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        )
+        await m.close()
+
+    async def cmd_poll(self, args, src, _question=None, _channel=None, _time=None, **_):
+        if len(args) < 2:
+            return "Must provide at least two options."
+
+        if _time and not _time.isnumeric():
+            return "Time must be numeric."
+        elif not _time:
+            duration = 3600
+        else:
+            duration = int(_time)
+
+        title = "Poll"
+        if _question:
+            title += ": " + _question
+
+        if _channel:
+            targ = self.client.get_channel(_channel)
+        else:
+            targ = src.channel
+        if not targ:
+            return "Invalid Channel"
+
+        poll = Menu(self.client, targ, title=title)
+        outcome = await poll.get_poll(args, duration)
+        return str(outcome)
 
 
 # Keep the actual classname unique from this common identifier
