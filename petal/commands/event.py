@@ -14,7 +14,13 @@ class CommandsEvent(core.Commands):
     role = "xPostRole"
 
     async def cmd_event(self, src, _channels="", _nomenu=False, **_):
-        """Post a message announcing the start of an event."""
+        """Post a message announcing the start of an event.
+
+        Define a message which will be sent to one or more predefined channels. The message may include mass pings by way of including tags `{{e}}` and `{{h}}` for substitution.
+        Destination channels may be selected conversationally or by way of a reaction-based menu.
+
+        Options: `--nomenu` :: Forsake the Reaction UI and determine destination channels conversationally.
+        """
         channels_list = []
         channels_dict = {}
         msg = ""
