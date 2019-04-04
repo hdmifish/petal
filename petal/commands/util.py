@@ -183,8 +183,8 @@ class CommandsUtil(core.Commands):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
         return await self.cmd_time(["UTC"])
 
-    async def cmd_statsfornerds(self, src, **_):
-        """Display more detailed statistics (for nerds)."""
+    async def cmd_stats(self, src, **_):
+        """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
         em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
