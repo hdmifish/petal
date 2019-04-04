@@ -16,10 +16,16 @@ from .config import Config
 from .commands import CommandRouter as Commands
 from .dbhandler import DBHandler
 
+
 # from random import randint
 log = Peacock()
 
-version = "0.5.7"
+version = "<ERROR>"
+with open("version_info.sh", "r") as f:
+    inf = f.read()
+    inf = inf.split("VERSION=", 1)[-1].split("\n", 1)[0]
+    if inf:
+        version = inf
 
 
 class Petal(discord.Client):
