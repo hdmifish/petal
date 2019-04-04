@@ -1,0 +1,28 @@
+#!/bin/bash
+source ./version_info.sh
+REPO_URL="leaf.drunkencode.net"
+URL="YOUR_WEBHOOK_URL_HERE"
+HASH=$(git rev-parse --short HEAD) 
+TS=$(TZ=UTC git log --date=format:'%Y-%m-%dT%H:%M:%SZ' -n1 | grep -i date | cut -d' ' -f4-5)
+
+CONTENT=$(cat <<EOF 
+{
+    "content": "A new version of Petal has been deployed",
+    "embeds": [
+        {
+      "title": "$UPDATE_TITLE (Version: $VERSION)",
+      "description": "Short Changelog:\n$CHANGELOG",
+      "url": "http://leaf.drunkencode.net",
+      "color": 3041428,
+      "timestamp": "$TS",
+      "footer": {
+        "text": "Commit: $HASH"
+      }
+       }
+    ]
+}    
+EOF
+)
+
+echo "$CONTENT"
+curl -X POST -H "Content-Type: application/json" -d "$CONTENT" $URL
