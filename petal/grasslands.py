@@ -13,6 +13,7 @@ from wiktionaryparser import WiktionaryParser as WP
 version = "0.0.0"
 
 Wikt = WP()
+def_cache = {}
 
 
 class Peacock(object):
@@ -289,8 +290,15 @@ class Pidgeon:
 
 
 class Define:
-    def __init__(self, query: str, lang=None):
-        result = Wikt.fetch(query, lang)[0]
+    def __init__(self, query: str, lang=None, which=0):
+        cachename = "{}/{}".format(query, lang)
+        if cachename in def_cache:
+            result = def_cache[cachename]
+        else:
+            result = Wikt.fetch(query, lang)
+            def_cache[cachename] = result
+        self.alts = len(result)
+        result = result[which]
         self.etymology = result["etymology"]
         self.definitions = result["definitions"]
         self.valid = bool(self.definitions)

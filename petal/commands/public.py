@@ -4,8 +4,9 @@ Access: Public"""
 from datetime import datetime as dt
 import json
 from random import randint
-import requests
+import re
 
+import requests
 import discord
 
 from petal.commands import core
@@ -274,7 +275,7 @@ class CommandsPublic(core.Commands):
 
             await self.client.embed(src.channel, em)
 
-    async def cmd_define(self, args, src, _language=None, **_):
+    async def cmd_define(self, args, src, _language=None, _etymology=None, **_):
         """Find the definition of a word from Wiktionary.
 
         Syntax: `{p}define <word>`
@@ -287,31 +288,40 @@ class CommandsPublic(core.Commands):
         self.log.f("dict", "Query string: " + word)
         await self.client.send_typing(src.channel)
 
-        ref = Define(word, _language)
+        if type(_etymology) == str and _etymology.isdigit():
+            which = int(_etymology)
+        else:
+            which = 0
+
+        ref = Define(word, _language, which)
         url = "https://en.wiktionary.org/wiki/" + word
         if ref.valid:
-            em = discord.Embed(color=0xF8F9FA)
-            em.set_author(
-                name="'{}' on Wiktionary".format(word),
-                url=url,
-                icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
-            )
-            em.add_field(name="Etymology", value=ref.etymology)
-            for definition in ref.definitions:
-                em.add_field(
-                    name="{} ({}):".format(
-                        word.capitalize(), definition["partOfSpeech"]
+            try:
+                em = discord.Embed(color=0xF8F9FA)
+                em.set_author(
+                    name="'{}' on Wiktionary ({} etymologies available)".format(
+                        word, ref.alts
                     ),
-                    value="\n- ".join(
-                        [
-                            text
-                            for text in definition["text"]
-                            if "vulgar" not in text.lower()
-                        ]
-                    ),
+                    url=url,
+                    icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
                 )
+                em.add_field(name="Etymology", value=ref.etymology, inline=False)
+                for definition in ref.definitions:
+                    em.add_field(
+                        name="`{}` ({}):".format(word, definition["partOfSpeech"]),
+                        value="\n- ".join(
+                            [
+                                text
+                                for text in definition["text"]
+                                if not re.search(r"^\(.*vulgar.*\)", text.lower())
+                            ]
+                        ),
+                        inline=False,
+                    )
 
-            await self.client.embed(src.channel, em)
+                await self.client.embed(src.channel, em)
+            except Exception as e:
+                return "Error: {}".format(e)
         else:
             return "Word not found."
 
