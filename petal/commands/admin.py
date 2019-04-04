@@ -139,23 +139,23 @@ class CommandsAdmin(core.Commands):
         )
         await m.close()
 
-    async def cmd_poll(self, args, src, question=None, channel=None, time=None, **_):
+    async def cmd_poll(self, args, src, _question=None, _channel=None, _time=None, **_):
         if len(args) < 2:
             return "Must provide at least two options."
 
-        if time and not time.isnumeric():
+        if _time and not _time.isnumeric():
             return "Time must be numeric."
-        elif not time:
+        elif not _time:
             duration = 3600
         else:
-            duration = int(time)
+            duration = int(_time)
 
         title = "Poll"
-        if question:
-            title += ": " + question
+        if _question:
+            title += ": " + _question
 
-        if channel:
-            targ = self.client.get_channel(channel)
+        if _channel:
+            targ = self.client.get_channel(_channel)
         else:
             targ = src.channel
         if not targ:
