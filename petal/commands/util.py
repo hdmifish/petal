@@ -188,17 +188,18 @@ class CommandsUtil(core.Commands):
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
         em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
-        em.add_field(name="Version", value=self.router.version)
-        em.add_field(name="Uptime", value=self.router.uptime)
-        # em.add_field(name="Void Count", value=str(self.db.void.count()))
-        em.add_field(name="Servers", value=str(len(self.client.servers)))
+        em.add_field(name="Version", value=self.router.version, inline=False)
+        em.add_field(name="Uptime", value=self.router.uptime, inline=False)
+        # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
+        em.add_field(name="Servers", value=str(len(self.client.servers)), inline=False)
         em.add_field(
             name="Total Number of Commands run",
             value=str(self.config.get("stats")["comCount"]),
+            inline=False
         )
-        em.add_field(name="Average Ping", value=str(truedelta))
+        em.add_field(name="Average Ping", value=str(truedelta), inline=False)
         mc = sum(1 for _ in self.client.get_all_members())
-        em.add_field(name="Total Members", value=str(mc))
+        em.add_field(name="Total Members", value=str(mc), inline=False)
         role = discord.utils.get(
             self.client.get_server(self.config.get("mainServer")).roles,
             name=self.config.get("mainRole"),
@@ -209,7 +210,7 @@ class CommandsUtil(core.Commands):
 
                 if role in m.roles:
                     c += 1
-            em.add_field(name="Total Validated Members", value=str(c))
+            em.add_field(name="Total Validated Members", value=str(c), inline=False)
 
         await self.client.embed(src.channel, em)
 
