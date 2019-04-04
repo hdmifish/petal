@@ -19,6 +19,7 @@ LoadModules = [
     "sudo",
     "dev",
     "admin",
+    "manager",
     "mod",
     "listener",
     "social",
