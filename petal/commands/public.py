@@ -280,7 +280,9 @@ class CommandsPublic(core.Commands):
 
         Syntax: `{p}define <word>`
 
-        Options: `--language=<lang>` :: Specify a language in which to search for the word.
+        Options:
+        `--language=<lang>` :: Specify a language in which to search for the word.
+        `--etymology=<int>` :: Specify a certain number etymology to be shown.
         """
         if not args:
             return "Wiktionary, the Free Dictionary\nhttps://en.wiktionary.org/"
@@ -323,7 +325,7 @@ class CommandsPublic(core.Commands):
             except Exception as e:
                 return "Error: {}".format(e)
         else:
-            return "Word not found."
+            return "Definition not found."
 
     async def cmd_xkcd(self, args, src, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.

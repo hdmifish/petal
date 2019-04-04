@@ -298,7 +298,12 @@ class Define:
             result = Wikt.fetch(query, lang)
             def_cache[cachename] = result
         self.alts = len(result)
-        result = result[which]
-        self.etymology = result["etymology"]
-        self.definitions = result["definitions"]
-        self.valid = bool(self.definitions)
+        if 0 <= which < self.alts:
+            result = result[which]
+            self.etymology = result["etymology"]
+            self.definitions = result["definitions"]
+            self.valid = bool(self.definitions)
+        else:
+            self.etymology = ""
+            self.definitions = []
+            self.valid = False
