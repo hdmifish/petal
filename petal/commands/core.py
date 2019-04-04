@@ -8,7 +8,8 @@ from petal.dbhandler import m2id
 class Commands:
     auth_fail = "This command is implemented incorrectly."
     op = -1  # Used for Minecraft commands
-    role = ""
+    role = ""  # Name of the config field dictating the name of the needed role
+    whitelist = ""  # Name of the list of permitted IDs in the config file
 
     def __init__(self, client, router, *a, **kw):
         self.client = client
@@ -34,28 +35,70 @@ class Commands:
         ]
         return full
 
-    def authenticate(self, *_):
+    def authenticate(self, src):
         """
         Take a Discord message and return True if:
-          1. The author of the message is allowed to access this package
-          2. This command can be run in this channel
-        Should be overwritten by modules providing secure functions
-        (For example, moderation tools)
+          1. The author of the message is allowed to access this package.
+          2. This command can be run in this channel.
         """
-        return False
+        try:
+            if self.whitelist and src.author.id not in self.config.get(
+                self.whitelist, []
+            ):
+                return False, "denied"
+            if self.role:
+                allow, denied = self.check_user_has_role(
+                    src.author, self.config.get(self.role)
+                )
+                if not allow:
+                    return allow, denied
+            if 0 <= self.op <= 4:
+                if hasattr(self, "minecraft"):
+                    return self.minecraft.WLAuthenticate(src, self.op)
+                else:
+                    return False, "bad op"
+        except Exception as e:
+            # For security, "fail closed".
+            return False, "Error: `{}`".format(e)
+        else:
+            return True, None
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
-        target = discord.utils.get(user.server.roles, name=role)
-        if target is None:
-            self.log.err("Role '" + role + "' does not exist.")
-            return False
-        else:
-            if target in user.roles:
-                return True
+        if not role:
+            return "bad role"
+        if type(user) == discord.Member:
+            server = self.client.get_server(self.config.get("mainServer"))
+            target = discord.utils.get(server.roles, name=role)
+            # TODO: Make this block a bit more...compact.
+            if target is None:
+                # Role is not found on Main Server? Check this one.
+                target = discord.utils.get(user.server.roles, name=role)
+                if target is None:
+                    # Role is not found on this server? Fail.
+                    self.log.err("Role '" + role + "' does not exist.")
+                    return False, "bad role"
+                elif target in user.roles:
+                    # Role is found, and includes member? Pass.
+                    return True, None
+                else:
+                    # Role is found, but does not include member? Fail.
+                    return False, "denied"
             else:
-                return False
+                # Role is found on Main Server. Find the member there and check.
+                user_there = server.get_member(user.id)
+                if user_there:
+                    # User is there? Check roles.
+                    if target in user_there.roles:
+                        return True, None
+                    else:
+                        return False, "denied"
+                else:
+                    # User is NOT there? Fail.
+                    return False, "bad user"
+        else:
+            return False, "private"
 
     def get_member(self, src, uuid):
         """

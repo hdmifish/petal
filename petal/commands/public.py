@@ -16,9 +16,6 @@ from petal.util import dice
 class CommandsPublic(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    def authenticate(self, *_):
-        return True
-
     async def cmd_hello(self, **_):
         """Echo."""
         return "Hey there!"
@@ -109,7 +106,8 @@ class CommandsPublic(core.Commands):
 
         When this command is run with no arguments, a randomly selected online user from the Hug Donors database will be messaged with a notification that a hug has been requested. That user can then descend upon whoever invoked the command and initiate mutual arm enclosure.
 
-        Syntax: `{p}freehug` - Request a hug.
+        Syntax:
+        `{p}freehug` - Request a hug.
         `{p}freehug donate` - Toggle your donor status. Your request counter will reset if you opt out.
         `{p}freehug add <user-id>` - Add another user to donor list.
         `{p}freehug del <user-id>` - Remove another user from donor list.
@@ -197,6 +195,50 @@ class CommandsPublic(core.Commands):
                 del self.config.hugDonors[src.author.id]
                 self.config.save()
                 return "You have been removed from the donor list."
+
+    async def cmd_askpatch(self, args, src, **_):
+        """Access the AskPatch database. Functionality determined by subcommand.
+
+        Syntax:
+        `{p}askpatch submit "<question>"` - Submit a question to Patch Asks. Should be quoted.
+        """
+        if not args:
+            return "Subcommand required."
+
+        subcom = args.pop(0)
+
+        if subcom == "submit":
+            # msg = msg.split(maxsplit=2)
+            # if len(msg) < 3:
+            #     return "Question cannot be empty."
+            # msg = msg[2]
+            if not args:
+                return "Question cannot be empty."
+            elif len(args) > 1:
+                return "Question should be put in quotes."
+            else:
+                msg = args[0]
+
+            response = self.db.submit_motd(src.author.id, msg)
+            if response is None:
+                return "Unable to add to database, ask your bot owner as to why."
+
+            newEmbed = discord.Embed(
+                title="Entry " + str(response["num"]),
+                description="New question from " + src.author.name,
+                colour=0x8738F,
+            )
+            newEmbed.add_field(name="content", value=response["content"])
+
+            chan = self.client.get_channel(self.config.get("motdModChannel"))
+            await self.client.embed(chan, embedded=newEmbed)
+
+            return "Question added to database."
+
+        elif subcom in ("approve", "reject", "count"):
+            return "Restricted subcommand."
+        else:
+            return "Unrecognized subcommand."
 
     async def cmd_wiki(self, args, src, **_):
         """Retrieve information about a query from Wikipedia.
@@ -293,7 +335,7 @@ class CommandsPublic(core.Commands):
 
         await self.client.embed(src.channel, embed)
 
-    async def cmd_roll(self, args, total=False, t=False, sums=False, s=False, **_):
+    async def cmd_roll(self, args, _total=False, _t=False, _sums=False, _s=False, **_):
         """Roll the dice and try your luck.
 
         This function uses the strongest source of randomness available to the system, with a quality generally considered to be sufficient for use in cryptographic applications. While the fairness of these dice cannot be *guaranteed*, it is as good as it possibly could be on the hardware running this bot.
@@ -307,8 +349,8 @@ class CommandsPublic(core.Commands):
         `--sums`, `-s` :: Display only the sum of each group of dice, not every individual roll.
         `--total`, `-t` :: Display ONLY the final, cumulative, total of all rolls. Overrides `--sums`/`-s`.
         """
-        _total = True in (total, t)  # Print ONLY final cumulative total
-        _sums = True in (sums, s)  # Print ONLY sums of groups
+        _total = True in (_total, _t)  # Print ONLY final cumulative total
+        _sums = True in (_sums, _s)  # Print ONLY sums of groups
 
         dice_ = [dice.get_die(term) for term in args]
 
@@ -491,7 +533,7 @@ class CommandsPublic(core.Commands):
                 return response
         else:
             count = self.client.db.save_void(
-                src.split(" ", 1)[1], src.author.name, src.author.id
+                src.content.split(" ", 1)[1], src.author.name, src.author.id
             )
 
             if count is not None:

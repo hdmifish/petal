@@ -6,9 +6,7 @@ from petal.commands import core
 
 class CommandsMaintenance(core.Commands):
     auth_fail = "This command is whitelisted."
-
-    def authenticate(self, src):
-        return src.author.id in (self.config.get("bot_maintainers") or [])
+    whitelist = "bot_maintainers"
 
     async def cmd_list_connected_servers(self, src, **_):
         """Return a list of all servers Petal is in."""
@@ -18,6 +16,16 @@ class CommandsMaintenance(core.Commands):
     async def cmd_hello(self, **_):
         """Echo."""
         return "Hello boss! How's it going?"
+
+    async def cmd_forcesave(self, **_):
+        """Force configuration file save."""
+        self.config.save(vb=1)
+        return "Saved."
+
+    async def cmd_forceload(self, **_):
+        """Force configuration file reload."""
+        self.config.load()
+        return "Loaded config file."
 
     async def cmd_calias(self, args, **_):
         """Manipulate command aliases.

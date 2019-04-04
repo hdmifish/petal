@@ -3,6 +3,7 @@ import importlib
 import shlex
 import sys
 
+import discord
 import facebook
 import praw
 import pytumblr
@@ -30,6 +31,36 @@ LoadModules = [
 for module in LoadModules:
     # Import everything in the list above.
     importlib.import_module("." + module, package=__name__)
+
+
+def split(line: str) -> (list, str):
+    """Break an input line into a list of tokens, and a "regular" message."""
+    # Split the full command line into a list of tokens, each its own arg.
+    tokens = shlex.shlex(line, posix=True)
+    tokens.quotes += "`"
+    # Split the string only on whitespace.
+    tokens.whitespace_split = True
+    # However, consider a comma to be whitespace so it splits on them too.
+    tokens.whitespace += ","
+    # Consider a semicolon to denote a comment; Everything after a semicolon
+    #   will then be ignored.
+    tokens.commenters = ";"
+
+    # Now, find the original string, but only up until the point of a semicolon.
+    # Therefore, the following command:
+    #   `help commands -v; @person, this is where to see the list`
+    # will return a list, ["help", "commands", "-v"], and a string, "help commands -v".
+    # This will allow commands to consider "the rest of the line" without going
+    #   beyond a semicolon, and without having to reconstruct the line from the
+    #   list of arguments, which may or may not have been separated by spaces.
+    original = shlex.shlex(line, posix=True)
+    original.quotes += "`"
+    original.whitespace_split = True
+    original.whitespace = ""
+    original.commenters = ";"
+
+    # Return a list of all the tokens, and the first part of the "original".
+    return list(tokens), original.read_token()
 
 
 class CommandRouter:
@@ -153,17 +184,29 @@ class CommandRouter:
                 continue
             else:
                 mod_src = submod or mod
-                if not src or mod_src.authenticate(src):
+                permitted, reason = mod_src.authenticate(src)
+                if not src or permitted:
                     return mod_src, func, False
                 else:
-                    denied = mod_src.auth_fail.format(
-                        op=mod_src.op,
-                        role=(
-                            self.config.get(mod_src.role)
-                            if mod_src.role
-                            else "!! ERROR !!"
-                        ),
-                    )
+                    if reason == "bad user":
+                        denied = "Could not find you on the main server."
+                    elif reason == "bad role":
+                        denied = "Could not find the correct role on the main server."
+                    elif reason == "bad op":
+                        denied = "Command wants MC Operator but is not integrated."
+                    elif reason == "private":
+                        denied = "Command cannot be used in DM."
+                    elif reason == "denied":
+                        denied = mod_src.auth_fail.format(
+                            op=mod_src.op,
+                            role=(
+                                self.config.get(mod_src.role)
+                                if mod_src.role
+                                else "!! ERROR !!"
+                            ),
+                        )
+                    else:
+                        denied = "`{}`.".format(reason)
 
         # This command is not "real". Check whether it is an alias.
         alias = dict(self.config.get("aliases")) or {}
@@ -190,18 +233,10 @@ class CommandRouter:
 
         # Loop through given arguments.
         for i, arg in enumerate(cline):
-            # Stop parsing if a semicolon is found.
-            if not arg.strip(";"):
-                break
-
             # Find args that begin with a dash.
             if arg.startswith("-"):
                 # This arg is an option key.
                 key = arg.lstrip("-")
-
-                if key in ("self", "args", "src"):
-                    # Do not allow flags that mimic important values.
-                    continue
 
                 if "=" in key:
                     # A specific value was given.
@@ -212,12 +247,12 @@ class CommandRouter:
 
                 if arg.startswith("--"):
                     # This arg is a long opt; The whole word is one key.
-                    opts[key] = val
+                    opts["_" + key.strip("_")] = val
                 else:
                     # This is a short opt cluster; Each letter is a key.
-                    for char in key:
-                        opts[char] = True
-                    opts[key[-1]] = val
+                    for char in key[:-1]:
+                        opts["_" + char] = True
+                    opts["_" + key[-1]] = val
             else:
                 args.append(arg)
 
@@ -228,10 +263,7 @@ class CommandRouter:
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
         """
-        # Split the full command line into a list of tokens, each its own arg.
-        div = shlex.shlex(command, posix=True, punctuation_chars=True)
-        div.wordchars += "+"  # Additionally allow these characters in args.
-        cline = list(div)
+        cline, msg = split(command)
         cword = cline.pop(0)
 
         # Find the method, if one exists.
@@ -245,7 +277,7 @@ class CommandRouter:
             args, opts = self.parse(cline)
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
-            return await func(args=args, **opts, src=src)
+            return await func(args=args, **opts, msg=msg, src=src)
 
     async def run(self, src):
         """Given a message, determine whether it is a command;
@@ -271,3 +303,77 @@ class CommandRouter:
         s = m[1]  # seconds
 
         return "%d days, %d hours, %d minutes, %d seconds" % (d[0], h[0], m[0], s)
+
+    @staticmethod
+    def get_member_name(server, member):
+        try:
+            m = server.get_member(member).name
+            if m is None:
+                m = member
+        except AttributeError:
+            m = member
+
+        return m
+
+    async def check_pa_updates(self, force=False):
+        if force:
+            self.config.doc["lastRun"] = dt.utcnow()
+            self.config.save()
+
+        else:
+            last_run = self.config.get("lastRun")
+            self.log.f("pa", "Last run at: " + str(last_run))
+            if last_run is None:
+                last_run = dt.utcnow()
+                self.config.doc["lastRun"] = last_run
+                self.config.save()
+            else:
+                difference = (
+                    dt.utcnow() - dt.strptime(str(last_run), "%Y-%m-%d %H:%M:%S.%f")
+                ).total_seconds()
+                self.log.f("pa", "Difference: " + str(difference))
+                if difference < 86400:
+                    return
+                else:
+                    self.config.doc["lastRun"] = dt.utcnow()
+                    self.config.save()
+
+        self.log.f("pa", "Searching for entries...")
+        response = self.client.db.get_motd_entry(update=True)
+
+        if response is None:
+            if force:
+                return "Could not find suitable entry, make sure you have added questions to the DB"
+
+            self.log.f("pa", "Could not find suitable entry")
+
+        else:
+            try:
+                em = discord.Embed(
+                    title="Patch Asks",
+                    description="Today Patch asks: \n " + response["content"],
+                    colour=0x0ACDFF,
+                )
+
+                msg = await self.client.embed(
+                    self.client.get_channel(self.config.get("motdChannel")), em
+                )
+
+                await self.client.send_message(
+                    msg.author,
+                    msg.channel,
+                    "*today's question was "
+                    + "written by "
+                    + self.get_member_name(msg.server, response["author"])
+                    + "*",
+                )
+                self.log.f(
+                    "pa",
+                    "Going with entry: "
+                    + str(response["num"])
+                    + " by "
+                    + self.get_member_name(msg.server, response["author"]),
+                )
+
+            except KeyError:
+                self.log.f("pa", "Malformed entry, dumping: " + str(response))

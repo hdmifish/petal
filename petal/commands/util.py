@@ -4,10 +4,12 @@ Access: Public"""
 from datetime import datetime as dt
 
 import discord
+import pytz
 
 from petal.commands import core
 
-
+# Reference: strftime.org
+tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
 helptext = [
     """An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.""",
     """While spaces separate Arguments, sometimes an Argument is desired to be multiple words. In these cases, one can simply enclose the argument in quotes; For example:```{p}command "asdf qwert" zxcv```This would pass only *two* arguments to the command: `"asdf qwert"` and `"zxcv"`.""",
@@ -17,13 +19,17 @@ helptext = [
 ]
 
 
+def zone(tz: str):
+    try:
+        return pytz.timezone(tz)
+    except pytz.exceptions.UnknownTimeZoneError:
+        return None
+
+
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    def authenticate(self, *_):
-        return True
-
-    async def cmd_help(self, args, src, **_):
+    async def cmd_help(self, args, src, _short=False, _s=False, **_):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -35,6 +41,8 @@ class CommandsUtil(core.Commands):
         For exhaustive help with Arguments and Options, invoke `{p}help extreme`.
 
         Syntax: `{p}help [(<command>|extreme)]`
+
+        Options: `--short`, `-s` :: Exclude the "details" section of printed help.
         """
         if not args:
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
@@ -49,7 +57,7 @@ class CommandsUtil(core.Commands):
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            return denied
+            return "Cannot show help: " + denied
         elif cmd.__doc__:
             # Grab the docstring and insert the correct prefix wherever needed
             doc0 = cmd.__doc__.format(p=self.config.prefix)
@@ -58,7 +66,7 @@ class CommandsUtil(core.Commands):
 
             summary = doc.pop(0)
             em = discord.Embed(
-                title=self.config.prefix + cmd.__name__[4:],
+                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
                 description=summary,
                 colour=0x0ACDFF,
             )
@@ -74,15 +82,15 @@ class CommandsUtil(core.Commands):
                     opts = line.split(" ", 1)[1]
                 else:
                     details += line + "\n"
-            if details:
-                em.add_field(name="Details", value=details.strip())
+            if details and True not in (_short, _s):
+                em.add_field(name="Details:", value=details.strip())
             if syntax:
-                em.add_field(name="Syntax", value=syntax)
+                em.add_field(name="Syntax:", value=syntax)
             if opts:
-                em.add_field(name="Options", value=opts)
+                em.add_field(name="Options:", value=opts)
 
             em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
-            em.set_thumbnail(url=self.client.user.avatar_url)
+            # em.set_thumbnail(url=self.client.user.avatar_url)
             await self.client.embed(src.channel, em)
         else:
             if cmd:
@@ -92,29 +100,28 @@ class CommandsUtil(core.Commands):
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, src, all=False, a=False, custom=False, c=False, **_):
+    async def cmd_commands(self, src, _all=False, _a=False, _custom=False, _c=False, **_):
         """List all commands.
 
         Syntax: `{p}commands [OPTIONS]`
 
-        Options: `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
+        Options:
+        `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
         `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
         """
         formattedList = ""
         cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
-        if True in (custom, c):
+        if True in (_custom, _c):
             line_2 = ", including custom commands"
             cmd_list += list(self.config.get("commands")) or []
         else:
             line_2 = ""
         cmd_list.sort()
 
-        if True not in (all, a):
+        if True not in (_all, _a):
             # Unless --all or -a, remove any restricted commands.
             for cmd in cmd_list.copy():
-                mod, func, denied = self.router.find_command(
-                    kword=cmd, src=src
-                )
+                mod, func, denied = self.router.find_command(kword=cmd, src=src)
                 if denied is not False:
                     cmd_list.remove(cmd)
             line_1 = "List of commands you can access"
@@ -139,6 +146,42 @@ class CommandsUtil(core.Commands):
         return "Current Ping: {}ms\nPing till now: {}ms of {} pings".format(
             str(delta), str(truedelta), str(self.config.stats["pingCount"])
         )
+
+    async def cmd_time(self, args, **_):
+        """Show the current time and date in a specific time zone or location.
+
+        This command will accept either a region/location pair, such as `US/Pacific`, or a time zone code, like `UTC` or `CET` or even ones such as `GMT-5`. Great efforts are taken to hopefully ensure that capitalization is not a concern. With no given input, default output is in UTC.
+        The time zones are defined by way of the PyTZ library, and can be found here: http://pytz.sourceforge.net/
+
+        Syntax:
+        `{p}time` - Show date/time in UTC.
+        `{p}time <tz code>` - Show d/t in the specified time zone.
+        `{p}time <region>/<location>` - Show d/t somewhere specific, such as `Europe/Rome`.
+        `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
+        """
+        tz = args[0] if args else "UTC"
+        # Try a bunch of different possibilities for what the user might have
+        #     meant. Use the first one found, if any. First, check it plain.
+        #     Then, check it in all caps and CamelCase. Then, look for the same,
+        #     but in 'Etc/*'. Finally, split it and capitalize each part before
+        #     finally giving up.
+        tzone = (
+            zone(tz)
+            or zone(tz.upper())
+            or zone(tz.capitalize())
+            or zone("Etc/" + tz)
+            or zone("Etc/" + tz.upper())
+            or zone("Etc/" + tz.capitalize())
+            or zone("/".join([term.capitalize() for term in tz.split("/")]))
+        )
+        if tzone:
+            return dt.now(tzone).strftime(tstring)
+        else:
+            return "Could not find the `{}` timezone.".format(tz)
+
+    async def cmd_utc(self, **_):
+        """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
+        return await self.cmd_time(["UTC"])
 
     async def cmd_statsfornerds(self, src, **_):
         """Display more detailed statistics (for nerds)."""
@@ -191,7 +234,7 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
-    async def cmd_argtest(self, args, src, **opts):
+    async def cmd_argtest(self, args, msg, src, **opts):
         """Display details on how the command was parsed.
 
         Used for testing, or personal experimentation to help you to understand Arguments, Options and Flags.
@@ -205,7 +248,8 @@ class CommandsUtil(core.Commands):
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
         for opt, val in opts.items():
-            out.append(str(opt) + "==" + str(val))
+            out.append(str(opt)[1:] + "==" + str(val))
+        out.append("MSG: " + msg)
         return "\n".join(out)
 
 

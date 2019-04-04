@@ -87,18 +87,15 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def ask_patch_loop(self):
-        # TODO: Implement CommandRouter.check_pa_updates()
-        pass
-        # if self.dev_mode:
-        #     return
-        # if self.config.get("motdInterval") is None:
-        #     log.f("PA", "not using MOTD stuff...")
-        #     return
-        # interval = self.config.get("motdInterval")
-        # while True:
-        #     await self.commands.check_pa_updates()
-        #
-        #     await asyncio.sleep(interval)
+        if self.dev_mode:
+            return
+        if self.config.get("motdInterval") is None:
+            log.f("PA", "not using MOTD stuff...")
+            return
+        interval = self.config.get("motdInterval")
+        while True:
+            await self.commands.check_pa_updates()
+            await asyncio.sleep(interval)
 
     async def ban_loop(self):
         # if self.dev_mode:

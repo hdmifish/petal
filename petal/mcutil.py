@@ -494,7 +494,7 @@ class Minecraft:
         for e in entries:
             try:
                 if e["discord"] == str(msg.author.id) and e["operator"] >= clearance:
-                    return True
+                    return True, None
             except:
                 continue
-        return False
+        return False, "denied"

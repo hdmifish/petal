@@ -62,7 +62,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
-    async def cmd_wlquery(self, args, src, verbose=False, v=False, **_):
+    async def cmd_wlquery(self, args, src, _verbose=False, _v=False, **_):
         """Take a string and finds any database entry that references it.
 
         Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once.
@@ -73,7 +73,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         Options: `--verbose`, `-v` :: Provide more detailed information about the user.
         """
         submission = [arg.lower() for arg in args]
-        verbose = True in [verbose, v]
+        _verbose = True in [_verbose, _v]
 
         if "pending" in submission:
             searchres = []
@@ -128,7 +128,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 )
                 oput += "- Minecraft UUID: `" + entry.get("uuid", "<ERROR>") + "`\n"
                 oput += "- Discord UUID: `" + entry.get("discord", "<ERROR>") + "`\n"
-                if verbose:
+                if _verbose:
                     oput += (
                         "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
                     )
@@ -183,14 +183,14 @@ class CommandsMCMod(auth.CommandsMCAuth):
         oput += "----({})----".format(leftnum)
         return oput
 
-    async def cmd_wlsuspend(self, args, src, help, h, **_):
+    async def cmd_wlsuspend(self, args, src, _help=False, _h=False, **_):
         """Flag a person to be removed from the whitelist.
 
         Syntax: `{p}wlsuspend [OPTIONS] <profile_identifier> <code>`
 
         Options: `--help`, `-h` :: Return the list of Suspension Codes and stop
         """
-        if True in [help, h]:
+        if True in [_help, _h]:
             # Command was invoked with --help or -h
             return "Suspension codes:\n" + "\n".join(
                 ["{}: {}".format(k, v) for k, v in self.minecraft.suspend_table.items()]
