@@ -28,6 +28,8 @@ with open("version_info.sh", "r") as f:
     if inf:
         version = inf
 
+grasslands.version = version
+
 
 class Petal(discord.Client):
     logLock = False

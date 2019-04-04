@@ -86,7 +86,7 @@ T pypa package
 First changelog be gentle; Biiiiiiiiig updates since then
 Since the last documented update:
 +- Ripped out and replaced the whole single-module commands system with a package-based "router" system with modular authentication and a rather crude (but working!) approximation of C-style option flags
-+ New commands; Main ones: argtest, roll, time, calias, sudo
++ New commands; Main ones: argtest, roll, time, calias, sudo, define
 * Overhauled commands: commands, help, new, wiki, xkcd
 + Reaction-based UI menus for choices n stuff
 * Various spelling fixes, removal of many line-end whitespaces

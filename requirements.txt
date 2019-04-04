@@ -12,3 +12,4 @@ pytz
 pyNaCL
 python-twitter
 ruamel.yaml
+wiktionaryparser

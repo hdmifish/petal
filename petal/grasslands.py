@@ -1,11 +1,18 @@
 """
-Grasslands is a semi-public module for colored logging
+Grasslands is a semi-public module for colored logging and misc APIs
 """
 
 from datetime import datetime as dt
 from random import randint
-from colorama import init, Fore
 import requests
+
+from colorama import init, Fore
+from wiktionaryparser import WiktionaryParser as WP
+
+
+version = "0.0.0"
+
+Wikt = WP()
 
 
 class Peacock(object):
@@ -247,7 +254,7 @@ class Giraffe(object):
 
 
 class Pidgeon:
-    def __init__(self, query, version="0.3.2"):
+    def __init__(self, query):
         self.query = query
         api_url = "https://en.wikipedia.org/w/api.php?action=query&titles={q}&format=json&prop=extracts&exintro&explaintext"
         url = api_url.format(q=query)
@@ -279,3 +286,11 @@ class Pidgeon:
         else:
 
             return 1, {"title": page["title"], "content": p, "id": page["pageid"]}
+
+
+class Define:
+    def __init__(self, query: str, lang=None):
+        result = Wikt.fetch(query, lang)[0]
+        self.etymology = result["etymology"]
+        self.definitions = result["definitions"]
+        self.valid = bool(self.definitions)

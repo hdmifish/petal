@@ -9,7 +9,7 @@ import requests
 import discord
 
 from petal.commands import core
-from petal.grasslands import Pidgeon
+from petal.grasslands import Pidgeon, Define
 from petal.util import dice
 
 
@@ -250,7 +250,7 @@ class CommandsPublic(core.Commands):
         query = " ".join(args)
         self.log.f("wiki", "Query string: " + query)
 
-        response = Pidgeon(query, version=self.router.version).get_summary()
+        response = Pidgeon(query).get_summary()
         title = response[1]["title"]
         url = "https://en.wikipedia.org/wiki/" + title
         if response[0] == 0:
@@ -265,10 +265,7 @@ class CommandsPublic(core.Commands):
                 )
 
             else:
-                em = discord.Embed(
-                    color=0xF8F9FA,
-                    description=response[1]["content"],
-                )
+                em = discord.Embed(color=0xF8F9FA, description=response[1]["content"])
                 em.set_author(
                     name="'{}' on Wikipedia".format(title),
                     url=url,
@@ -276,6 +273,47 @@ class CommandsPublic(core.Commands):
                 )
 
             await self.client.embed(src.channel, em)
+
+    async def cmd_define(self, args, src, _language=None, **_):
+        """Find the definition of a word from Wiktionary.
+
+        Syntax: `{p}define <word>`
+
+        Options: `--language=<lang>` :: Specify a language in which to search for the word.
+        """
+        if not args:
+            return "Wiktionary, the Free Dictionary\nhttps://en.wiktionary.org/"
+        word = args[0]
+        self.log.f("dict", "Query string: " + word)
+        await self.client.send_typing(src.channel)
+
+        ref = Define(word, _language)
+        url = "https://en.wiktionary.org/wiki/" + word
+        if ref.valid:
+            em = discord.Embed(color=0xF8F9FA)
+            em.set_author(
+                name="'{}' on Wiktionary".format(word),
+                url=url,
+                icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
+            )
+            em.add_field(name="Etymology", value=ref.etymology)
+            for definition in ref.definitions:
+                em.add_field(
+                    name="{} ({}):".format(
+                        word.capitalize(), definition["partOfSpeech"]
+                    ),
+                    value="\n- ".join(
+                        [
+                            text
+                            for text in definition["text"]
+                            if "vulgar" not in text.lower()
+                        ]
+                    ),
+                )
+
+            await self.client.embed(src.channel, em)
+        else:
+            return "Word not found."
 
     async def cmd_xkcd(self, args, src, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
