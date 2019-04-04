@@ -13,13 +13,15 @@ class CommandsEvent(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "xPostRole"
 
-    async def cmd_event(self, src, _channels="", _nomenu=False, **_):
+    async def cmd_event(self, src, _message="", _channels="", _nomenu=False, **_):
         """Post a message announcing the start of an event.
 
         Define a message which will be sent to one or more predefined channels. The message may include mass pings by way of including tags `{{e}}` and `{{h}}` for substitution.
         Destination channels may be selected conversationally or by way of a reaction-based menu.
 
-        Options: `--nomenu` :: Forsake the Reaction UI and determine destination channels conversationally.
+        Options:
+        `--message=<msg>` :: Define the message to send ahead of time. This will skip the step where Petal asks you what you want the message to say.
+        `--nomenu` :: Forsake the Reaction UI and determine destination channels conversationally.
         """
         channels_list = []
         channels_dict = {}
@@ -97,9 +99,14 @@ class CommandsEvent(core.Commands):
             "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
         )
 
-        msgstr = (await self.client.wait_for_message(
-            channel=src.channel, author=src.author, timeout=120
-        )).content.format(e="@everyone", h="@here")
+        msgstr = (
+            _message
+            or (
+                await self.client.wait_for_message(
+                    channel=src.channel, author=src.author, timeout=120
+                )
+            ).content
+        ).format(e="@everyone", h="@here")
 
         embed = discord.Embed(
             title="Message to post", description=msgstr, colour=0x0ACDFF
