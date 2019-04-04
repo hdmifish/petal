@@ -16,6 +16,7 @@ from petal.grasslands import Giraffe, Octopus, Peacock
 # Order of this list is the order in which commands will be searched. First occurrence
 #     the user is permitted to access will be run.
 LoadModules = [
+    "sudo",
     "dev",
     "admin",
     "mod",
@@ -204,6 +205,7 @@ class CommandRouter:
                                 if mod_src.role
                                 else "!! ERROR !!"
                             ),
+                            user=src.author.name,
                         )
                     else:
                         denied = "`{}`.".format(reason)
