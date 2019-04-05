@@ -334,7 +334,10 @@ class CommandRouter:
 
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
-            return await func(args=args, **opts, msg=msg, src=src)
+            try:
+                return await func(args=args, **opts, msg=msg, src=src)
+            except Exception as e:
+                return "Sorry, an exception was raised: ```{}```(`{}`)".format(e, type(e))
 
     async def run(self, src):
         """Given a message, determine whether it is a command;
