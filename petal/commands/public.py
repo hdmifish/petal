@@ -275,7 +275,9 @@ class CommandsPublic(core.Commands):
 
             await self.client.embed(src.channel, em)
 
-    async def cmd_define(self, args, src, _language=None, _etymology=None, **_):
+    async def cmd_define(
+        self, args, src, _language: str = "", _etymology: int = 0, **_
+    ):
         """Find the definition of a word from Wiktionary.
 
         Syntax: `{p}define <word>`
@@ -290,10 +292,7 @@ class CommandsPublic(core.Commands):
         self.log.f("dict", "Query string: " + word)
         await self.client.send_typing(src.channel)
 
-        if type(_etymology) == str and _etymology.isdigit():
-            which = int(_etymology)
-        else:
-            which = 0
+        which = _etymology or 0
 
         ref = Define(word, _language, which)
         url = "https://en.wiktionary.org/wiki/" + word
@@ -385,7 +384,15 @@ class CommandsPublic(core.Commands):
 
         await self.client.embed(src.channel, embed)
 
-    async def cmd_roll(self, args, _total=False, _t=False, _sums=False, _s=False, **_):
+    async def cmd_roll(
+        self,
+        args,
+        _total: bool = False,
+        _t: bool = False,
+        _sums: bool = False,
+        _s: bool = False,
+        **_
+    ):
         """Roll the dice and try your luck.
 
         This function uses the strongest source of randomness available to the system, with a quality generally considered to be sufficient for use in cryptographic applications. While the fairness of these dice cannot be *guaranteed*, it is as good as it possibly could be on the hardware running this bot.

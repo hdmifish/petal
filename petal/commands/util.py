@@ -29,7 +29,7 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    async def cmd_help(self, args, src, _short=False, _s=False, **_):
+    async def cmd_help(self, args, src, _short: bool = False, _s: bool = False, **_):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -100,7 +100,15 @@ class CommandsUtil(core.Commands):
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, src, _all=False, _a=False, _custom=False, _c=False, **_):
+    async def cmd_commands(
+        self,
+        src,
+        _all: bool = False,
+        _a: bool = False,
+        _custom: bool = False,
+        _c: bool = False,
+        **_
+    ):
         """List all commands.
 
         Syntax: `{p}commands [OPTIONS]`
@@ -195,7 +203,7 @@ class CommandsUtil(core.Commands):
         em.add_field(
             name="Total Number of Commands run",
             value=str(self.config.get("stats")["comCount"]),
-            inline=False
+            inline=False,
         )
         em.add_field(name="Average Ping", value=str(truedelta), inline=False)
         mc = sum(1 for _ in self.client.get_all_members())
@@ -249,7 +257,7 @@ class CommandsUtil(core.Commands):
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
         for opt, val in opts.items():
-            out.append(str(opt)[1:] + "==" + str(val))
+            out.append("{}=={} ({})".format(str(opt)[1:], val, type(val)))
         out.append("MSG: " + msg)
         return "\n".join(out)
 

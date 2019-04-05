@@ -2,6 +2,7 @@ from datetime import datetime as dt
 import importlib
 import shlex
 import sys
+from typing import get_type_hints
 
 import discord
 import facebook
@@ -278,6 +279,33 @@ class CommandRouter:
         else:
             # Extract option flags from the argument list.
             args, opts = self.parse(cline)
+
+            # Check to make sure that all options are correctly typed.
+            hints = get_type_hints(func)
+            for opt, val in opts.items():
+                if opt in hints:
+                    hint = hints[opt]
+                    if hint == bool and type(val) != bool:
+                        # Command wants bool, value has been specified.
+                        return "Flag `{}` does not take a value.".format(opt[1:])
+                    elif hint == int:
+                        if type(val) == str and val.isdigit():
+                            opts[opt] = int(val)
+                        else:
+                            # Command wants int, value not str or not integer str.
+                            return "Option `{}` must be integer.".format(opt[1:])
+                    elif hint == float:
+                        if type(val) == str and val.isnumeric():
+                            opts[opt] = hint(val)
+                        else:
+                            # Command wants number, value not str or not numeric str.
+                            return "Option `{}` must be numeric.".format(opt[1:])
+                    elif hint != str and type(val) == str:
+                        # "Else:" Command wants non-str, but value is str.
+                        return "Option `{}` is `{}` but should be `{}`.".format(
+                            opt[1:], type(val), hint
+                        )
+
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
             return await func(args=args, **opts, msg=msg, src=src)

@@ -136,16 +136,13 @@ class CommandsMaintenance(core.Commands):
         )
         await m.close()
 
-    async def cmd_poll(self, args, src, _question=None, _channel=None, _time=None, **_):
+    async def cmd_poll(
+        self, args, src, _question: str = "", _channel: str = "", _time: int = 0, **_
+    ):
         if len(args) < 2:
             return "Must provide at least two options."
 
-        if _time and not _time.isnumeric():
-            return "Time must be numeric."
-        elif not _time:
-            duration = 3600
-        else:
-            duration = int(_time)
+        duration = _time or 3600
 
         title = "Poll"
         if _question:
