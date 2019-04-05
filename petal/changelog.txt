@@ -89,4 +89,5 @@ Since the last documented update:
 + New commands; Main ones: argtest, roll, time, calias, sudo, define
 * Overhauled commands: commands, help, new, wiki, xkcd
 + Reaction-based UI menus for choices n stuff
++ Implemented basic type checking for --options
 * Various spelling fixes, removal of many line-end whitespaces
