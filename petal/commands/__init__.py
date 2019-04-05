@@ -284,34 +284,52 @@ class CommandRouter:
             hints = get_type_hints(func)
             for opt, val in opts.items():
                 if opt in hints:
-                    hint = hints[opt]
+                    wanted = hints[opt]
                     opt_name = ("-" * min(len(opt[1:]), 2)) + opt[1:]
-                    if hint == bool and type(val) != bool:
-                        # Command wants bool, value has been specified.
+
+                    # Check for any invalid typing.
+                    if wanted == bool and type(val) != bool:
+                        # Command wants bool, but value has been specified. Fail.
                         return "Flag `{}` does not take a value.".format(opt_name)
-                    elif hint != bool and type(val) == bool:
-                        # Command wants value, but value was left boolean.
+                    elif wanted != bool and type(val) == bool:
+                        # Command wants value, but value was left boolean. Fail.
                         return "Option `{}` requires a value of type {}.".format(
-                            opt_name, hint
+                            opt_name, wanted
                         )
-                    elif hint == int:
-                        # Command wants int
-                        if type(val) == str and val.isdigit():
-                            opts[opt] = int(val)
-                        else:
-                            # Value not str or not integer str.
-                            return "Option `{}` must be integer.".format(opt_name)
-                    elif hint == float:
-                        # Command wants float
-                        if type(val) == str and val.isnumeric():
-                            opts[opt] = hint(val)
-                        else:
-                            # Value not str or not numeric str.
-                            return "Option `{}` must be numeric.".format(opt_name)
-                    elif hint != str and type(val) == str:
+
+                    elif wanted == int:
+                        # Command wants int.
+                        if type(val) == str:
+                            if val.isdigit():
+                                # Value is str, but is a str of an int. Change it.
+                                opts[opt] = int(val)
+                            else:
+                                # Value is str, but is not a integer str. Invalid.
+                                return "Option `{}` must be integer.".format(opt_name)
+                        elif type(val) != wanted:
+                            # Value is neither str nor int and cannot be made valid. Fail.
+                            return "Option `{}` wanted `{}` but got `{}`.".format(
+                                opt_name, wanted, type(val)
+                            )
+                    elif wanted == float:
+                        # Command wants float.
+                        if type(val) == str:
+                            if val.isnumeric():
+                                # Value is str, but is a str of a float. Change it.
+                                opts[opt] = float(val)
+                            else:
+                                # Value is str, but is not a numeric str. Invalid.
+                                return "Option `{}` must be numeric.".format(opt_name)
+                        elif type(val) != wanted:
+                            # Value is neither str nor float and cannot be made valid. Fail.
+                            return "Option `{}` wanted `{}` but got `{}`.".format(
+                                opt_name, wanted, type(val)
+                            )
+
+                    elif wanted != str and type(val) == str:
                         # "Else:" Command wants non-str, but value is str.
                         return "Option `{}` is `{}` but should be `{}`.".format(
-                            opt_name, type(val), hint
+                            opt_name, type(val), wanted
                         )
 
             # Execute the method, passing the arguments as a list and the options
