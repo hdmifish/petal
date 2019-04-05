@@ -2,6 +2,7 @@
 Access: Public"""
 
 from datetime import datetime as dt
+from typing import get_type_hints
 
 import discord
 import pytz
@@ -38,7 +39,7 @@ class CommandsUtil(core.Commands):
         The __Syntax__ section describes exactly how the command should be invoked. Angle brackets indicate a parameter to be filled, square brackets indicate an optional segment, and parentheses indicate choices, separated by pipes.
         The __Options__ section details Options and Flags that may be passed to the command. These may significantly alter the operation of a command.
 
-        For exhaustive help with Arguments and Options, invoke `{p}help extreme`.
+        For exhaustive help with Arguments and Options, invoke `{p}help extreme`. See also `{p}commands` and `{p}info`.
 
         Syntax: `{p}help [(<command>|extreme)]`
 
@@ -99,6 +100,53 @@ class CommandsUtil(core.Commands):
                 )
             else:
                 return "Command not found."
+
+    async def cmd_info(self, args, src, **_):
+        """Print technical information regarding command implementation.
+
+        Return information about a command, including its restriction settings, its parent module, and, if applicable, its typed parameters. Can only be used on commands to which you have access. See also `{p}help` and `{p}commands`.
+
+        Syntax: `{p}info [<command>]`
+        """
+        if not args:
+            return "`<Default infotext goes here>`\n`#BlameDav`"
+
+        mod, cmd, denied = self.router.find_command(args[0], src)
+        if denied:
+            return "Cannot show info: " + denied
+        elif cmd:
+            if cmd.__doc__:
+                # Grab the docstring and insert the correct prefix wherever needed
+                doc0 = cmd.__doc__.format(p=self.config.prefix)
+                # Split the docstring up by double-newlines
+                doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
+
+                summary = doc.pop(0)
+            else:
+                summary = "Command summary unavailable."
+
+            em = discord.Embed(
+                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
+                description=summary,
+                colour=0xFFCD0A,
+            )
+
+            em.add_field(name="Restriction:", value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(self.config.get(mod.role), mod.op, mod.whitelist))
+            em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
+
+            hints = get_type_hints(cmd)
+            if hints:
+                em.add_field(
+                    name="Typed Parameters:",
+                    value="\n".join(
+                        ["`{}`: `{}`".format(k, v.__name__) for k, v in hints.items()]
+                    ),
+                )
+
+            em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
+            await self.client.embed(src.channel, em)
+        else:
+            return "Command not found."
 
     async def cmd_commands(
         self,
