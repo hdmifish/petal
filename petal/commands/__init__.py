@@ -285,25 +285,33 @@ class CommandRouter:
             for opt, val in opts.items():
                 if opt in hints:
                     hint = hints[opt]
+                    opt_name = ("-" * min(len(opt[1:]), 2)) + opt[1:]
                     if hint == bool and type(val) != bool:
                         # Command wants bool, value has been specified.
-                        return "Flag `{}` does not take a value.".format(opt[1:])
+                        return "Flag `{}` does not take a value.".format(opt_name)
+                    elif hint != bool and type(val) == bool:
+                        # Command wants value, but value was left boolean.
+                        return "Option `{}` requires a value of type {}.".format(
+                            opt_name, hint
+                        )
                     elif hint == int:
+                        # Command wants int
                         if type(val) == str and val.isdigit():
                             opts[opt] = int(val)
                         else:
-                            # Command wants int, value not str or not integer str.
-                            return "Option `{}` must be integer.".format(opt[1:])
+                            # Value not str or not integer str.
+                            return "Option `{}` must be integer.".format(opt_name)
                     elif hint == float:
+                        # Command wants float
                         if type(val) == str and val.isnumeric():
                             opts[opt] = hint(val)
                         else:
-                            # Command wants number, value not str or not numeric str.
-                            return "Option `{}` must be numeric.".format(opt[1:])
+                            # Value not str or not numeric str.
+                            return "Option `{}` must be numeric.".format(opt_name)
                     elif hint != str and type(val) == str:
                         # "Else:" Command wants non-str, but value is str.
                         return "Option `{}` is `{}` but should be `{}`.".format(
-                            opt[1:], type(val), hint
+                            opt_name, type(val), hint
                         )
 
             # Execute the method, passing the arguments as a list and the options
