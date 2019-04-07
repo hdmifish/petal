@@ -1,6 +1,5 @@
 colorama
 discord
-facebook
 facebook-sdk
 praw
 pymongo
