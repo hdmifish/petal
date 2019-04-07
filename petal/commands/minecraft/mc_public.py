@@ -6,7 +6,7 @@ from petal.commands.minecraft import auth
 
 class CommandsMCPublic(auth.CommandsMCAuth):
     auth_fail = "This command is public. If you are reading this, something went wrong."
-    op = 0
+    op = -1
 
     async def cmd_wlme(self, args, src, **_):
         """Submit your Minecraft username to be whitelisted on the community server.
