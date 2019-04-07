@@ -4,22 +4,31 @@ loosely based on functionality provided by leaf for Patch Gaming
 written by isometricramen
 """
 
-import discord
+import asyncio
+from datetime import datetime
 import random
 import re
-import asyncio
-import calendar
 import time
-from datetime import datetime
-from .grasslands import Peacock
-from .config import Config
-from .commands import CommandRouter as Commands
-from .dbhandler import DBHandler
+
+import discord
+
+from petal import grasslands
+from petal.commands import CommandRouter as Commands
+from petal.config import Config
+from petal.dbhandler import DBHandler
+
 
 # from random import randint
-log = Peacock()
+log = grasslands.Peacock()
 
-version = "0.5.7"
+version = "0.0.0"
+with open("version_info.sh", "r") as f:
+    inf = f.read()
+    inf = inf.split("VERSION=", 1)[-1].split("\n", 1)[0]
+    if inf:
+        version = inf
+
+grasslands.version = version
 
 
 class Petal(discord.Client):

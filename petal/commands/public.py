@@ -4,12 +4,13 @@ Access: Public"""
 from datetime import datetime as dt
 import json
 from random import randint
-import requests
+import re
 
+import requests
 import discord
 
 from petal.commands import core
-from petal.grasslands import Pidgeon
+from petal.grasslands import Pidgeon, Define
 from petal.util import dice
 
 
@@ -250,7 +251,7 @@ class CommandsPublic(core.Commands):
         query = " ".join(args)
         self.log.f("wiki", "Query string: " + query)
 
-        response = Pidgeon(query, version=self.router.version).get_summary()
+        response = Pidgeon(query).get_summary()
         title = response[1]["title"]
         url = "https://en.wikipedia.org/wiki/" + title
         if response[0] == 0:
@@ -265,10 +266,7 @@ class CommandsPublic(core.Commands):
                 )
 
             else:
-                em = discord.Embed(
-                    color=0xF8F9FA,
-                    description=response[1]["content"],
-                )
+                em = discord.Embed(color=0xF8F9FA, description=response[1]["content"])
                 em.set_author(
                     name="'{}' on Wikipedia".format(title),
                     url=url,
@@ -276,6 +274,57 @@ class CommandsPublic(core.Commands):
                 )
 
             await self.client.embed(src.channel, em)
+
+    async def cmd_define(
+        self, args, src, _language: str = "", _etymology: int = 0, **_
+    ):
+        """Find the definition of a word from Wiktionary.
+
+        Syntax: `{p}define <word>`
+
+        Options:
+        `--language=<lang>` :: Specify a language in which to search for the word.
+        `--etymology=<int>` :: Specify a certain number etymology to be shown.
+        """
+        if not args:
+            return "Wiktionary, the Free Dictionary\nhttps://en.wiktionary.org/"
+        word = args[0]
+        self.log.f("dict", "Query string: " + word)
+        await self.client.send_typing(src.channel)
+
+        which = _etymology or 0
+
+        ref = Define(word, _language, which)
+        url = "https://en.wiktionary.org/wiki/" + word
+        if ref.valid:
+            try:
+                em = discord.Embed(color=0xF8F9FA)
+                em.set_author(
+                    name="'{}' on Wiktionary ({} etymologies available)".format(
+                        word, ref.alts
+                    ),
+                    url=url,
+                    icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
+                )
+                em.add_field(name="Etymology", value=ref.etymology, inline=False)
+                for definition in ref.definitions:
+                    em.add_field(
+                        name="`{}` ({}):".format(word, definition["partOfSpeech"]),
+                        value="\n- ".join(
+                            [
+                                text
+                                for text in definition["text"]
+                                if not re.search(r"^\(.*vulgar.*\)", text.lower())
+                            ]
+                        ),
+                        inline=False,
+                    )
+
+                await self.client.embed(src.channel, em)
+            except Exception as e:
+                return "Error: {}".format(e)
+        else:
+            return "Definition not found."
 
     async def cmd_xkcd(self, args, src, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
@@ -335,7 +384,15 @@ class CommandsPublic(core.Commands):
 
         await self.client.embed(src.channel, embed)
 
-    async def cmd_roll(self, args, _total=False, _t=False, _sums=False, _s=False, **_):
+    async def cmd_roll(
+        self,
+        args,
+        _total: bool = False,
+        _t: bool = False,
+        _sums: bool = False,
+        _s: bool = False,
+        **_
+    ):
         """Roll the dice and try your luck.
 
         This function uses the strongest source of randomness available to the system, with a quality generally considered to be sufficient for use in cryptographic applications. While the fairness of these dice cannot be *guaranteed*, it is as good as it possibly could be on the hardware running this bot.

@@ -12,9 +12,9 @@ class CommandsListener(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleListener"
 
-    async def cmd_lpromote(self, src, _user=None, **_):
+    async def cmd_lpromote(self, src, _user: str="", **_):
 
-        if _user is None:
+        if not _user:
             await self.client.send_message(
                 src.author, src.channel, "Who would you like to promote?"
             )
@@ -63,8 +63,8 @@ class CommandsListener(core.Commands):
                 + "lcancel (not to be confused with smash bros)"
             )
 
-    async def cmd_ldemote(self, src, _user=None, **_):
-        if _user is None:
+    async def cmd_ldemote(self, src, _user: str="", **_):
+        if not _user:
             await self.client.send_message(
                 src.author, src.channel, "Who would you like to demote?"
             )
@@ -141,7 +141,7 @@ class CommandsListener(core.Commands):
         self.config.save()
         return "Deleted all lvotes if you had started any"
 
-    async def cmd_lvalidate(self, src, _user=None, **_):
+    async def cmd_lvalidate(self, src, _user: str="", **_):
         """
         Ends a vote and promotes/demotes user. Can be used prematurely
         !lvalidate <optional: tagged user>
@@ -151,7 +151,7 @@ class CommandsListener(core.Commands):
 
         if "choppingBlock" not in self.config.doc:
             return "Unable to find the config object associated. You need to add choppingBlock: {} to your config..."
-        if _user is None:
+        if not _user:
             await self.client.send_message(
                 src.author, src.channel, "Which user would you like to validate?"
             )

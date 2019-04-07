@@ -3,11 +3,11 @@
 # Not necessarily the prettiest but easy to work with.
 
 # MATCH THIS TO THE VERSION IN PETAL
-VERSION=0.5.7 
+VERSION=0.7.0
 
-#(optional) what the webhook message should say. 
-UPDATE_TITLE="THE META UPDATE"
+#(optional) what the webhook message should say.
+UPDATE_TITLE="Preparing to Prepare"
 
-# Separate bullet points with hyphens and use \n characters please. 
-CHANGELOG="-Enabled webhook support for deployments\n-Added indentation"
+# Separate bullet points with hyphens and use \n characters please.
+CHANGELOG="A primarily administrative update, and maybe some features\n+ Filled out changelog.txt\n\* Changed !statsfornerds to !stats\n\* Changed !list_connected_servers to !servers\n+ Added !define command\n+ Added !info command\n+ Added rudimentary type-checking for --options"
 

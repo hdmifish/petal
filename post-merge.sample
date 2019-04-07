@@ -2,10 +2,10 @@
 source ./version_info.sh
 REPO_URL="leaf.drunkencode.net"
 URL="YOUR_WEBHOOK_URL_HERE"
-HASH=$(git rev-parse --short HEAD) 
+HASH=$(git rev-parse --short HEAD)
 TS=$(TZ=UTC git log --date=format:'%Y-%m-%dT%H:%M:%SZ' -n1 | grep -i date | cut -d' ' -f4-5)
 
-CONTENT=$(cat <<EOF 
+CONTENT=$(cat <<EOF
 {
     "content": "A new version of Petal has been deployed",
     "embeds": [
@@ -20,7 +20,7 @@ CONTENT=$(cat <<EOF
       }
        }
     ]
-}    
+}
 EOF
 )
 

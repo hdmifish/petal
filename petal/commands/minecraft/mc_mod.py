@@ -62,7 +62,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
-    async def cmd_wlquery(self, args, src, _verbose=False, _v=False, **_):
+    async def cmd_wlquery(
+        self, args, src, _verbose: bool = False, _v: bool = False, **_
+    ):
         """Take a string and finds any database entry that references it.
 
         Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once.
@@ -183,7 +185,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
         oput += "----({})----".format(leftnum)
         return oput
 
-    async def cmd_wlsuspend(self, args, src, _help=False, _h=False, **_):
+    async def cmd_wlsuspend(
+        self, args, src, _help: bool = False, _h: bool = False, **_
+    ):
         """Flag a person to be removed from the whitelist.
 
         Syntax: `{p}wlsuspend [OPTIONS] <profile_identifier> <code>`

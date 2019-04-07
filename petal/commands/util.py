@@ -2,6 +2,7 @@
 Access: Public"""
 
 from datetime import datetime as dt
+from typing import get_type_hints
 
 import discord
 import pytz
@@ -29,7 +30,7 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    async def cmd_help(self, args, src, _short=False, _s=False, **_):
+    async def cmd_help(self, args, src, _short: bool = False, _s: bool = False, **_):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -38,7 +39,7 @@ class CommandsUtil(core.Commands):
         The __Syntax__ section describes exactly how the command should be invoked. Angle brackets indicate a parameter to be filled, square brackets indicate an optional segment, and parentheses indicate choices, separated by pipes.
         The __Options__ section details Options and Flags that may be passed to the command. These may significantly alter the operation of a command.
 
-        For exhaustive help with Arguments and Options, invoke `{p}help extreme`.
+        For exhaustive help with Arguments and Options, invoke `{p}help extreme`. See also `{p}commands` and `{p}info`.
 
         Syntax: `{p}help [(<command>|extreme)]`
 
@@ -100,7 +101,62 @@ class CommandsUtil(core.Commands):
             else:
                 return "Command not found."
 
-    async def cmd_commands(self, src, _all=False, _a=False, _custom=False, _c=False, **_):
+    async def cmd_info(self, args, src, **_):
+        """Print technical information regarding command implementation.
+
+        Return information about a command, including its restriction settings, its parent module, and, if applicable, its typed parameters. Can only be used on commands to which you have access. See also `{p}help` and `{p}commands`.
+
+        Syntax: `{p}info [<command>]`
+        """
+        if not args:
+            return "`<Default infotext goes here>`\n`#BlameDav`"
+
+        mod, cmd, denied = self.router.find_command(args[0], src)
+        if denied:
+            return "Cannot show info: " + denied
+        elif cmd:
+            if cmd.__doc__:
+                # Grab the docstring and insert the correct prefix wherever needed
+                doc0 = cmd.__doc__.format(p=self.config.prefix)
+                # Split the docstring up by double-newlines
+                doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
+
+                summary = doc.pop(0)
+            else:
+                summary = "Command summary unavailable."
+
+            em = discord.Embed(
+                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
+                description=summary,
+                colour=0xFFCD0A,
+            )
+
+            em.add_field(name="Restriction:", value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(self.config.get(mod.role), mod.op, mod.whitelist))
+            em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
+
+            hints = get_type_hints(cmd)
+            if hints:
+                em.add_field(
+                    name="Typed Parameters:",
+                    value="\n".join(
+                        ["`{}`: `{}`".format(k, v.__name__) for k, v in hints.items()]
+                    ),
+                )
+
+            em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
+            await self.client.embed(src.channel, em)
+        else:
+            return "Command not found."
+
+    async def cmd_commands(
+        self,
+        src,
+        _all: bool = False,
+        _a: bool = False,
+        _custom: bool = False,
+        _c: bool = False,
+        **_
+    ):
         """List all commands.
 
         Syntax: `{p}commands [OPTIONS]`
@@ -183,22 +239,23 @@ class CommandsUtil(core.Commands):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
         return await self.cmd_time(["UTC"])
 
-    async def cmd_statsfornerds(self, src, **_):
-        """Display more detailed statistics (for nerds)."""
+    async def cmd_stats(self, src, **_):
+        """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
         em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
-        em.add_field(name="Version", value=self.router.version)
-        em.add_field(name="Uptime", value=self.router.uptime)
-        # em.add_field(name="Void Count", value=str(self.db.void.count()))
-        em.add_field(name="Servers", value=str(len(self.client.servers)))
+        em.add_field(name="Version", value=self.router.version, inline=False)
+        em.add_field(name="Uptime", value=self.router.uptime, inline=False)
+        # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
+        em.add_field(name="Servers", value=str(len(self.client.servers)), inline=False)
         em.add_field(
             name="Total Number of Commands run",
             value=str(self.config.get("stats")["comCount"]),
+            inline=False,
         )
-        em.add_field(name="Average Ping", value=str(truedelta))
+        em.add_field(name="Average Ping", value=str(truedelta), inline=False)
         mc = sum(1 for _ in self.client.get_all_members())
-        em.add_field(name="Total Members", value=str(mc))
+        em.add_field(name="Total Members", value=str(mc), inline=False)
         role = discord.utils.get(
             self.client.get_server(self.config.get("mainServer")).roles,
             name=self.config.get("mainRole"),
@@ -209,7 +266,7 @@ class CommandsUtil(core.Commands):
 
                 if role in m.roles:
                     c += 1
-            em.add_field(name="Total Validated Members", value=str(c))
+            em.add_field(name="Total Validated Members", value=str(c), inline=False)
 
         await self.client.embed(src.channel, em)
 
@@ -248,7 +305,7 @@ class CommandsUtil(core.Commands):
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
         for opt, val in opts.items():
-            out.append(str(opt)[1:] + "==" + str(val))
+            out.append("{}=={} ({})".format(str(opt)[1:], val, type(val)))
         out.append("MSG: " + msg)
         return "\n".join(out)
 

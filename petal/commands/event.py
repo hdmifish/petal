@@ -13,7 +13,9 @@ class CommandsEvent(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "xPostRole"
 
-    async def cmd_event(self, src, _message="", _channels="", _nomenu=False, **_):
+    async def cmd_event(
+        self, src, _message: str = "", _channels: str = "", _nomenu: bool = False, **_
+    ):
         """Post a message announcing the start of an event.
 
         Define a message which will be sent to one or more predefined channels. The message may include mass pings by way of including tags `{{e}}` and `{{h}}` for substitution.

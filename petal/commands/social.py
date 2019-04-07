@@ -21,13 +21,13 @@ class CommandsSocial(core.Commands):
     async def cmd_update(
         self,
         src,
-        _title="",
-        _content="",
-        _platform="",
-        _reddit=False,
-        _twitter=False,
-        _fb=False,
-        _tumblr=False,
+        _title: str = "",
+        _content: str = "",
+        _platform: str = "",
+        _reddit: bool = False,
+        _twitter: bool = False,
+        _fb: bool = False,
+        _tumblr: bool = False,
         **_
     ):
         """
