@@ -36,14 +36,16 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 ).get_member(recipientid)
                 try:
                     wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect"
-                    await self.client.send_message(channel=recipientobj, message=wlpm)
+                    msg = await self.client.send_message(channel=recipientobj, message=wlpm)
                 except discord.DiscordException as e:
                     self.log.err("Error on WLAdd PM: " + str(e))
-                    return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(
+                    msg = None
+                if msg:
+                    return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(
                         mcname, recipientid
                     )
                 else:
-                    return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(
+                    return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(
                         mcname, recipientid
                     )
             else:
