@@ -335,9 +335,16 @@ class CommandRouter:
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
             try:
+                if "|" in args:
+                    await self.client.send_message(
+                        channel=src.channel,
+                        message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
+                    )
                 return await func(args=args, **opts, msg=msg, src=src)
             except Exception as e:
-                return "Sorry, an exception was raised: ```{}```(`{}`)".format(e, type(e))
+                return "Sorry, an exception was raised: ```{}```(`{}`)".format(
+                    e, type(e)
+                )
 
     async def run(self, src):
         """Given a message, determine whether it is a command;
