@@ -30,7 +30,7 @@ class CommandsMCPublic(auth.CommandsMCAuth):
             )
 
             wlreq = await self.client.send_message(
-                channel=self.config.mc_channel, message="`<request loading...>`"
+                channel=self.config.get("mc_channel"), message="`<request loading...>`"
             )
 
             await self.client.edit_message(
