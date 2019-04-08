@@ -9,12 +9,16 @@ from petal.commands.minecraft import auth
 class CommandsMCMod(auth.CommandsMCAuth):
     op = 3
 
-    async def cmd_wlaccept(self, args, src, **_):
+    async def cmd_wlaccept(self, args, src, _nosend=False, **_):
         """Mark a PlayerDB entry as "approved", to be added to the whitelist.
 
-        Same methods of specification as {p}WLQuery; See `{p}help wlquery` for more information.
+        If this is the first time the user is being approved, unless `--nosend` is passed, a DM will be sent to the user, if possible, to notify them that their application has been accepted.
+
+        Same methods of specification as `{p}wlquery`; See `{p}help wlquery` for more information.
 
         Syntax: `{p}wlaccept <profile_identifier>`
+
+        Options: `--nosend` :: Do not send a message to the user telling them they have been whitelisted.
         """
         if not args:
             return
@@ -30,7 +34,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 "wl+",
                 f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
             )
-            if doSend:
+            if doSend and not _nosend:
                 recipientobj = self.client.get_server(
                     self.config.get("mainServer")
                 ).get_member(recipientid)
