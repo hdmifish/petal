@@ -6,7 +6,7 @@ import discord
 from petal.commands import core
 
 
-class CommandsMod(core.Commands):
+class CommandsMgr(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "role_manager"
 
@@ -125,4 +125,4 @@ class CommandsMod(core.Commands):
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
-CommandModule = CommandsMod
+CommandModule = CommandsMgr
