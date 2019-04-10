@@ -294,7 +294,7 @@ class CommandRouter:
                     elif wanted != bool and type(val) == bool:
                         # Command wants value, but value was left boolean. Fail.
                         return "Option `{}` requires a value of type {}.".format(
-                            opt_name, wanted
+                            opt_name, wanted.__name__
                         )
 
                     elif wanted == int:
@@ -309,7 +309,7 @@ class CommandRouter:
                         elif type(val) != wanted:
                             # Value is neither str nor int and cannot be made valid. Fail.
                             return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted, type(val)
+                                opt_name, wanted.__name__, type(val).__name__
                             )
                     elif wanted == float:
                         # Command wants float.
@@ -323,13 +323,13 @@ class CommandRouter:
                         elif type(val) != wanted:
                             # Value is neither str nor float and cannot be made valid. Fail.
                             return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted, type(val)
+                                opt_name, wanted.__name__, type(val).__name__
                             )
 
                     elif wanted != str and type(val) == str:
                         # "Else:" Command wants non-str, but value is str.
                         return "Option `{}` is `{}` but should be `{}`.".format(
-                            opt_name, type(val), wanted
+                            opt_name, type(val).__name__, wanted.__name__
                         )
 
             # Execute the method, passing the arguments as a list and the options
@@ -342,8 +342,8 @@ class CommandRouter:
                     )
                 return await func(args=args, **opts, msg=msg, src=src)
             except Exception as e:
-                return "Sorry, an exception was raised: ```{}```(`{}`)".format(
-                    e, type(e)
+                return "Sorry, an exception was raised: `{}` (`{}`)".format(
+                    type(e).__name__, e
                 )
 
     async def run(self, src):
