@@ -238,7 +238,7 @@ class CommandRouter:
         # Loop through given arguments.
         for i, arg in enumerate(cline):
             # Find args that begin with a dash.
-            if arg.startswith("-"):
+            if arg.startswith("-") and not arg.lstrip("-").isnumeric():
                 # This arg is an option key.
                 key = arg.lstrip("-")
 
