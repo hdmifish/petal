@@ -114,6 +114,11 @@ class Commands:
                 src.server.members, id=uuid.lstrip("<@!").rstrip(">")
             )
 
+    def member_on_main(self, uuid):
+        return self.get_member(
+            self.client.get_server(self.client.get_main_server()), uuid
+        )
+
     @staticmethod
     def validate_channel(chanlist: list, msg: str) -> bool:
         for i in range(len(msg)):
