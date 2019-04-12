@@ -238,7 +238,7 @@ class CommandRouter:
         # Loop through given arguments.
         for i, arg in enumerate(cline):
             # Find args that begin with a dash.
-            if arg.startswith("-"):
+            if arg.startswith("-") and not arg.lstrip("-").isnumeric():
                 # This arg is an option key.
                 key = arg.lstrip("-")
 
@@ -294,7 +294,7 @@ class CommandRouter:
                     elif wanted != bool and type(val) == bool:
                         # Command wants value, but value was left boolean. Fail.
                         return "Option `{}` requires a value of type {}.".format(
-                            opt_name, wanted
+                            opt_name, wanted.__name__
                         )
 
                     elif wanted == int:
@@ -309,7 +309,7 @@ class CommandRouter:
                         elif type(val) != wanted:
                             # Value is neither str nor int and cannot be made valid. Fail.
                             return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted, type(val)
+                                opt_name, wanted.__name__, type(val).__name__
                             )
                     elif wanted == float:
                         # Command wants float.
@@ -323,21 +323,28 @@ class CommandRouter:
                         elif type(val) != wanted:
                             # Value is neither str nor float and cannot be made valid. Fail.
                             return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted, type(val)
+                                opt_name, wanted.__name__, type(val).__name__
                             )
 
                     elif wanted != str and type(val) == str:
                         # "Else:" Command wants non-str, but value is str.
                         return "Option `{}` is `{}` but should be `{}`.".format(
-                            opt_name, type(val), wanted
+                            opt_name, type(val).__name__, wanted.__name__
                         )
 
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
             try:
+                if "|" in args:
+                    await self.client.send_message(
+                        channel=src.channel,
+                        message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
+                    )
                 return await func(args=args, **opts, msg=msg, src=src)
             except Exception as e:
-                return "Sorry, an exception was raised: ```{}```(`{}`)".format(e, type(e))
+                return "Sorry, an exception was raised: `{}` (`{}`)".format(
+                    type(e).__name__, e
+                )
 
     async def run(self, src):
         """Given a message, determine whether it is a command;

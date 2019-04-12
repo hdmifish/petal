@@ -82,7 +82,7 @@ T pypa package
 --------------------------------------------------------------------
 
 
-[v0.7.0] (2018-04-04)
+[v0.7.0] (2019-04-04)
 First changelog be gentle; Biiiiiiiiig updates since then
 Since the last documented update:
 +- Ripped out and replaced the whole single-module commands system with a package-based "router" system with modular authentication and a rather crude (but working!) approximation of C-style option flags
@@ -92,7 +92,16 @@ Since the last documented update:
 + Implemented basic type checking for --options
 * Various spelling fixes, removal of many line-end whitespaces
 
-[v0.7.1] (2018-04-07)
+[v0.7.1] (2019-04-07)
 * Fixed a mistake where !wlme would look for a config option as an attribute of Config, rather than going through Config.get()
 * Fixed an oversight wherein a failure to send a notification DM would not be correctly reported
 + Added flag --nosend to !wlaccept to prevent sending DM notification
+
+[v0.8.0] (2019-04-11)
++ Return a syntax hint if it looks like the user might have tried to separate arguments with a pipe
++ Allow most role restricted commands to be used in DM by falling back to mainserver roles
++ Integrate command options with moderation commands
++ Reimplement mod report URIs
+* Dashed numbers are no longer interpreted as command options; Apparently negative numbers exist
+* Correct CommandsMod to CommandsMgr in manager command module
+* Improve type printing

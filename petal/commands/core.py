@@ -1,4 +1,5 @@
 import asyncio
+from urllib.parse import urlencode, quote_plus
 
 import discord
 
@@ -68,7 +69,9 @@ class Commands:
     def check_user_has_role(self, user, role):
         if not role:
             return "bad role"
-        if type(user) == discord.Member:
+        if type(user) != discord.Member:
+            user = self.member_on_main(user.id)
+        if user:
             server = self.client.get_server(self.config.get("mainServer"))
             target = discord.utils.get(server.roles, name=role)
             # TODO: Make this block a bit more...compact.
@@ -110,6 +113,11 @@ class Commands:
             return discord.utils.get(
                 src.server.members, id=uuid.lstrip("<@!").rstrip(">")
             )
+
+    def member_on_main(self, uuid):
+        return self.get_member(
+            self.client.get_server(self.client.get_main_server()), uuid
+        )
 
     @staticmethod
     def validate_channel(chanlist: list, msg: str) -> bool:
@@ -203,3 +211,9 @@ class Commands:
 
         self.log.f("event", "could not find subscription key in your announcement")
         return None, None
+
+    def generate_post_process_URI(self, mod, reason, message, target):
+        if self.config.get("modURI") is None:
+            return "*no modURI in config, so post processing will be skipped*"
+        req = {"mod": mod, "off": reason, "msg": message, "uid": target}
+        return self.config.get("modURI") + "?" + urlencode(req, quote_via=quote_plus)
