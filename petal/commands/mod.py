@@ -237,8 +237,7 @@ class CommandsMod(core.Commands):
             )
             await asyncio.sleep(4)
             # petal.logLock = False
-            # response =
-            await self.client.send_message(
+            response = await self.client.send_message(
                 src.author,
                 src.channel,
                 userToBan.name
@@ -246,19 +245,19 @@ class CommandsMod(core.Commands):
                 + userToBan.id
                 + ") was successfully banned\n\n",
             )
-            # try:
-            #     # Post-processing webhook for ban command
-            #     return self.generate_post_process_URI(
-            #         src.author.name + src.author.discriminator,
-            #         reason.content,
-            #         response.content,
-            #         userToBan.name + userToBan.discriminator,
-            #     )
-            # except Exception as e:
-            #     self.log.err(
-            #         "Could not generate post_process_message for ban" + str(e)
-            #     )
-            #     return "Error occurred trying to generate webhook URI"
+            try:
+                # Post-processing webhook for ban command
+                return self.generate_post_process_URI(
+                    src.author.name + src.author.discriminator,
+                    _reason,
+                    response.content,
+                    userToBan.name + userToBan.discriminator,
+                )
+            except Exception as e:
+                self.log.err(
+                    "Could not generate post_process_message for ban: " + str(e)
+                )
+                return "Error occurred trying to generate webhook URI"
 
     async def cmd_tempban(
         self,
