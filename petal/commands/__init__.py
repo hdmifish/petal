@@ -263,7 +263,7 @@ class CommandRouter:
 
         return args, opts
 
-    async def route(self, command: str, src=None):
+    async def route(self, command: str, src: discord.Message):
         """Route a command (and the source message) to the correct method of the
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
@@ -274,10 +274,19 @@ class CommandRouter:
         # Find the method, if one exists.
         engine, func, denied = self.find_command(cword, src)
         if denied:
+            # User is not permitted to use this.
             return "Authentication failure: " + denied
-        elif not func:
-            return
-        else:
+
+        elif not func and src.id not in self.client.potential_typoed_commands:
+            # This is not a command. However, might it have been a typo? Add the
+            #   message ID to a deque.
+            self.client.potential_typoed_commands.append(src.id)
+            return ""
+
+        elif func:
+            if src.id in self.client.potential_typoed_commands:
+                self.client.potential_typoed_commands.remove(src.id)
+
             # Extract option flags from the argument list.
             args, opts = self.parse(cline)
 
@@ -341,13 +350,13 @@ class CommandRouter:
                         channel=src.channel,
                         message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                     )
-                return await func(args=args, **opts, msg=msg, src=src)
+                return (await func(args=args, **opts, msg=msg, src=src)) or ""
             except Exception as e:
                 return "Sorry, an exception was raised: `{}` (`{}`)".format(
                     type(e).__name__, e
                 )
 
-    async def run(self, src):
+    async def run(self, src: discord.Message):
         """Given a message, determine whether it is a command;
         If it is, route it accordingly.
         """

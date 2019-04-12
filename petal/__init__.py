@@ -5,6 +5,7 @@ written by isometricramen
 """
 
 import asyncio
+from collections import deque
 from datetime import datetime
 import random
 import re
@@ -47,6 +48,7 @@ class Petal(discord.Client):
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
         self.commands.version = version
+        self.potential_typoed_commands = deque([], 3)
         self.tempBanFlag = False
 
         self.dev_mode = devmode
@@ -188,6 +190,15 @@ class Petal(discord.Client):
             )
         await self.change_presence(game=discord.Game(name="with cats :3"))
         return
+
+    async def execute_command(self, message):
+        response = await self.commands.run(message)
+        if response is not None:
+            self.config.get("stats")["comCount"] += 1
+            await self.send_message(message.author, message.channel, response)
+            return True
+        else:
+            return False
 
     async def send_message(
         self, author=None, channel=None, message=None, timeout=0, **kwargs
@@ -391,23 +402,31 @@ class Petal(discord.Client):
         if before.content == after.content:
             return
 
-        userEmbed = discord.Embed(
-            title="Message Edit",
-            description=before.author.name
-            + "#"
-            + before.author.discriminator
-            + " edited their message",
-            colour=0xAE00FE,
+        edit_time = datetime.utcnow()
+
+        # If the message was marked as a possible typo by the command router,
+        #   try running it again.
+        executed = (
+            before.id in self.potential_typoed_commands
+            and await self.execute_command(after)
         )
 
-        userEmbed.add_field(name="Server", value=before.server.name)
-        userEmbed.add_field(name="Channel", value=before.channel.name)
-        userEmbed.add_field(
-            name="Previous message: ", value=before.content, inline=False
-        )
-        userEmbed.add_field(name="Edited message: ", value=after.content)
-        userEmbed.add_field(
-            name="Timestamp", value=str(datetime.utcnow())[:-7], inline=False
+        userEmbed = (
+            discord.Embed(
+                title="Message Edit with command execution"
+                if executed
+                else "Message Edit",
+                description=before.author.name
+                + "#"
+                + before.author.discriminator
+                + " edited their message",
+                colour=0xAE00FE,
+            )
+            .add_field(name="Server", value=before.server.name)
+            .add_field(name="Channel", value=before.channel.name)
+            .add_field(name="Previous message: ", value=before.content, inline=False)
+            .add_field(name="Edited message: ", value=after.content)
+            .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
         )
 
         try:
@@ -649,75 +668,4 @@ class Petal(discord.Client):
         # For now, do all the above checks and then run/route it.
         # This may result in repeating some checks, but these checks should
         #     eventually be moved into the commands module itself.
-        response = await self.commands.run(message)
-        if response:
-            self.config.get("stats")["comCount"] += 1
-            await self.send_message(message.author, message.channel, response)
-            return
-
-        # # # # LEGACY COMMAND SYSTEM # # #
-
-        # if not content.startswith(self.config.prefix):
-        #     return
-        # com = content[len(self.config.prefix) :].lower().strip()
-        #
-        # if com.split()[0] in dir(self.commands):
-        #     methodToCall = getattr(self.commands, com.split()[0])
-        #     if methodToCall.__doc__ is None:
-        #         log.warn(
-        #             "All commands require a docstring to not be "
-        #             + "ignored. If you don't know what caused this, "
-        #             + "it's safe to ignore the warning."
-        #         )
-        #         return
-        #     log.com(
-        #         "[{0}] [{1}] [{1.id}] [{2}] ".format(
-        #             message.channel, message.author, com
-        #         )
-        #     )
-        #     if not message.channel.is_private:
-        #         self.db.update_member(
-        #             message.author,
-        #             {
-        #                 "aliases": message.author.name,
-        #                 "servers": message.author.server.id,
-        #                 "last_message_channel": message.channel.id,
-        #                 "last_active": message.timestamp,
-        #                 "last_message": message.timestamp,
-        #             },
-        #             type=2,
-        #         )
-        #     response = await methodToCall(message)
-        #     if response:
-        #         self.config.get("stats")["comCount"] += 1
-        #         await self.send_message(message.author, message.channel, response)
-        #         return
-        #
-        # else:
-        #     if com.split()[0] in self.config.aliases:
-        #         aliased = self.config.aliases[com.split()[0]]
-        #         methodToCall = getattr(self.commands, aliased)
-        #         log.com(
-        #             "[{0}] [{1}] [{1.id}] [{2}] ".format(
-        #                 message.channel, message.author, com
-        #             )
-        #         )
-        #         response = await methodToCall(message)
-        #         if response:
-        #             self.config.get("stats")["comCount"] += 1
-        #             await self.send_message(message.author, message.channel, response)
-        #             return
-        #
-        #     # if com.split()[0] in self.config.commands:
-        #     #     response = await self.commands.parseCustom(com, message)
-        #     #     await self.send_message(message.author, message.channel, response)
-        #
-        #     # else:
-        #     #    return
-        #     #
-        #     #    log.com("[{0}] [{1}] [{1.id}] [Cleverbot][{2}]"
-        #     #            .format(message.channel, message.author,
-        #     #                    message.content.lstrip(self.config.prefix)))
-        #     #    response = await self.commands.cleverbot(message)
-        #     #    await self.send_message(message.channel, response, )
-        #     return
+        await self.execute_command(message)
