@@ -68,7 +68,9 @@ class Commands:
     def check_user_has_role(self, user, role):
         if not role:
             return "bad role"
-        if type(user) == discord.Member:
+        if type(user) != discord.Member:
+            user = self.member_on_main(user.id)
+        if user:
             server = self.client.get_server(self.config.get("mainServer"))
             target = discord.utils.get(server.roles, name=role)
             # TODO: Make this block a bit more...compact.
