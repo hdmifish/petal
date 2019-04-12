@@ -133,7 +133,8 @@ class CommandRouter:
             self.log.warn("No Reddit keys found")
 
         tweet = self.config.get("twitter")
-        if tweet:
+        # Twittwr support disabled till api fix
+        if tweet and False:
             self.twit = twitter.Api(
                 consumer_key=tweet["consumerKey"],
                 consumer_secret=tweet["consumerSecret"],
