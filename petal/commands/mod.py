@@ -146,8 +146,8 @@ class CommandsMod(core.Commands):
         args,
         src,
         _reason: str = "",
+        _purge: int = 1,
         _noconfirm: bool = False,
-        _nopurge: bool = False,
         **_
     ):
         """Ban a user permenantly.
@@ -156,18 +156,21 @@ class CommandsMod(core.Commands):
 
         Options:
         `--reason=<str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
+        `--purge=<int>` :: Determine how many days of messages by the banned user to delete. Default is 1. Can be between 0 and 7, inclusive.
         `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
-        `--nopurge` :: Do not purge the server of messages by the banned user.
         """
         if not args:
             return
+
+        if not 0 <= _purge <= 7:
+            return "Can only purge between 0 and 7 days of messages, inclusive."
 
         logChannel = src.server.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
-                    "I'm sorry, you must have logging enabled "
-                    + "to use administrative functions"
+                "I'm sorry, you must have logging enabled "
+                + "to use administrative functions"
             )
 
         if not _reason:
@@ -194,7 +197,7 @@ class CommandsMod(core.Commands):
                 "You are about to ban: "
                 + userToBan.name
                 + ". If this is correct, type `yes`.",
-                )
+            )
             msg = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=10
             )
@@ -209,27 +212,22 @@ class CommandsMod(core.Commands):
             self.client.db.update_member(
                 userToBan, {"banned": True, "tempBanned": False, "banExpires": None}
             )
-            await self.client.ban(userToBan)
+            await self.client.ban(userToBan, _purge)
         except discord.errors.Forbidden:
             return "It seems I don't have perms to ban this user"
         else:
-            logEmbed = discord.Embed(
-                title="User Ban", description=_reason, colour=0xFF0000
+            logEmbed = (
+                discord.Embed(title="User Ban", description=_reason, colour=0xFF0000)
+                .set_author(
+                    name=self.client.user.name,
+                    icon_url="https://" + "puu.sh/tACjX/fc14b56458.png",
+                )
+                .add_field(name="Issuer", value=src.author.name + "\n" + src.author.id)
+                .add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+                .add_field(name="Server", value=userToBan.server.name)
+                .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
+                .set_thumbnail(url=userToBan.avatar_url)
             )
-            logEmbed.set_author(
-                name=self.client.user.name,
-                icon_url="https://" + "puu.sh/tACjX/fc14b56458.png",
-            )
-            logEmbed.add_field(
-                name="Issuer", value=src.author.name + "\n" + src.author.id
-            )
-            logEmbed.add_field(
-                name="Recipient", value=userToBan.name + "\n" + userToBan.id
-            )
-            logEmbed.add_field(name="Server", value=userToBan.server.name)
-            logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-
-            logEmbed.set_thumbnail(url=userToBan.avatar_url)
 
             await self.client.embed(
                 self.client.get_channel(self.config.modChannel), logEmbed
@@ -247,7 +245,7 @@ class CommandsMod(core.Commands):
                 + " (ID: "
                 + userToBan.id
                 + ") was successfully banned\n\n",
-                )
+            )
             # try:
             #     # Post-processing webhook for ban command
             #     return self.generate_post_process_URI(
