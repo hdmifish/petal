@@ -57,11 +57,16 @@ class CommandsMod(core.Commands):
 
             return msg
 
-    async def cmd_kick(self, args, src, **_):
-        """
-        Kick a user from a server.
+    async def cmd_kick(
+        self, args, src, _reason: str = "", _noconfirm: bool = False, **_
+    ):
+        """Kick a user from a server.
 
         Syntax: `{p}kick <user tag/id>`
+
+        Options:
+        `--reason=<str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
+        `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
         """
         if not args:
             return
@@ -74,74 +79,67 @@ class CommandsMod(core.Commands):
                 + " administrative functions"
             )
 
-        await self.client.send_message(
-            src.author, src.channel, "Please give a reason (just reply below): "
-        )
+        if not _reason:
+            await self.client.send_message(
+                src.author, src.channel, "Please give a reason (just reply below): "
+            )
 
-        msg = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, timeout=30
-        )
-        if msg is None:
-            return "Timed out while waiting for input"
+            reason = await self.client.wait_for_message(
+                channel=src.channel, author=src.author, timeout=30
+            )
+            if reason is None:
+                return "Timed out while waiting for input"
+            _reason = reason.content
 
-        else:
+        userToBan = self.get_member(src, args[0])
+        if userToBan is None:
+            return "Could not get user with that id"
 
-            userToBan = self.get_member(src, args[0])
-            if userToBan is None:
-                return "Could not get user with that id"
-
+        if not _noconfirm:
             await self.client.send_message(
                 src.author,
                 src.channel,
                 "You are about to kick: "
                 + userToBan.name
-                + ". If this is correct, type `yes`",
+                + ". If this is correct, type `yes`.",
             )
             confmsg = await self.client.wait_for_message(
                 channel=src.channel, author=src.author, timeout=10
             )
             if confmsg is None:
-                return "Timed out... user was not kicked"
-            else:
-                if confmsg.content.lower() != "yes":
-                    return userToBan.name + " was not kicked. What changed your mind? "
+                return "Timed out. User was not kicked"
+            elif confmsg.content.lower() != "yes":
+                return userToBan.name + " was not kicked."
 
-            try:
-                # petal.logLock = True
-                await self.client.kick(userToBan)
-            except discord.errors.Forbidden:
-                return "It seems I don't have perms to kick this user"
-            else:
-                logEmbed = discord.Embed(
-                    title="User Kick", description=msg.content, colour=0xFF7900
-                )
-                logEmbed.set_author(
+        try:
+            # petal.logLock = True
+            await self.client.kick(userToBan)
+        except discord.errors.Forbidden:
+            return "It seems I don't have perms to kick this user"
+        else:
+            logEmbed = (
+                discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
+                .set_author(
                     name=self.client.user.name,
                     icon_url="https:" + "//puu.sh/tAAjx/2d29a3a79c.png",
                 )
-                logEmbed.add_field(
-                    name="Issuer", value=src.author.name + "\n" + src.author.id
-                )
-                logEmbed.add_field(
-                    name="Recipient", value=userToBan.name + "\n" + userToBan.id
-                )
-                logEmbed.add_field(name="Server", value=userToBan.server.name)
-                logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=userToBan.avatar_url)
+                .add_field(name="Issuer", value=src.author.name + "\n" + src.author.id)
+                .add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+                .add_field(name="Server", value=userToBan.server.name)
+                .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
+                .set_thumbnail(url=userToBan.avatar_url)
+            )
 
-                await self.client.embed(
-                    self.client.get_channel(self.config.modChannel), logEmbed
-                )
-                # # await self.client.send_message(message.author, message.channel, "Cleaning up...", )
-                await self.client.send_typing(src.channel)
-                await asyncio.sleep(4)
-                # petal.lockLog = False
-                return (
-                    userToBan.name
-                    + " (ID: "
-                    + userToBan.id
-                    + ") was successfully kicked"
-                )
+            await self.client.embed(
+                self.client.get_channel(self.config.modChannel), logEmbed
+            )
+            # # await self.client.send_message(message.author, message.channel, "Cleaning up...", )
+            await self.client.send_typing(src.channel)
+            await asyncio.sleep(4)
+            # petal.lockLog = False
+            return (
+                userToBan.name + " (ID: " + userToBan.id + ") was successfully kicked"
+            )
 
     async def cmd_ban(self, args, src, **_):
         """
