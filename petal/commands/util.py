@@ -14,9 +14,9 @@ tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
 helptext = [
     """An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.""",
     """While spaces separate Arguments, sometimes an Argument is desired to be multiple words. In these cases, one can simply enclose the argument in quotes; For example:```{p}command "asdf qwert" zxcv```This would pass only *two* arguments to the command: `"asdf qwert"` and `"zxcv"`.""",
-    """An __Option__ is an additional Argument passed to a command, prefixed by either `-` or `--`, which is optional. An Option prefixed by `-` is a "Short" Option, while an Option prefixed by `--` is a "Long" Option. For example:```{p}command --opt=asdf```If you were to run this, you would pass the Long Option, `opt`, into the command with the value of `"asdf"`. It is up to the `cmd_command()` method to accept and use this value somehow.""",
-    """A __Flag__ is an Option passed without an explicit value, such as in:```{p}command --verbose```In this example, `verbose` is passed into the command with a **boolean** value of `True`, rather than any string value. This is often used by commands that may optionally return more information if requested.""",
-    """Short Options may be grouped together as a single prefixed word, or cluster. This can save time when typing a command with a series of Flags, but it is less useful when values need to be passed, because only the final Short Option in a cluster will be assigned the value specified. For example:```{p}command -abc=23 --long1=xyz --long2```In this command, while `c` is passed with a value of `"23"`, `a` and `b` are simply passed with values of `True`. This is the same difference by which the Long Option `long1` is passed with the value `"xyz"` while `long2` is passed with the value `True`.""",
+    """An __Option__ is an additional Argument passed to a command, prefixed by either `-` or `--`, which is optional. An Option prefixed by `-` is a "Short" Option, while an Option prefixed by `--` is a "Long" Option. A Long Option may also have its value specified with a `=` instead of a space and a string, and additionally, only needs enough of the word to be uniquely identified. For example:```{p}command --option asdf\n{p}command --option=asdf\n{p}command --opt asdf```If you were to run one of these, you would pass the Long Option, `option`, into the command with the value of `"asdf"`. It is up to the `cmd_command()` method to accept and use this value somehow.""",
+    """A __Flag__ is an Option passed without an explicit value, such as in:```{p}command --verbose```In this example, `verbose` is passed into the command with a **boolean** value of `True`, rather than any string value. This is often used by commands that may optionally return more or less information if requested.""",
+    """Short Options may be grouped together as a single prefixed word, or cluster. This can save time when typing a command with a series of Flags, but it is less useful when values need to be passed, because only the final Short Option in a cluster will be assigned the value specified. For example:```{p}command -abc 23 --long1 xyz --long2```In this command, while `c` is passed with a value of `"23"`, `a` and `b` are simply passed with values of `True`. This is the same difference by which the Long Option `long1` is passed with the value `"xyz"` while `long2` is passed with the value `True`.""",
 ]
 
 
@@ -30,7 +30,15 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    async def cmd_help(self, args, src, _short: bool = False, _s: bool = False, **_):
+    async def cmd_help(
+        self,
+        args,
+        src,
+        _short: bool = False,
+        _s: bool = False,
+        _extreme: bool = False,
+        **_
+    ):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -41,20 +49,22 @@ class CommandsUtil(core.Commands):
 
         For exhaustive help with Arguments and Options, invoke `{p}help extreme`. See also `{p}commands` and `{p}info`.
 
-        Syntax: `{p}help [(<command>|extreme)]`
+        Syntax: `{p}help [OPTIONS] [<str>]`
 
-        Options: `--short`, `-s` :: Exclude the "details" section of printed help.
+        Options:
+        `--short`, `-s` :: Exclude the "details" section of printed help.
+        `--extreme` :: Return **extremely verbose** general help on Arguments, Options, and Flags.
         """
-        if not args:
-            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
-            return "`<Default helptext goes here>`\n`#BlameIso`"
-
-        if args[0].lower() == "extreme":
+        if _extreme:
             for line in helptext:
                 await self.client.send_message(
                     src.author, src.channel, line.format(p=self.config.prefix)
                 )
             return
+
+        if not args:
+            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
+            return "`<Default helptext goes here>`\n`#BlameIso`"
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
@@ -309,6 +319,7 @@ class CommandsUtil(core.Commands):
         _string: str = None,
         _digit: int = None,
         _number: float = None,
+        _dashed_long_opt: str = None,
         **opts
     ):
         """Display details on how the command was parsed.
@@ -324,6 +335,7 @@ class CommandsUtil(core.Commands):
         Options:
         `--boolean`, `-b` :: Set the Boolean Flag to display `True`.
         `--string=<str>`, `-s <str>` :: Define this Option to be displayed.
+        `--dashed-long-opt=<str>`
         `--digit=<int>`, `-d <int>` :: Define this Option to be displayed.
         `--number=<float>`, `-n <float>` :: Define this Option to be displayed.
         """
@@ -332,6 +344,7 @@ class CommandsUtil(core.Commands):
         for opt, val in [
             ("`--boolean`, `-b`", _boolean or _b),
             ("`--string`, `-s`", _string or _s),
+            ("`--dashed-long-opt`", _dashed_long_opt),
             ("`--digit`, `-d`", _digit or _d),
             ("`--number`, `-n`", _number or _n),
             # ("--boolean", _boolean),

@@ -52,7 +52,7 @@ def split(line: str) -> (list, str):
 
     # Now, find the original string, but only up until the point of a semicolon.
     # Therefore, the following command:
-    #   `help commands -v; @person, this is where to see the list`
+    #   `help commands; @person, this is where to see the list`
     # will return a list, ["help", "commands", "-v"], and a string, "help commands -v".
     # This will allow commands to consider "the rest of the line" without going
     #   beyond a semicolon, and without having to reconstruct the line from the
@@ -70,24 +70,22 @@ def split(line: str) -> (list, str):
 def check_types(opts: dict, hints: dict) -> dict:
     output = {}
     for opt_name, val in opts:
-        kwarg = "_" + opt_name.lstrip("-")  # opt name back into kwarg name
+        kwarg = "_" + opt_name.strip("-").replace("-", "_")  # opt name back into kwarg name
         want = hints[kwarg]
-        err = TypeError(
-            "{} wants {}, got {}".format(opt_name, want, repr(val))
-        )
+        err = TypeError("{} wants {}, got {}".format(opt_name, want, repr(val)))
 
         if want == bool:
             print(repr(val))
             val = True
 
         elif want == Opt[int]:
-            if val.isdigit():
+            if val.lstrip("-").isdigit() and val.count("-") <= 1:
                 val = int(val)
             else:
                 raise err
 
         elif want == Opt[float]:
-            if val.replace(".", "", 1).isdigit():
+            if val.replace(".", "", 1).lstrip("-").isdigit() and val.count("-") <= 1:
                 val = float(val)
             else:
                 raise err
@@ -279,7 +277,8 @@ class CommandRouter:
         for opt_name, opt_type in hints.items():
             if not opt_name.startswith("_"):
                 continue
-            opt_name = opt_name[1:]
+            # "_option_name" -> "option-name"
+            opt_name = opt_name[1:].replace("_", "-")
             if len(opt_name) == 1:
                 if opt_type != bool:
                     opt_name += ":"
