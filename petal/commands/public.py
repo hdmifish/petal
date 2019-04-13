@@ -24,7 +24,7 @@ class CommandsPublic(core.Commands):
     async def cmd_choose(self, args, **_):
         """Choose a random option from a list.
 
-        Syntax: `{p}choose <option> [<option> [<option> [...]]]`
+        Syntax: `{p}choose <option>...`
         """
         response = "From what you gave me, I believe `{}` is the best choice".format(
             args[randint(0, len(args) - 1)]
@@ -276,15 +276,22 @@ class CommandsPublic(core.Commands):
             await self.client.embed(src.channel, em)
 
     async def cmd_define(
-        self, args, src, _language: str = "", _etymology: int = 0, **_
+        self,
+        args,
+        src,
+        _language: str = None,
+        _l: str = None,
+        _etymology: int = None,
+        _e: int = None,
+        **_
     ):
         """Find the definition of a word from Wiktionary.
 
         Syntax: `{p}define <word>`
 
         Options:
-        `--language=<lang>` :: Specify a language in which to search for the word.
-        `--etymology=<int>` :: Specify a certain number etymology to be shown.
+        `--language=<str>`, `-l <str>` :: Specify a language in which to search for the word.
+        `--etymology=<int>`, `-e <int>` :: Specify a certain number etymology to be shown.
         """
         if not args:
             return "Wiktionary, the Free Dictionary\nhttps://en.wiktionary.org/"
@@ -292,9 +299,9 @@ class CommandsPublic(core.Commands):
         self.log.f("dict", "Query string: " + word)
         await self.client.send_typing(src.channel)
 
-        which = _etymology or 0
+        which = _etymology or _e or 0
 
-        ref = Define(word, _language, which)
+        ref = Define(word, _language or _l, which)
         url = "https://en.wiktionary.org/wiki/" + word
         if ref.valid:
             try:
@@ -326,11 +333,17 @@ class CommandsPublic(core.Commands):
         else:
             return "Definition not found."
 
-    async def cmd_xkcd(self, args, src, **_):
+    async def cmd_xkcd(self, args, src, _explain: int = None, _e: int = None, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
 
-        Syntax: `{p}xkcd [<number>]`
+        Syntax: `{p}xkcd [<int>]`
+
+        Options: `--explain=<int>`, `-e <int>` :: Provide a link to the explanation of the given comic number.
         """
+        ex = _explain if _explain is not None else _e
+        if ex is not None:
+            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(ex)
+
         try:
             indexresp = json.loads(
                 requests.get("http://xkcd.com/info.0.json").content.decode()
@@ -373,14 +386,16 @@ class CommandsPublic(core.Commands):
         except ValueError as e:
             return "XKCD response was missing data. Try again. [{}]".format(str(e))
 
-        embed = discord.Embed(color=0x96A8C8)
-        embed.set_image(url=resp["img"])
-        embed.set_author(
-            name="XKCD #{}: {}".format(resp["num"], resp["safe_title"]),
-            url="https://www.xkcd.com/{}".format(resp["num"]),
-            icon_url="https://is1-ssl.mzstatic.com/image/thumb/Purple128/v4/e0/a4/67/e0a467b3-dedf-cc50-aeeb-2efd42bb0386/source/512x512bb.jpg",
+        embed = (
+            discord.Embed(color=0x96A8C8)
+            .set_image(url=resp["img"])
+            .set_author(
+                name="XKCD #{}: {}".format(resp["num"], resp["safe_title"]),
+                url="https://www.xkcd.com/{}".format(resp["num"]),
+                icon_url="https://is1-ssl.mzstatic.com/image/thumb/Purple128/v4/e0/a4/67/e0a467b3-dedf-cc50-aeeb-2efd42bb0386/source/512x512bb.jpg",
+            )
+            .set_footer(text=resp["alt"])
         )
-        embed.set_footer(text=resp["alt"])
 
         await self.client.embed(src.channel, embed)
 
@@ -406,8 +421,8 @@ class CommandsPublic(core.Commands):
         `--sums`, `-s` :: Display only the sum of each group of dice, not every individual roll.
         `--total`, `-t` :: Display ONLY the final, cumulative, total of all rolls. Overrides `--sums`/`-s`.
         """
-        _total = True in (_total, _t)  # Print ONLY final cumulative total
-        _sums = True in (_sums, _s)  # Print ONLY sums of groups
+        _total = _total or _t  # Print ONLY final cumulative total
+        _sums = _sums or _s  # Print ONLY sums of groups
 
         dice_ = [dice.get_die(term) for term in args]
 
