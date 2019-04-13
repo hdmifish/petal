@@ -99,6 +99,14 @@ def check_types(opts: dict, hints: dict) -> dict:
     return output
 
 
+auth_fail_dict = {
+    "bad user": "Could not find you on the main server.",
+    "bad role": "Could not find the correct role on the main server.",
+    "bad op": "Command wants MC Operator but is not integrated.",
+    "private": "Command cannot be used in DM.",
+}
+
+
 class CommandRouter:
     version = ""
 
@@ -225,14 +233,8 @@ class CommandRouter:
                 if not src or permitted:
                     return mod_src, func, False
                 else:
-                    if reason == "bad user":
-                        denied = "Could not find you on the main server."
-                    elif reason == "bad role":
-                        denied = "Could not find the correct role on the main server."
-                    elif reason == "bad op":
-                        denied = "Command wants MC Operator but is not integrated."
-                    elif reason == "private":
-                        denied = "Command cannot be used in DM."
+                    if reason in auth_fail_dict:
+                        denied = auth_fail_dict[reason]
                     elif reason == "denied":
                         denied = mod_src.auth_fail.format(
                             op=mod_src.op,
