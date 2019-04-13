@@ -131,7 +131,12 @@ class CommandsUtil(core.Commands):
                 colour=0xFFCD0A,
             )
 
-            em.add_field(name="Restriction:", value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(self.config.get(mod.role), mod.op, mod.whitelist))
+            em.add_field(
+                name="Restriction:",
+                value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(
+                    self.config.get(mod.role), mod.op, mod.whitelist
+                ),
+            )
             em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
 
             hints = get_type_hints(cmd)
@@ -291,7 +296,21 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
-    async def cmd_argtest(self, args, msg, src, **opts):
+    async def cmd_argtest(
+        self,
+        args,
+        msg,
+        src,
+        _b: bool = False,
+        _s: str = None,
+        _d: int = None,
+        _n: float = None,
+        _boolean: bool = False,
+        _string: str = None,
+        _digit: int = None,
+        _number: float = None,
+        **opts
+    ):
         """Display details on how the command was parsed.
 
         Used for testing, or personal experimentation to help you to understand Arguments, Options and Flags.
@@ -300,12 +319,32 @@ class CommandsUtil(core.Commands):
 
         An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.
 
-        Syntax: `{p}argtest [-<abcd...>=<value>] [--<flag>=<value>]`
+        Syntax: `{p}argtest [OPTIONS] [<arguments>...]`
+
+        Options:
+        `--boolean`, `-b` :: Set the Boolean Flag to display `True`.
+        `--string=<str>`, `-s <str>` :: Define this Option to be displayed.
+        `--digit=<int>`, `-d <int>` :: Define this Option to be displayed.
+        `--number=<float>`, `-n <float>` :: Define this Option to be displayed.
         """
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
-        for opt, val in opts.items():
-            out.append("{}=={} ({})".format(str(opt)[1:], val, type(val)))
+        for opt, val in [
+            ("`--boolean`, `-b`", _boolean or _b),
+            ("`--string`, `-s`", _string or _s),
+            ("`--digit`, `-d`", _digit or _d),
+            ("`--number`, `-n`", _number or _n),
+            # ("--boolean", _boolean),
+            # ("--string", _string),
+            # ("--digit", _digit),
+            # ("--number", _number),
+            # ("-b", _b),
+            # ("-s", _s),
+            # ("-d", _d),
+            # ("-n", _n),
+        ]:
+            if val is not None:
+                out.append("{} = `{}` ({})".format(opt, repr(val), type(val).__name__))
         out.append("MSG: " + msg)
         return "\n".join(out)
 

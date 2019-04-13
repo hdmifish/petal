@@ -1,8 +1,9 @@
 from datetime import datetime as dt
+import getopt
 import importlib
 import shlex
 import sys
-from typing import get_type_hints
+from typing import get_type_hints, List, Tuple, Optional as Opt
 
 import discord
 import facebook
@@ -64,6 +65,38 @@ def split(line: str) -> (list, str):
 
     # Return a list of all the tokens, and the first part of the "original".
     return list(tokens), original.read_token()
+
+
+def check_types(opts: dict, hints: dict) -> dict:
+    output = {}
+    for opt_name, val in opts:
+        kwarg = "_" + opt_name.lstrip("-")  # opt name back into kwarg name
+        want = hints[kwarg]
+        err = TypeError(
+            "{} wants {}, got {}".format(opt_name, want, repr(val))
+        )
+
+        if want == bool:
+            print(repr(val))
+            val = True
+
+        elif want == Opt[int]:
+            if val.isdigit():
+                val = int(val)
+            else:
+                raise err
+
+        elif want == Opt[float]:
+            if val.replace(".", "", 1).isdigit():
+                val = float(val)
+            else:
+                raise err
+
+        elif want != Opt[type(val)]:
+            raise err
+
+        output[kwarg] = val
+    return output
 
 
 class CommandRouter:
@@ -226,44 +259,41 @@ class CommandRouter:
             full += mod.get_all()
         return full
 
-    def parse(self, cline: list) -> (list, dict):
-        """$cline is a list of strings. Figure out which strings, if any, are
-            meant to be options/flags. If an option has a related value, add it
-            to the options dict with the value as its value. Otherwise, do the
-            same but with True instead. Return what args remain with the options
-            dict.
+    def parse(self, cline: List[str], func: classmethod) -> Tuple[list, dict]:
+        """cline is a List of Strings, and func is a Command Method. Generate a
+            Dict of Types that can be accepted by the various kwargs of func.
+            With that information, use Getopt to break cline down into
+            Arguments, Options, and Values that can be passed to func.
+
+        Using this system, a Command Method can specify the types acceptable for
+            its Options, and Users can pass data as part of a String that gets
+            automatically converted into the correct Type.
         """
-        args = []
-        opts = {}
+        hints = get_type_hints(func)
+        shorts = ""
+        longs = []
 
-        # Loop through given arguments.
-        for i, arg in enumerate(cline):
-            # Find args that begin with a dash.
-            if arg.startswith("-") and not arg.lstrip("-").isnumeric():
-                # This arg is an option key.
-                key = arg.lstrip("-")
-
-                if "=" in key:
-                    # A specific value was given.
-                    key, val = key.split("=", 1)
-                else:
-                    # Unspecified value defaults to generic True.
-                    val = True
-
-                if arg.startswith("--"):
-                    # This arg is a long opt; The whole word is one key.
-                    opts["_" + key.strip("_")] = val
-                else:
-                    # This is a short opt cluster; Each letter is a key.
-                    for char in key[:-1]:
-                        opts["_" + char] = True
-                    opts["_" + key[-1]] = val
+        # First, convert the method typing hints into something Getopt knows.
+        for opt_name, opt_type in hints.items():
+            if not opt_name.startswith("_"):
+                continue
+            opt_name = opt_name[1:]
+            if len(opt_name) == 1:
+                if opt_type != bool:
+                    opt_name += ":"
+                shorts += opt_name
             else:
-                args.append(arg)
+                if opt_type != bool:
+                    opt_name += "="
+                longs.append(opt_name)
 
+        # Run the line through Getopt using the type mapping we just generated.
+        opts, args = getopt.getopt(cline, shorts, longs)
+        # Enforce the typing, and if it all passes, send our results back up.
+        opts = check_types(opts, hints)
         return args, opts
 
-    async def route(self, command: str, src: discord.Message):
+    async def route(self, command: str, src: discord.Message) -> str:
         """Route a command (and the source message) to the correct method of the
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
@@ -287,65 +317,17 @@ class CommandRouter:
             if src.id in self.client.potential_typoed_commands:
                 self.client.potential_typoed_commands.remove(src.id)
 
-            # Extract option flags from the argument list.
-            args, opts = self.parse(cline)
-
-            # Check to make sure that all options are correctly typed.
-            hints = get_type_hints(func)
-            for opt, val in opts.items():
-                if opt in hints:
-                    wanted = hints[opt]
-                    opt_name = ("-" * min(len(opt[1:]), 2)) + opt[1:]
-
-                    # Check for any invalid typing.
-                    if wanted == bool and type(val) != bool:
-                        # Command wants bool, but value has been specified. Fail.
-                        return "Flag `{}` does not take a value.".format(opt_name)
-                    elif wanted != bool and type(val) == bool:
-                        # Command wants value, but value was left boolean. Fail.
-                        return "Option `{}` requires a value of type {}.".format(
-                            opt_name, wanted.__name__
-                        )
-
-                    elif wanted == int:
-                        # Command wants int.
-                        if type(val) == str:
-                            if val.isdigit():
-                                # Value is str, but is a str of an int. Change it.
-                                opts[opt] = int(val)
-                            else:
-                                # Value is str, but is not a integer str. Invalid.
-                                return "Option `{}` must be integer.".format(opt_name)
-                        elif type(val) != wanted:
-                            # Value is neither str nor int and cannot be made valid. Fail.
-                            return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted.__name__, type(val).__name__
-                            )
-                    elif wanted == float:
-                        # Command wants float.
-                        if type(val) == str:
-                            if val.isnumeric():
-                                # Value is str, but is a str of a float. Change it.
-                                opts[opt] = float(val)
-                            else:
-                                # Value is str, but is not a numeric str. Invalid.
-                                return "Option `{}` must be numeric.".format(opt_name)
-                        elif type(val) != wanted:
-                            # Value is neither str nor float and cannot be made valid. Fail.
-                            return "Option `{}` wanted `{}` but got `{}`.".format(
-                                opt_name, wanted.__name__, type(val).__name__
-                            )
-
-                    elif wanted != str and type(val) == str:
-                        # "Else:" Command wants non-str, but value is str.
-                        return "Option `{}` is `{}` but should be `{}`.".format(
-                            opt_name, type(val).__name__, wanted.__name__
-                        )
+            try:
+                args, opts = self.parse(cline, func)
+            except getopt.GetoptError as e:
+                return "Invalid Option ({})".format(e)
+            except TypeError as e:
+                return "Invalid Type: {}".format(e)
 
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
             try:
-                if "|" in args:
+                if cword != "argtest" and "|" in args:
                     await self.client.send_message(
                         channel=src.channel,
                         message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
