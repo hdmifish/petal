@@ -37,10 +37,10 @@ for module in LoadModules:
     importlib.import_module("." + module, package=__name__)
 
 
-def split(line: str) -> (list, str):
+def split(line: str) -> Tuple[list, str]:
     """Break an input line into a list of tokens, and a "regular" message."""
     # Split the full command line into a list of tokens, each its own arg.
-    tokens = shlex.shlex(line, posix=True)
+    tokens = shlex.shlex(line, posix=False)
     tokens.quotes += "`"
     # Split the string only on whitespace.
     tokens.whitespace_split = True
@@ -51,13 +51,14 @@ def split(line: str) -> (list, str):
     tokens.commenters = ";"
 
     # Now, find the original string, but only up until the point of a semicolon.
-    # Therefore, the following command:
-    #   `help commands; @person, this is where to see the list`
-    # will return a list, ["help", "commands", "-v"], and a string, "help commands -v".
+    # Therefore, the following message:
+    #   !help -s commands; @person, this is where to see the list
+    # will yield a list:   ["help", "-s", "commands"]
+    # and a string:         "help -s commands"
     # This will allow commands to consider "the rest of the line" without going
     #   beyond a semicolon, and without having to reconstruct the line from the
     #   list of arguments, which may or may not have been separated by spaces.
-    original = shlex.shlex(line, posix=True)
+    original = shlex.shlex(line, posix=False)
     original.quotes += "`"
     original.whitespace_split = True
     original.whitespace = ""
@@ -65,6 +66,12 @@ def split(line: str) -> (list, str):
 
     # Return a list of all the tokens, and the first part of the "original".
     return list(tokens), original.read_token()
+
+
+def unquote(string: str) -> str:
+    for q in "\'\"`":
+        if string.startswith(q) and string.endswith(q):
+            return string[1:-1]
 
 
 def check_types(opts: dict, hints: dict) -> dict:
@@ -292,14 +299,17 @@ class CommandRouter:
         opts, args = getopt.getopt(cline, shorts, longs)
         # Enforce the typing, and if it all passes, send our results back up.
         opts = check_types(opts, hints)
-        return args, opts
+        return [unquote(arg) for arg in args], opts
 
     async def route(self, command: str, src: discord.Message) -> str:
         """Route a command (and the source message) to the correct method of the
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
         """
-        cline, msg = split(command)
+        try:
+            cline, msg = split(command)
+        except ValueError as e:
+            return "Could not parse arguments: {}".format(e)
         cword = cline.pop(0)
 
         # Find the method, if one exists.
@@ -321,7 +331,7 @@ class CommandRouter:
             try:
                 args, opts = self.parse(cline, func)
             except getopt.GetoptError as e:
-                return "Invalid Option ({})".format(e)
+                return "Invalid Option: {}".format(e)
             except TypeError as e:
                 return "Invalid Type: {}".format(e)
 
