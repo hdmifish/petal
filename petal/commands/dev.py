@@ -3,6 +3,7 @@ Access: Config Whitelist"""
 
 from petal.commands import core
 from petal.menu import Menu
+from petal.util.grammar import pluralize, sequence_words
 
 
 class CommandsMaintenance(core.Commands):
@@ -31,66 +32,120 @@ class CommandsMaintenance(core.Commands):
     async def cmd_calias(self, args, **_):
         """Manipulate command aliases.
 
-        If an alias overlaps with a "real" command, the real command will __always__ take priority.
+        An Alias is an alternative invocation for a command. If a command is not
+        found under the invocation given, the list of aliases is checked, and if
+        the invocation is found to be an alias, the request is instead forwarded
+        to the command word set under the alias.
+        Due to this approach to resolution, if an alias overlaps with a "real"
+        command, the real command will __always__ take priority.
 
         Syntax:
-        `{p}calias add <command> <alias>...` - Add an alias so that when `{p}<alias>` is invoked, `{p}<command>` is executed instead.
-        `{p}calias list <command>`
-        `{p}calias clear <command>...`
-        `{p}calias remove <alias>...`
+        `{p}calias add <command> <alias>...` - Add aliases so that when `{p}<alias>` is invoked, `{p}<command>` is executed instead.
+        `{p}calias clear <command>...` - Remove ALL aliases that lead to specified commands.
+        `{p}calias list [<command>]` - List aliases for command. If command is not supplied, list all aliases instead.
+        `{p}calias remove <alias>...` - Unset specified aliases.
+        `{p}calias trace <alias>...` - Display the command that would be executed if `{p}<alias>` were invoked.
         """
         if not args:
             return "This command requires a subcommand."
 
         # The first argument passed is a subcommand; What action should be taken.
         mode = args.pop(0).lower()
-        if mode not in ("add", "list", "clear", "remove"):
+        if mode not in ("add", "clear", "list", "remove", "trace"):
             return "Invalid subcommand `{}`.".format(mode)
 
         # Ensure that enough arguments have been supplied.
-        if not args or (mode == "add" and len(args) < 2):
+        if (mode != "list" and not args) or (mode == "add" and len(args) < 2):
             return "Subcommand `{}` requires more arguments.".format(mode)
 
         out = []
         aliases = self.config.get("aliases")
+        p = self.config.prefix
+
+        args = [arg[len(p) :] if arg.startswith(p) else arg for arg in args]
 
         # Now we can get down to business :D
         if mode == "add":
             cmd = args.pop(0)
             if not self.router.find_command(cmd, recursive=False)[1]:
-                return "`{}{}` cannot be aliased because it is not a valid command.".format(
-                    self.config.prefix, cmd
+                return "`{}` cannot be aliased because it is not a valid command.".format(
+                    p + cmd
                 )
+            out.append(
+                "To command `{}`, add {} {}:".format(
+                    cmd,
+                    pluralize(len(args), "es", "", "alias"),
+                    sequence_words(["`{}`".format(p + a) for a in args]),
+                )
+            )
 
             for alias in args:
                 if self.router.find_command(alias, recursive=False)[1]:
                     out.append(
-                        "`{}{}` cannot be an alias because it is already a command.".format(
-                            self.config.prefix, alias
-                        )
+                        f"`{p + alias}` cannot be an alias because it is already a command."
                     )
                 elif alias in aliases:
                     out.append(
-                        "`{}{}` is already an alias for `{}{}`.".format(
-                            self.config.prefix,
-                            alias,
-                            self.config.prefix,
-                            aliases[alias],
+                        "`{0}{1}` is already an alias for `{0}{2}`.".format(
+                            p, alias, aliases[alias]
                         )
                     )
                 else:
                     aliases[alias] = cmd
                     out.append(
-                        "`{}{}` has been added as an alias for `{}{}`.".format(
-                            self.config.prefix, alias, self.config.prefix, cmd
+                        "`{0}{1}` has been added as an alias for `{0}{2}`.".format(
+                            p, alias, cmd
                         )
                     )
-        elif mode == "list":
-            pass
         elif mode == "clear":
-            pass
+            cmd = args.pop(0)
+            if not self.router.find_command(cmd, recursive=False)[1]:
+                return f"`{p + cmd}` cannot be cleared of aliases because it is not a valid command."
+            out.append(f"From command `{p + cmd}`, remove all aliases:")
+            for alias, target in aliases.copy().items():
+                if target == cmd:
+                    del aliases[alias]
+                    out.append(f"Alias `{p + alias}` removed.")
+        elif mode == "list":
+            if args:
+                cmd = args.pop(0)
+                if not self.router.find_command(cmd, recursive=False)[1]:
+                    return f"`{p + cmd}` cannot have aliases listed because it is not a valid command."
+                out.append(f"List of aliases for command `{p + cmd}`:")
+                for alias, target in aliases.items():
+                    if target == cmd:
+                        out.append(f"`{p + alias}`")
+            else:
+                out.append("List of aliases:")
+                out += [
+                    "`{}` -> `{}`".format(p + alias, p + cmd)
+                    for alias, cmd in aliases.items()
+                ]
         elif mode == "remove":
-            pass
+            out.append(
+                "Remove {} {}:".format(
+                    pluralize(len(args), "es", "", "alias"),
+                    sequence_words(["`{}`".format(p + a) for a in args]),
+                )
+            )
+            for alias in args:
+                if alias in aliases:
+                    del aliases[alias]
+                    out.append("Alias `{}` removed.".format(p + alias))
+                else:
+                    out.append("`{}` is not a valid alias.".format(p + alias))
+        elif mode == "trace":
+            out.append(
+                "Trace {} {}:".format(
+                    pluralize(len(args), "es", "", "alias"),
+                    sequence_words(["`{}`".format(p + a) for a in args]),
+                )
+            )
+            for alias in args:
+                if alias in aliases:
+                    out.append("`{}` -> `{}`".format(p + alias, p + aliases[alias]))
+                else:
+                    out.append("`{}` is not a valid alias.".format(p + alias))
 
         self.config.save()
         return "\n".join(out)
