@@ -466,7 +466,7 @@ class CommandsPublic(core.Commands):
     async def cmd_sub(self, args, **_):
         """Return a random image from a given subreddit. Defaults to /r/cats.
 
-        Syntax: '{p}sub [<subreddit>]'
+        Syntax: `{p}sub [<subreddit>]`
         """
         sr = args[0] if args else "cats"
         # if force is not None:
