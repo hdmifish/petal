@@ -90,11 +90,11 @@ Since the last documented update:
 * Overhauled commands: commands, help, new, wiki, xkcd
 + Reaction-based UI menus for choices n stuff
 + Implemented basic type checking for --options
-* Various spelling fixes, removal of many line-end whitespaces
+= Various spelling fixes, removal of many line-end whitespaces
 
 [v0.7.1] (2019-04-07)
-* Fixed a mistake where !wlme would look for a config option as an attribute of Config, rather than going through Config.get()
-* Fixed an oversight wherein a failure to send a notification DM would not be correctly reported
+= Fixed a mistake where !wlme would look for a config option as an attribute of Config, rather than going through Config.get()
+= Fixed an oversight wherein a failure to send a notification DM would not be correctly reported
 + Added flag --nosend to !wlaccept to prevent sending DM notification
 
 [v0.8.0] (2019-04-11)
@@ -103,5 +103,14 @@ Since the last documented update:
 + Integrate command options with moderation commands
 + Reimplement mod report URIs
 * Dashed numbers are no longer interpreted as command options; Apparently negative numbers exist
-* Correct CommandsMod to CommandsMgr in manager command module
+= Correct CommandsMod to CommandsMgr in manager command module
 * Improve type printing
+
+[v0.9.0] (2019-04-14)
++ If you misspell a command, you can now edit your message and it will run.
++- Replaced low quality homemade option parser. Again. For the third time. We use GetOpt now.
++ More options for define, help, xkcd, and mod commands.
++ Finally finished !calias.
+* Contents of petal/petal.py moved into previously-empty petal/__init__.py
+* Greatly improved quote support.
+= Various fixes.
