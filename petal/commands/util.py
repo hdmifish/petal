@@ -1,6 +1,7 @@
 """Commands module for BOT-RELATED UTILITIES.
 Access: Public"""
 
+from collections import OrderedDict
 from datetime import datetime as dt
 from typing import get_type_hints
 
@@ -154,7 +155,11 @@ class CommandsUtil(core.Commands):
                 em.add_field(
                     name="Typed Parameters:",
                     value="\n".join(
-                        ["`{}`: `{}`".format(k, v.__name__) for k, v in hints.items()]
+                        [
+                            "`{}`: `{}`".format(k, v)
+                            for k, v in hints.items()
+                            if k.startswith("_")
+                        ]
                     ),
                 )
 
@@ -165,11 +170,14 @@ class CommandsUtil(core.Commands):
 
     async def cmd_commands(
         self,
+        args,
         src,
         _all: bool = False,
         _a: bool = False,
         _custom: bool = False,
         _c: bool = False,
+        _sort: bool = False,
+        _s: bool = False,
         **_
     ):
         """List all commands.
@@ -179,30 +187,54 @@ class CommandsUtil(core.Commands):
         Options:
         `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
         `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
+        `--sort`, `-s` :: Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
-        formattedList = ""
-        cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
+        cmd_list = list(
+            OrderedDict.fromkeys(
+                [method.__name__[4:] for method in self.router.get_all()]
+            )
+        )
         if True in (_custom, _c):
             line_2 = ", including custom commands"
             cmd_list += list(self.config.get("commands")) or []
         else:
             line_2 = ""
-        cmd_list.sort()
 
-        if True not in (_all, _a):
-            # Unless --all or -a, remove any restricted commands.
-            for cmd in cmd_list.copy():
-                mod, func, denied = self.router.find_command(kword=cmd, src=src)
-                if denied is not False:
-                    cmd_list.remove(cmd)
-            line_1 = "List of commands you can access"
-        else:
+        if _sort or _s:
+            cmd_list.sort()
+
+        if args:
+            line_2 = " matching your search" + line_2
+            cmd_list = [
+                cmd
+                for cmd in cmd_list
+                if any(
+                    [
+                        cmd.lower() in term.lower() or term.lower() in cmd.lower()
+                        for term in args
+                    ]
+                )
+            ]
+
+        # Unless --all or -a, remove any restricted commands.
+        cl2 = []
+        for cmd in cmd_list.copy():
+            mod, func, denied = self.router.find_command(
+                kword=cmd, src=None if any((_all, _a)) else src
+            )
+            if denied is False:
+                cl2.append(
+                    "{} - {}".format(
+                        self.config.prefix + cmd, mod.__module__.split(".")[-1]
+                    )
+                )
+
+        if any((_all, _a)):
             line_1 = "List of all commands"
+        else:
+            line_1 = "List of commands you can access"
 
-        for cmd in cmd_list:
-            formattedList += "\n" + self.config.prefix + cmd
-
-        return line_1 + line_2 + ": ```" + formattedList + "```"
+        return line_1 + line_2 + ":```" + "\n".join(cl2) + "```"
 
     async def cmd_ping(self, src, **_):
         """Show the round trip time from this bot to Discord (not you) and back."""
