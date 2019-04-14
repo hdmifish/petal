@@ -68,6 +68,7 @@ def unquote(string: str) -> str:
     for q in "\'\"`":
         if string.startswith(q) and string.endswith(q):
             return string[1:-1]
+    return string
 
 
 def check_types(opts: dict, hints: dict) -> dict:
@@ -210,7 +211,8 @@ class CommandRouter(Integrated):
         opts, args = getopt.getopt(cline, shorts, longs)
         # Enforce the typing, and if it all passes, send our results back up.
         opts = check_types(opts, hints)
-        return [unquote(arg) for arg in args], opts
+        args = [unquote(arg) for arg in args]
+        return args, opts
 
     async def route(self, command: str, src: discord.Message) -> str:
         """Route a command (and the source message) to the correct method of the
