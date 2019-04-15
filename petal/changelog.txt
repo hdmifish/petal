@@ -114,3 +114,6 @@ Since the last documented update:
 * Contents of petal/petal.py moved into previously-empty petal/__init__.py
 * Greatly improved quote support.
 = Various fixes.
+
+[v0.9.1] (2019-04-15)
+* Minor bug fixes, optimizations
