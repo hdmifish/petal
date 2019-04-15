@@ -73,7 +73,7 @@ def unquote(string: str) -> str:
 
 def check_types(opts: dict, hints: dict) -> dict:
     output = {}
-    for opt_name, val in opts:
+    for opt_name, val in opts.items():
         # opt name back into kwarg name
         kwarg = "_" + opt_name.strip("-").replace("-", "_")
         want = hints[kwarg]
@@ -188,7 +188,7 @@ class CommandRouter(Integrated):
         """
         longs = longs or []
         o, a = getopt.getopt(args, shorts, longs)
-        return a, o
+        return a, {k: v for k, v in o}
 
     def parse_from_hinting(
         self, cline: List[str], func: classmethod
