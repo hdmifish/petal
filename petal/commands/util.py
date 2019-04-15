@@ -1,6 +1,7 @@
 """Commands module for BOT-RELATED UTILITIES.
 Access: Public"""
 
+from collections import OrderedDict
 from datetime import datetime as dt
 from typing import get_type_hints
 
@@ -14,9 +15,9 @@ tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
 helptext = [
     """An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.""",
     """While spaces separate Arguments, sometimes an Argument is desired to be multiple words. In these cases, one can simply enclose the argument in quotes; For example:```{p}command "asdf qwert" zxcv```This would pass only *two* arguments to the command: `"asdf qwert"` and `"zxcv"`.""",
-    """An __Option__ is an additional Argument passed to a command, prefixed by either `-` or `--`, which is optional. An Option prefixed by `-` is a "Short" Option, while an Option prefixed by `--` is a "Long" Option. For example:```{p}command --opt=asdf```If you were to run this, you would pass the Long Option, `opt`, into the command with the value of `"asdf"`. It is up to the `cmd_command()` method to accept and use this value somehow.""",
-    """A __Flag__ is an Option passed without an explicit value, such as in:```{p}command --verbose```In this example, `verbose` is passed into the command with a **boolean** value of `True`, rather than any string value. This is often used by commands that may optionally return more information if requested.""",
-    """Short Options may be grouped together as a single prefixed word, or cluster. This can save time when typing a command with a series of Flags, but it is less useful when values need to be passed, because only the final Short Option in a cluster will be assigned the value specified. For example:```{p}command -abc=23 --long1=xyz --long2```In this command, while `c` is passed with a value of `"23"`, `a` and `b` are simply passed with values of `True`. This is the same difference by which the Long Option `long1` is passed with the value `"xyz"` while `long2` is passed with the value `True`.""",
+    """An __Option__ is an additional Argument passed to a command, prefixed by either `-` or `--`, which is optional. An Option prefixed by `-` is a "Short" Option, while an Option prefixed by `--` is a "Long" Option. A Long Option may also have its value specified with a `=` instead of a space and a string, and additionally, only needs enough of the word to be uniquely identified. For example:```{p}command --option asdf\n{p}command --option=asdf\n{p}command --opt asdf```If you were to run one of these, you would pass the Long Option, `option`, into the command with the value of `"asdf"`. It is up to the `cmd_command()` method to accept and use this value somehow.""",
+    """A __Flag__ is an Option passed without an explicit value, such as in:```{p}command --verbose```In this example, `verbose` is passed into the command with a **boolean** value of `True`, rather than any string value. This is often used by commands that may optionally return more or less information if requested.""",
+    """Short Options may be grouped together as a single prefixed word, or cluster. This can save time when typing a command with a series of Flags, but it is less useful when values need to be passed, because only the final Short Option in a cluster will be assigned the value specified. For example:```{p}command -abc 23 --long1 xyz --long2```In this command, while `c` is passed with a value of `"23"`, `a` and `b` are simply passed with values of `True`. This is the same difference by which the Long Option `long1` is passed with the value `"xyz"` while `long2` is passed with the value `True`.""",
 ]
 
 
@@ -30,7 +31,15 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
-    async def cmd_help(self, args, src, _short: bool = False, _s: bool = False, **_):
+    async def cmd_help(
+        self,
+        args,
+        src,
+        _short: bool = False,
+        _s: bool = False,
+        _extreme: bool = False,
+        **_
+    ):
         """Print information regarding command usage.
 
         Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
@@ -41,20 +50,22 @@ class CommandsUtil(core.Commands):
 
         For exhaustive help with Arguments and Options, invoke `{p}help extreme`. See also `{p}commands` and `{p}info`.
 
-        Syntax: `{p}help [(<command>|extreme)]`
+        Syntax: `{p}help [OPTIONS] [<str>]`
 
-        Options: `--short`, `-s` :: Exclude the "details" section of printed help.
+        Options:
+        `--short`, `-s` :: Exclude the "details" section of printed help.
+        `--extreme` :: Return **extremely verbose** general help on Arguments, Options, and Flags.
         """
-        if not args:
-            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
-            return "`<Default helptext goes here>`\n`#BlameIso`"
-
-        if args[0].lower() == "extreme":
+        if _extreme:
             for line in helptext:
                 await self.client.send_message(
                     src.author, src.channel, line.format(p=self.config.prefix)
                 )
             return
+
+        if not args:
+            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
+            return "`<Default helptext goes here>`\n`#BlameIso`"
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
@@ -131,7 +142,12 @@ class CommandsUtil(core.Commands):
                 colour=0xFFCD0A,
             )
 
-            em.add_field(name="Restriction:", value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(self.config.get(mod.role), mod.op, mod.whitelist))
+            em.add_field(
+                name="Restriction:",
+                value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(
+                    self.config.get(mod.role), mod.op, mod.whitelist
+                ),
+            )
             em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
 
             hints = get_type_hints(cmd)
@@ -139,7 +155,11 @@ class CommandsUtil(core.Commands):
                 em.add_field(
                     name="Typed Parameters:",
                     value="\n".join(
-                        ["`{}`: `{}`".format(k, v.__name__) for k, v in hints.items()]
+                        [
+                            "`{}`: `{}`".format(k, v)
+                            for k, v in hints.items()
+                            if k.startswith("_")
+                        ]
                     ),
                 )
 
@@ -150,11 +170,14 @@ class CommandsUtil(core.Commands):
 
     async def cmd_commands(
         self,
+        args,
         src,
         _all: bool = False,
         _a: bool = False,
         _custom: bool = False,
         _c: bool = False,
+        _sort: bool = False,
+        _s: bool = False,
         **_
     ):
         """List all commands.
@@ -164,30 +187,54 @@ class CommandsUtil(core.Commands):
         Options:
         `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
         `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
+        `--sort`, `-s` :: Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
-        formattedList = ""
-        cmd_list = list(set([method.__name__[4:] for method in self.router.get_all()]))
+        cmd_list = list(
+            OrderedDict.fromkeys(
+                [method.__name__[4:] for method in self.router.get_all()]
+            )
+        )
         if True in (_custom, _c):
             line_2 = ", including custom commands"
             cmd_list += list(self.config.get("commands")) or []
         else:
             line_2 = ""
-        cmd_list.sort()
 
-        if True not in (_all, _a):
-            # Unless --all or -a, remove any restricted commands.
-            for cmd in cmd_list.copy():
-                mod, func, denied = self.router.find_command(kword=cmd, src=src)
-                if denied is not False:
-                    cmd_list.remove(cmd)
-            line_1 = "List of commands you can access"
-        else:
+        if _sort or _s:
+            cmd_list.sort()
+
+        if args:
+            line_2 = " matching your search" + line_2
+            cmd_list = [
+                cmd
+                for cmd in cmd_list
+                if any(
+                    [
+                        cmd.lower() in term.lower() or term.lower() in cmd.lower()
+                        for term in args
+                    ]
+                )
+            ]
+
+        # Unless --all or -a, remove any restricted commands.
+        cl2 = []
+        for cmd in cmd_list.copy():
+            mod, func, denied = self.router.find_command(
+                kword=cmd, src=None if any((_all, _a)) else src
+            )
+            if denied is False:
+                cl2.append(
+                    "{} - {}".format(
+                        self.config.prefix + cmd, mod.__module__.split(".")[-1]
+                    )
+                )
+
+        if any((_all, _a)):
             line_1 = "List of all commands"
+        else:
+            line_1 = "List of commands you can access"
 
-        for cmd in cmd_list:
-            formattedList += "\n" + self.config.prefix + cmd
-
-        return line_1 + line_2 + ": ```" + formattedList + "```"
+        return line_1 + line_2 + ":```" + "\n".join(cl2) + "```"
 
     async def cmd_ping(self, src, **_):
         """Show the round trip time from this bot to Discord (not you) and back."""
@@ -291,7 +338,22 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
-    async def cmd_argtest(self, args, msg, src, **opts):
+    async def cmd_argtest(
+        self,
+        args,
+        msg,
+        src,
+        _b: bool = False,
+        _s: str = None,
+        _d: int = None,
+        _n: float = None,
+        _boolean: bool = False,
+        _string: str = None,
+        _digit: int = None,
+        _number: float = None,
+        _dashed_long_opt: str = None,
+        **opts
+    ):
         """Display details on how the command was parsed.
 
         Used for testing, or personal experimentation to help you to understand Arguments, Options and Flags.
@@ -300,12 +362,34 @@ class CommandsUtil(core.Commands):
 
         An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.
 
-        Syntax: `{p}argtest [-<abcd...>=<value>] [--<flag>=<value>]`
+        Syntax: `{p}argtest [OPTIONS] [<arguments>...]`
+
+        Options:
+        `--boolean`, `-b` :: Set the Boolean Flag to display `True`.
+        `--string=<str>`, `-s <str>` :: Define this Option to be displayed.
+        `--dashed-long-opt=<str>`
+        `--digit=<int>`, `-d <int>` :: Define this Option to be displayed.
+        `--number=<float>`, `-n <float>` :: Define this Option to be displayed.
         """
         print(args, opts, src)
         out = ["ARGS:", *args, "OPTS:"]
-        for opt, val in opts.items():
-            out.append("{}=={} ({})".format(str(opt)[1:], val, type(val)))
+        for opt, val in [
+            ("`--boolean`, `-b`", _boolean or _b),
+            ("`--string`, `-s`", _string or _s),
+            ("`--dashed-long-opt`", _dashed_long_opt),
+            ("`--digit`, `-d`", _digit or _d),
+            ("`--number`, `-n`", _number or _n),
+            # ("--boolean", _boolean),
+            # ("--string", _string),
+            # ("--digit", _digit),
+            # ("--number", _number),
+            # ("-b", _b),
+            # ("-s", _s),
+            # ("-d", _d),
+            # ("-n", _n),
+        ]:
+            if val is not None:
+                out.append("{} = `{}` ({})".format(opt, repr(val), type(val).__name__))
         out.append("MSG: " + msg)
         return "\n".join(out)
 

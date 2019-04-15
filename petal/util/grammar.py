@@ -18,23 +18,10 @@ def get_a(word, include=False):
         return "a" + b
 
 
-def sequence_words(words, o=""):
-    o1 = ""
-    if type(words) != list:
-        return str(words)
-    while None in words:
-        words.remove(None)
-    words = [str(word) for word in words]
-    if len(words) == 0:
-        pass
-    elif len(words) == 1:
-        o += "{}".format(words.pop(0))
-    elif len(words) > 1:
-        o += "{}".format(words.pop(0))
-        if len(words) > 1:
-            o1 = ", and {}".format(words.pop(-1))
-        else:
-            o1 = " and {}".format(words.pop(-1))
-        for p in words:
-            o += ", {}".format(p)
-    return o + o1
+def sequence_words(words: list) -> str:
+    if not words:
+        return ""
+    words = [str(s) for s in words]
+    last = words.pop(-1)
+    most = ", ".join(words)
+    return (", and " if len(words) > 1 else " and ").join([most, last]) if most else last

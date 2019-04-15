@@ -155,15 +155,16 @@ class CommandsEvent(core.Commands):
                 src.channel,
                 "I auto-detected a possible game in your announcement: **"
                 + subname
-                + "**. Would you like to notify subscribers? [yes/no]",
+                + "**. Would you like to notify subscribers? [y/N]",
             )
             n = await self.client.wait_for_message(
                 channel=tempm.channel, author=src.author, timeout=20
             )
-            if n.content.lower() != "yes":
-                return "Timed out..."
-
-            if n.content == "yes":
+            if not n:
+                return "Timed out."
+            elif n.content.lower() not in ("y", "yes"):
+                return "Subscribers will not be notified."
+            else:
                 response = await self.notify_subscribers(src.channel, posted[0], subkey)
                 todelete = "[{}]".format(subkey)
                 for post in posted:

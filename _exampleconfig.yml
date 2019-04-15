@@ -220,7 +220,7 @@ hugDonors:
 #reddit:
 #  clientID: asd
 #  clientSecret: apsfihapsif-fapisfhaosf-000-
-#  userAgent: petal.py DiscordBot
+#  userAgent: petal/__init__.py DiscordBot
 #  username: your_reddit_username
 #  password: password
 #  targetSR: the_donald

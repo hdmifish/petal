@@ -58,7 +58,7 @@ class CommandsMod(core.Commands):
             return msg
 
     async def cmd_kick(
-        self, args, src, _reason: str = "", _noconfirm: bool = False, **_
+        self, args, src, _reason: str = None, _noconfirm: bool = False, **_
     ):
         """Kick a user from a server.
 
@@ -79,7 +79,7 @@ class CommandsMod(core.Commands):
                 + " administrative functions"
             )
 
-        if not _reason:
+        if _reason is None:
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
@@ -145,7 +145,7 @@ class CommandsMod(core.Commands):
         self,
         args,
         src,
-        _reason: str = "",
+        _reason: str = None,
         _purge: int = 1,
         _noconfirm: bool = False,
         **_
@@ -173,7 +173,7 @@ class CommandsMod(core.Commands):
         if not 0 <= _purge <= 7:
             return "Can only purge between 0 and 7 days of messages, inclusive."
 
-        if not _reason:
+        if _reason is None:
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
@@ -263,9 +263,9 @@ class CommandsMod(core.Commands):
         self,
         args,
         src,
-        _days: int = 0,
-        _reason: str = "",
+        _reason: str = None,
         _purge: int = 1,
+        _days: int = None,
         **_
     ):
         """Temporarily ban a user.
@@ -290,7 +290,7 @@ class CommandsMod(core.Commands):
         if not 0 <= _purge <= 7:
             return "Can only purge between 0 and 7 days of messages, inclusive."
 
-        if not _reason:
+        if _reason is None:
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
@@ -443,7 +443,7 @@ class CommandsMod(core.Commands):
         """
         Toggle the mute tag on a user if your server supports that role.
 
-        Syntax: `{p}mute <user tag/ id>`
+        Syntax: `{p}mute <user tag/id>`
         """
         if not args:
             return
