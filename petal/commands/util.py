@@ -120,7 +120,27 @@ class CommandsUtil(core.Commands):
         Syntax: `{p}info [<command>]`
         """
         if not args:
-            return "`<Default infotext goes here>`\n`#BlameDav`"
+            em = discord.Embed(
+                title="General Information",
+                description="This is Petal, the Patch Gaming Discord Bot.\n"
+                "For a list of commands, invoke `{0}commands`.\n"
+                "For help with a specific command, invoke `{0}help <command>`.".format(
+                    self.config.prefix
+                ),
+                colour=0x0ACDFF,
+                timestamp=self.router.startup,
+            )
+            em.add_field(name="Version", value=self.router.version)
+            em.add_field(name="Uptime", value=self.router.uptime)
+            em.set_author(
+                name="Source on GitHub",
+                url="https://www.github.com/hdmifish/petal",
+                icon_url="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+            )
+            em.set_footer(text="Startup Time")
+
+            await self.client.embed(src.channel, em)
+            return
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
@@ -182,19 +202,24 @@ class CommandsUtil(core.Commands):
     ):
         """List all commands.
 
-        Syntax: `{p}commands [OPTIONS]`
+        Syntax: `{p}commands [OPTIONS] [<search>]`
 
         Options:
         `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
         `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
         `--sort`, `-s` :: Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
+        # Send through OrderedDict to remove duplicates while maintaining order.
         cmd_list = list(
             OrderedDict.fromkeys(
-                [method.__name__[4:] for method in self.router.get_all()]
+                [
+                    method.__name__[4:]
+                    for method in self.router.get_all(src=None if _all or _a else src)
+                ]
             )
         )
-        if True in (_custom, _c):
+
+        if _custom or _c:
             line_2 = ", including custom commands"
             cmd_list += list(self.config.get("commands")) or []
         else:
@@ -290,7 +315,7 @@ class CommandsUtil(core.Commands):
         """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
-        em = discord.Embed(title="Stats", description="*for nerds*", colour=0x0ACDFF)
+        em = discord.Embed(title="Stats", colour=0x0ACDFF)
         em.add_field(name="Version", value=self.router.version, inline=False)
         em.add_field(name="Uptime", value=self.router.uptime, inline=False)
         # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
