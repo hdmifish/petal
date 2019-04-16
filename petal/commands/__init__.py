@@ -65,7 +65,7 @@ def split(line: str) -> Tuple[list, str]:
 
 
 def unquote(string: str) -> str:
-    for q in "\'\"`":
+    for q in "'\"`":
         if string.startswith(q) and string.endswith(q):
             return string[1:-1]
     return string
@@ -73,8 +73,9 @@ def unquote(string: str) -> str:
 
 def check_types(opts: dict, hints: dict) -> dict:
     output = {}
-    for opt_name, val in opts:
-        kwarg = "_" + opt_name.strip("-").replace("-", "_")  # opt name back into kwarg name
+    for opt_name, val in opts.items():
+        # opt name back into kwarg name
+        kwarg = "_" + opt_name.strip("-").replace("-", "_")
         want = hints[kwarg]
         err = TypeError("{} wants {}, got {}".format(opt_name, want, repr(val)))
 
@@ -178,7 +179,20 @@ class CommandRouter(Integrated):
             full += mod.get_all()
         return full
 
-    def parse(self, cline: List[str], func: classmethod) -> Tuple[list, dict]:
+    def parse(
+        self, args: List[str], shorts: str = "", longs: list = None
+    ) -> Tuple[list, dict]:
+        """Just a hinted proxy for GetOpt. Allows commands to more easily use it.
+        Also reverses the output because I dislike the normal order, but dont
+            tell anyone.
+        """
+        longs = longs or []
+        o, a = getopt.getopt(args, shorts, longs)
+        return a, {k: v for k, v in o}
+
+    def parse_from_hinting(
+        self, cline: List[str], func: classmethod
+    ) -> Tuple[list, dict]:
         """cline is a List of Strings, and func is a Command Method. Generate a
             Dict of Types that can be accepted by the various kwargs of func.
             With that information, use Getopt to break cline down into
@@ -207,11 +221,14 @@ class CommandRouter(Integrated):
                     opt_name += "="
                 longs.append(opt_name)
 
-        # Run the line through Getopt using the type mapping we just generated.
-        opts, args = getopt.getopt(cline, shorts, longs)
-        # Enforce the typing, and if it all passes, send our results back up.
-        opts = check_types(opts, hints)
+        # Run the line through Getopt using the option expectations we just generated.
+        args, opts = self.parse(cline, shorts, longs)
+
+        # Args: Remove any outermost quotes.
         args = [unquote(arg) for arg in args]
+        # Opts: Enforce the typing, and if it all passes, send our results back up.
+        opts = check_types(opts, hints)
+
         return args, opts
 
     async def route(self, command: str, src: discord.Message) -> str:
@@ -242,7 +259,7 @@ class CommandRouter(Integrated):
                 self.client.potential_typoed_commands.remove(src.id)
 
             try:
-                args, opts = self.parse(cline, func)
+                args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
                 return "Invalid Option: {}".format(e)
             except TypeError as e:
