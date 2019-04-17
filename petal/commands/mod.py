@@ -3,13 +3,23 @@ Access: Role-based"""
 
 import asyncio
 from datetime import datetime as dt, timedelta
-
-# from operator import attrgetter
+from operator import attrgetter
 import time
 
 import discord
 
 from petal.commands import core
+
+
+# Hash functions; Generate a small numeric "name" given any hashable inputs.
+id_16 = lambda *iii, d=3: "{:04x}".format(
+    hash("".join([str(hash(i)) for i in iii])) % (16 ** d - (10 ** (d - 1)))
+    + (10 ** (d - 1))
+)
+id_10 = lambda *iii, d=3: hash("".join([str(hash(i)) for i in iii])) % (
+    10 ** d - (10 ** (d - 1))
+) + (10 ** (d - 1))
+mkid = id_10  # Use this one.
 
 
 class CommandsMod(core.Commands):
@@ -664,10 +674,10 @@ class CommandsMod(core.Commands):
                     if _preserve or _p
                     else message.clean_content,
                     timestamp=message.timestamp,
-                    title="Message by {}{}#{}".format(
+                    title="Message __{}__ by {}{}".format(
+                        mkid(member.id, message.id),
                         "`[BOT]` " if member.bot else "",
                         member.name,
-                        member.discriminator,
                     )
                     + (" ({})".format(member.nick) if member.nick else "")
                     + (" (__EDITED__)" if message.edited_timestamp else ""),
@@ -684,6 +694,25 @@ class CommandsMod(core.Commands):
                 # .set_thumbnail(url=channel.server.icon_url)
                 .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
             )
+
+            # Add a field for EMBEDS (mostly for bots).
+            if message.embeds:
+                e.add_field(
+                    name=f"Embed Titles ({len(message.embeds)})",
+                    value="\n".join(
+                        [
+                            (
+                                '#{}. ({} chars) "{}"'.format(
+                                    i + 1,
+                                    len(e.get("description", "")),
+                                    e.get("title", "(No Title)"),
+                                )
+                            )
+                            for i, e in enumerate(message.embeds)
+                        ]
+                    ),
+                    inline=False,
+                )
 
             # Add a field for ATTACHED FILES (if any).
             if message.attachments:
@@ -715,9 +744,13 @@ class CommandsMod(core.Commands):
                     inline=True,
                 ).add_field(
                     name="Location",
-                    value="{}\n{}".format(channel.server.name, channel.mention)
-                    if channel.server
-                    else channel.mention,
+                    value=(
+                        "{}\n".format(channel.server.name, channel.mention)
+                        if channel.server
+                        else ""
+                    )
+                    + channel.mention
+                    + ("\n**(Pinned)**" if message.pinned else ""),
                     inline=True,
                 ).add_field(
                     name="Link to original",
@@ -731,12 +764,8 @@ class CommandsMod(core.Commands):
                     name=f"User Tags ({len(message.mentions)})",
                     value="\n".join(
                         [
-                            u
-                            # u.mention
-                            for u in sorted(
-                                message.raw_mentions
-                                # message.mentions, key=attrgetter("name")
-                            )
+                            u.mention
+                            for u in sorted(message.mentions, key=attrgetter("name"))
                         ]
                     ),
                     inline=False,
@@ -746,8 +775,10 @@ class CommandsMod(core.Commands):
                     name=f"Reactions ({len(message.reactions)})",
                     value="\n".join(
                         [
-                            "{} x{}".format(r.emoji, r.count)
-                            for r in sorted(message.reactions)
+                            "{} x{} (+1)".format(r.emoji, r.count - 1)
+                            if r.me
+                            else "{} x{}".format(r.emoji, r.count)
+                            for r in message.reactions
                         ]
                     ),
                     inline=False,
