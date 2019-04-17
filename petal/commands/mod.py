@@ -148,7 +148,7 @@ class CommandsMod(core.Commands):
         _reason: str = None,
         _purge: int = 1,
         _noconfirm: bool = False,
-        **_
+        **_,
     ):
         """Ban a user permenantly.
 
@@ -260,13 +260,7 @@ class CommandsMod(core.Commands):
                 return "Error occurred trying to generate webhook URI"
 
     async def cmd_tempban(
-        self,
-        args,
-        src,
-        _reason: str = None,
-        _purge: int = 1,
-        _days: int = None,
-        **_
+        self, args, src, _reason: str = None, _purge: int = 1, _days: int = None, **_
     ):
         """Temporarily ban a user.
 
@@ -316,10 +310,7 @@ class CommandsMod(core.Commands):
 
         try:
             # petal.logLock = True
-            timex = (
-                time.time()
-                + timedelta(days=int(_days)).total_seconds()
-            )
+            timex = time.time() + timedelta(days=int(_days)).total_seconds()
             self.client.db.update_member(
                 userToBan,
                 {
@@ -599,6 +590,142 @@ class CommandsMod(core.Commands):
             await asyncio.sleep(4)
             # petal.logLock = False
             return
+
+    async def cmd_quote(
+        self,
+        args,
+        src,
+        _channel: int = None,
+        _c: int = None,
+        _author: bool = False,
+        _a: bool = False,
+        _image: bool = False,
+        _i: bool = False,
+        _short: bool = False,
+        _s: bool = False,
+        **_,
+    ):
+        """Display a quoted message from elsewhere.
+
+        Provide a URL to a Discord message, accessed via `Copy Message Link` in
+        the context menu, or simply a slash-separated string of
+        `channel-id/message-id`. To copy a message link, you may need to enable
+        Developer Mode.
+
+        Syntax: `{p}quote [OPTIONS] <URL>...`
+
+        Options:
+        `--channel <int>`, `-c <int>` :: Specify a Channel ID to be used for Message IDs provided without a Channel ID.
+        `--author`, `-a` :: Display extra information about the Member being quoted.
+        `--image`, `-i` :: Display the image, if any, attached to the message being quoted.
+        `--short`, `-s` :: Display less detail, for a more compact embed. Overrides `--author`, `-a`.
+        """
+        if not args:
+            return "Must provide at least one URL or ID pair."
+
+        # try:
+        #     await self.client.delete_message(src)
+        # except (discord.Forbidden, discord.HTTPException):
+        #     pass
+
+        for arg in args:
+            id_c = str(_channel or _c or 0)
+            p = arg.split("/")
+            id_m = p.pop(-1)
+            if p:
+                id_c = p[-1]
+
+            channel: discord.Channel = self.client.get_channel(id_c)
+            if not channel:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Cannot find Channel with id `{}`.".format(id_c),
+                )
+                continue
+            message: discord.Message = await self.client.get_message(channel, id_m)
+            if not message:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Cannot find Message with id `{}`.".format(id_c),
+                )
+                continue
+            member: discord.Member = message.author
+
+            e = (
+                discord.Embed(
+                    colour=member.colour,
+                    description=message.content,
+                    timestamp=message.timestamp,
+                    title="Message by {}{}#{}".format(
+                        "`[BOT]` " if member.bot else "",
+                        member.name,
+                        member.discriminator,
+                    )
+                    + (" ({})".format(member.nick) if member.nick else "")
+                    + (" (__EDITED__)" if message.edited_timestamp else ""),
+                )
+                .set_author(
+                    # icon_url=member.avatar_url or member.default_avatar_url,
+                    icon_url=channel.server.icon_url,
+                    name=member.nick or member.name,
+                )
+                .set_footer(
+                    text=f"{member.name}#{member.discriminator} / {member.id}",
+                    # icon_url=channel.server.icon_url,
+                )
+                # .set_thumbnail(url=channel.server.icon_url)
+                .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
+            )
+
+            # Add a field for ATTACHED FILES (if any).
+            if message.attachments:
+                if _image or _i:
+                    e.set_image(url=message.attachments[0]["url"])
+                e.add_field(
+                    name="Attached Files",
+                    value="\n".join(
+                        [
+                            "**`{filename}`:** ({size} bytes)\n{url}\n".format(**x)
+                            for x in message.attachments
+                        ]
+                    ),
+                    inline=False,
+                )
+
+            # Add fields for EXTRA INFORMATION (maybe).
+            if not (_short or _s):
+                e.add_field(
+                    name="Author",
+                    value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
+                        member.nick or "",
+                        member.mention,
+                        member.top_role if member.top_role != "@everyone" else None,
+                        "Bot" if member.bot else "User",
+                    )
+                    if _author or _a
+                    else member.mention,
+                    inline=True,
+                ).add_field(
+                    name="Location",
+                    value="{}\n{}".format(channel.server.name, channel.mention)
+                    if channel.server
+                    else channel.mention,
+                    inline=True,
+                ).add_field(
+                    name="Link to original",
+                    value="https://discordapp.com/channels/{}/{}/{}".format(
+                        message.server.id, message.channel.id, message.id
+                    ),
+                    inline=False,
+                )
+
+            try:  # Post it.
+                await self.client.embed(src.channel, e)
+            except discord.HTTPException:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Failed to post embed. Message may have been too long.",
+                )
 
 
 # Keep the actual classname unique from this common identifier
