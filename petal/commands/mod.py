@@ -3,6 +3,8 @@ Access: Role-based"""
 
 import asyncio
 from datetime import datetime as dt, timedelta
+
+# from operator import attrgetter
 import time
 
 import discord
@@ -601,6 +603,8 @@ class CommandsMod(core.Commands):
         _a: bool = False,
         _image: bool = False,
         _i: bool = False,
+        _preserve: bool = False,
+        _p: bool = False,
         _short: bool = False,
         _s: bool = False,
         **_,
@@ -609,8 +613,9 @@ class CommandsMod(core.Commands):
 
         Provide a URL to a Discord message, accessed via `Copy Message Link` in
         the context menu, or simply a slash-separated string of
-        `channel-id/message-id`. To copy a message link, you may need to enable
+        `channel-id`/`message-id`. To copy a message link, you may need to enable
         Developer Mode.
+        Lone Message IDs will be looked for in the current channel.
 
         Syntax: `{p}quote [OPTIONS] <URL>...`
 
@@ -618,6 +623,7 @@ class CommandsMod(core.Commands):
         `--channel <int>`, `-c <int>` :: Specify a Channel ID to be used for Message IDs provided without a Channel ID.
         `--author`, `-a` :: Display extra information about the Member being quoted.
         `--image`, `-i` :: Display the image, if any, attached to the message being quoted.
+        `--preserve`, `-p` :: Do not "simplify" or "clean up" message content.
         `--short`, `-s` :: Display less detail, for a more compact embed. Overrides `--author`, `-a`.
         """
         if not args:
@@ -629,7 +635,7 @@ class CommandsMod(core.Commands):
         #     pass
 
         for arg in args:
-            id_c = str(_channel or _c or 0)
+            id_c = str(_channel or _c or src.channel.id)
             p = arg.split("/")
             id_m = p.pop(-1)
             if p:
@@ -654,7 +660,9 @@ class CommandsMod(core.Commands):
             e = (
                 discord.Embed(
                     colour=member.colour,
-                    description=message.content,
+                    description=message.content
+                    if _preserve or _p
+                    else message.clean_content,
                     timestamp=message.timestamp,
                     title="Message by {}{}#{}".format(
                         "`[BOT]` " if member.bot else "",
@@ -664,11 +672,11 @@ class CommandsMod(core.Commands):
                     + (" ({})".format(member.nick) if member.nick else "")
                     + (" (__EDITED__)" if message.edited_timestamp else ""),
                 )
-                .set_author(
-                    # icon_url=member.avatar_url or member.default_avatar_url,
-                    icon_url=channel.server.icon_url,
-                    name=member.nick or member.name,
-                )
+                # .set_author(
+                #     # icon_url=member.avatar_url or member.default_avatar_url,
+                #     icon_url=channel.server.icon_url,
+                #     name=member.nick or member.name,
+                # )
                 .set_footer(
                     text=f"{member.name}#{member.discriminator} / {member.id}",
                     # icon_url=channel.server.icon_url,
@@ -715,6 +723,32 @@ class CommandsMod(core.Commands):
                     name="Link to original",
                     value="https://discordapp.com/channels/{}/{}/{}".format(
                         message.server.id, message.channel.id, message.id
+                    ),
+                    inline=False,
+                )
+            if message.mentions:
+                e.add_field(
+                    name=f"User Tags ({len(message.mentions)})",
+                    value="\n".join(
+                        [
+                            u
+                            # u.mention
+                            for u in sorted(
+                                message.raw_mentions
+                                # message.mentions, key=attrgetter("name")
+                            )
+                        ]
+                    ),
+                    inline=False,
+                )
+            if message.reactions:
+                e.add_field(
+                    name=f"Reactions ({len(message.reactions)})",
+                    value="\n".join(
+                        [
+                            "{} x{}".format(r.emoji, r.count)
+                            for r in sorted(message.reactions)
+                        ]
                     ),
                     inline=False,
                 )
