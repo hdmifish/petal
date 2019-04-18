@@ -3,6 +3,7 @@ Access: Role-based"""
 
 import asyncio
 from datetime import datetime as dt, timedelta
+from hashlib import sha256
 from operator import attrgetter
 import time
 
@@ -11,15 +12,15 @@ import discord
 from petal.commands import core
 
 
-# Hash functions; Generate a small numeric "name" given any hashable inputs.
-id_16 = lambda *iii, d=3: "{:04x}".format(
-    hash("".join([str(hash(i)) for i in iii])) % (16 ** d - (10 ** (d - 1)))
-    + (10 ** (d - 1))
-)
-id_10 = lambda *iii, d=3: hash("".join([str(hash(i)) for i in iii])) % (
-    10 ** d - (10 ** (d - 1))
-) + (10 ** (d - 1))
-mkid = id_10  # Use this one.
+# MultiHash function: Generate a small numeric "name" given arbitrary inputs.
+def mash(*data, digits=4, base=10):
+    sha = sha256()
+    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
+    hashval = int(sha.hexdigest(), 16)
+    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
+    hashval %= ceiling  # 0000 <= N <= 8999
+    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
+    return hashval
 
 
 class CommandsMod(core.Commands):
@@ -675,7 +676,7 @@ class CommandsMod(core.Commands):
                     else message.clean_content,
                     timestamp=message.timestamp,
                     title="Message __{}__ by {}{}".format(
-                        mkid(member.id, message.id),
+                        mash(member.id, channel.id, message.id),
                         "`[BOT]` " if member.bot else "",
                         member.name,
                     )
