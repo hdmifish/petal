@@ -276,7 +276,6 @@ class CommandRouter(Integrated):
                     )
                 return (await func(args=args, **opts, msg=msg, src=src)) or ""
             except Exception as e:
-                raise e
                 return "Sorry, an exception was raised: `{}` (`{}`)".format(
                     type(e).__name__, e
                 )
