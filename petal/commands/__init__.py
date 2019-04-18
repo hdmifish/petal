@@ -173,10 +173,11 @@ class CommandRouter(Integrated):
 
         return None, None, denied
 
-    def get_all(self):
+    def get_all(self, src=None):
         full = []
         for mod in self.engines:
-            full += mod.get_all()
+            if not src or mod.authenticate(src):
+                full += mod.get_all()
         return full
 
     def parse(

@@ -3,11 +3,24 @@ Access: Role-based"""
 
 import asyncio
 from datetime import datetime as dt, timedelta
+from hashlib import sha256
+from operator import attrgetter
 import time
 
 import discord
 
 from petal.commands import core
+
+
+# MultiHash function: Generate a small numeric "name" given arbitrary inputs.
+def mash(*data, digits=4, base=10):
+    sha = sha256()
+    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
+    hashval = int(sha.hexdigest(), 16)
+    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
+    hashval %= ceiling  # 0000 <= N <= 8999
+    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
+    return hashval
 
 
 class CommandsMod(core.Commands):
@@ -148,7 +161,7 @@ class CommandsMod(core.Commands):
         _reason: str = None,
         _purge: int = 1,
         _noconfirm: bool = False,
-        **_
+        **_,
     ):
         """Ban a user permenantly.
 
@@ -260,13 +273,7 @@ class CommandsMod(core.Commands):
                 return "Error occurred trying to generate webhook URI"
 
     async def cmd_tempban(
-        self,
-        args,
-        src,
-        _reason: str = None,
-        _purge: int = 1,
-        _days: int = None,
-        **_
+        self, args, src, _reason: str = None, _purge: int = 1, _days: int = None, **_
     ):
         """Temporarily ban a user.
 
@@ -316,10 +323,7 @@ class CommandsMod(core.Commands):
 
         try:
             # petal.logLock = True
-            timex = (
-                time.time()
-                + timedelta(days=int(_days)).total_seconds()
-            )
+            timex = time.time() + timedelta(days=int(_days)).total_seconds()
             self.client.db.update_member(
                 userToBan,
                 {
@@ -599,6 +603,190 @@ class CommandsMod(core.Commands):
             await asyncio.sleep(4)
             # petal.logLock = False
             return
+
+    async def cmd_quote(
+        self,
+        args,
+        src,
+        _channel: int = None,
+        _c: int = None,
+        _author: bool = False,
+        _a: bool = False,
+        _image: bool = False,
+        _i: bool = False,
+        _preserve: bool = False,
+        _p: bool = False,
+        _short: bool = False,
+        _s: bool = False,
+        **_,
+    ):
+        """Display a quoted message from elsewhere.
+
+        Provide a URL to a Discord message, accessed via `Copy Message Link` in
+        the context menu, or simply a slash-separated string of
+        `channel-id`/`message-id`. To copy a message link, you may need to enable
+        Developer Mode.
+        Lone Message IDs will be looked for in the current channel.
+
+        Syntax: `{p}quote [OPTIONS] <URL>...`
+
+        Options:
+        `--channel <int>`, `-c <int>` :: Specify a Channel ID to be used for Message IDs provided without a Channel ID.
+        `--author`, `-a` :: Display extra information about the Member being quoted.
+        `--image`, `-i` :: Display the image, if any, attached to the message being quoted.
+        `--preserve`, `-p` :: Do not "simplify" or "clean up" message content.
+        `--short`, `-s` :: Display less detail, for a more compact embed. Overrides `--author`, `-a`.
+        """
+        if not args:
+            return "Must provide at least one URL or ID pair."
+
+        # try:
+        #     await self.client.delete_message(src)
+        # except (discord.Forbidden, discord.HTTPException):
+        #     pass
+
+        for arg in args:
+            id_c = str(_channel or _c or src.channel.id)
+            p = arg.split("/")
+            id_m = p.pop(-1)
+            if p:
+                id_c = p[-1]
+
+            channel: discord.Channel = self.client.get_channel(id_c)
+            if not channel:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Cannot find Channel with id `{}`.".format(id_c),
+                )
+                continue
+            message: discord.Message = await self.client.get_message(channel, id_m)
+            if not message:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Cannot find Message with id `{}`.".format(id_c),
+                )
+                continue
+            member: discord.Member = message.author
+
+            ct = message.content if _preserve or _p else message.clean_content
+            if len(ct) > 1000:
+                ct = ct[:997] + "..."
+
+            e = (
+                discord.Embed(
+                    colour=member.colour,
+                    description=ct,
+                    timestamp=message.timestamp,
+                    title="Message __{}__ by {}{} ({} char)".format(
+                        mash(member.id, channel.id, message.id),
+                        "`[BOT]` " if member.bot else "",
+                        member.nick or member.name,
+                        len(message.clean_content),
+                    )
+                    # + (" ({})".format(member.nick) if member.nick else "")
+                    + (" (__EDITED__)" if message.edited_timestamp else ""),
+                )
+                .set_author(icon_url=channel.server.icon_url, name="#" + channel.name)
+                .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
+                .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
+            )
+
+            # Add a field for EMBEDS (mostly for bots).
+            if message.embeds:
+                e.add_field(
+                    name=f"Embed Titles ({len(message.embeds)})",
+                    value="\n".join(
+                        [
+                            (
+                                '#{}. ({} char) "{}"'.format(
+                                    i + 1,
+                                    len(e.get("description", "")),
+                                    e.get("title", "(No Title)"),
+                                )
+                            )
+                            for i, e in enumerate(message.embeds)
+                        ]
+                    ),
+                    inline=False,
+                )
+
+            # Add a field for ATTACHED FILES (if any).
+            if message.attachments:
+                if _image or _i:
+                    e.set_image(url=message.attachments[0]["url"])
+                e.add_field(
+                    name="Attached Files",
+                    value="\n".join(
+                        [
+                            "**`{filename}`:** ({size} bytes)\n{url}\n".format(**x)
+                            for x in message.attachments
+                        ]
+                    ),
+                    inline=False,
+                )
+
+            # Add fields for EXTRA INFORMATION (maybe).
+            if not (_short or _s):
+                e.add_field(
+                    name="Author",
+                    value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
+                        member.nick or "",
+                        member.mention,
+                        member.top_role if member.top_role != "@everyone" else None,
+                        "Bot" if member.bot else "User",
+                    )
+                    if _author or _a
+                    else member.mention,
+                    inline=True,
+                ).add_field(
+                    name="Location",
+                    value=(
+                        "{}\n".format(channel.server.name, channel.mention)
+                        if channel.server
+                        else ""
+                    )
+                    + channel.mention
+                    + ("\n**(Pinned)**" if message.pinned else ""),
+                    inline=True,
+                ).add_field(
+                    name="Link to original",
+                    value="https://discordapp.com/channels/{}/{}/{}".format(
+                        message.server.id, message.channel.id, message.id
+                    ),
+                    inline=False,
+                )
+            if message.mentions:
+                e.add_field(
+                    name=f"User Tags ({len(message.mentions)})",
+                    value="\n".join(
+                        [
+                            u.mention
+                            for u in sorted(message.mentions, key=attrgetter("name"))
+                        ]
+                    ),
+                    inline=False,
+                )
+            if message.reactions and not (_short or _s):
+                e.add_field(
+                    name=f"Reactions ({len(message.reactions)})",
+                    value="\n".join(
+                        [
+                            "{} x{} (+1)".format(r.emoji, r.count - 1)
+                            if r.me
+                            else "{} x{}".format(r.emoji, r.count)
+                            for r in message.reactions
+                        ]
+                    ),
+                    inline=False,
+                )
+
+            try:  # Post it.
+                await self.client.embed(src.channel, e)
+            except discord.HTTPException:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="Failed to post embed. Message may have been too long.",
+                )
 
 
 # Keep the actual classname unique from this common identifier
