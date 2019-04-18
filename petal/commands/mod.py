@@ -668,31 +668,26 @@ class CommandsMod(core.Commands):
                 continue
             member: discord.Member = message.author
 
+            ct = message.content if _preserve or _p else message.clean_content
+            if len(ct) > 1000:
+                ct = ct[:997] + "..."
+
             e = (
                 discord.Embed(
                     colour=member.colour,
-                    description=message.content
-                    if _preserve or _p
-                    else message.clean_content,
+                    description=ct,
                     timestamp=message.timestamp,
-                    title="Message __{}__ by {}{}".format(
+                    title="Message __{}__ by {}{} ({} char.)".format(
                         mash(member.id, channel.id, message.id),
                         "`[BOT]` " if member.bot else "",
-                        member.name,
+                        member.nick or member.name,
+                        len(message.clean_content)
                     )
-                    + (" ({})".format(member.nick) if member.nick else "")
+                    # + (" ({})".format(member.nick) if member.nick else "")
                     + (" (__EDITED__)" if message.edited_timestamp else ""),
-                )
-                # .set_author(
-                #     # icon_url=member.avatar_url or member.default_avatar_url,
-                #     icon_url=channel.server.icon_url,
-                #     name=member.nick or member.name,
-                # )
-                .set_footer(
+                ).set_footer(
                     text=f"{member.name}#{member.discriminator} / {member.id}",
-                    # icon_url=channel.server.icon_url,
                 )
-                # .set_thumbnail(url=channel.server.icon_url)
                 .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
             )
 
@@ -731,7 +726,9 @@ class CommandsMod(core.Commands):
                 )
 
             # Add fields for EXTRA INFORMATION (maybe).
-            if not (_short or _s):
+            if _short or _s:
+                e.set_author(icon_url=channel.server.icon_url, name="#" + channel.name)
+            else:
                 e.add_field(
                     name="Author",
                     value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
