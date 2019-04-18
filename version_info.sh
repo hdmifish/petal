@@ -3,10 +3,10 @@
 # Not necessarily the prettiest but easy to work with.
 
 # MATCH THIS TO THE VERSION IN PETAL
-VERSION=0.9.1
+VERSION=0.10.0
 
 #(optional) what the webhook message should say.
-UPDATE_TITLE="The Optional Update"
+UPDATE_TITLE="Dont Quote Me On This"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="* Minor bug fixes, optimizations"
+CHANGELOG="+ Filled in default return for !info.\n+ Implemented !quote command; Mods only for right now. May go public in a future patch."

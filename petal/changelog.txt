@@ -117,3 +117,7 @@ Since the last documented update:
 
 [v0.9.1] (2019-04-15)
 * Minor bug fixes, optimizations
+
+[v0.10.0] (2019-04-7)
++ Filled in default return for !info.
++ Implemented !quote command; Mods only for right now. May go public in a future patch.
