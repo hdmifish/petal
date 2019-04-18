@@ -9,4 +9,4 @@ VERSION=0.10.0
 UPDATE_TITLE="Dont Quote Me On This"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="+ Filled in default return for !info.\n+ Implemented !quote command; Mods only for right now. May go public in a future patch."
+CHANGELOG="+ Filled in default return for !info.\n+ Implemented !quote command; Mods only for right now. May go public in a future patch.\n* Overhauled the Menu system backend.\n= Fixed an issue with !wlme not submitting reports to the MC admin channel."

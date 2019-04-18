@@ -30,26 +30,29 @@ class CommandsMCPublic(auth.CommandsMCAuth):
             )
 
             wlreq = await self.client.send_message(
-                channel=self.config.get("mc_channel"), message="`<request loading...>`"
+                channel=self.client.get_channel(self.config.get("mc_channel")),
+                message="`<request loading...>`",
             )
 
-            await self.client.edit_message(
-                message=wlreq,
-                new_content="Whitelist Request from: `"
-                + src.author.name
-                + "#"
-                + src.author.discriminator
-                + "` with request: "
-                + src.content[len(self.config.prefix) + 4 :]
-                + "\nTaggable: <@"
-                + src.author.id
-                + ">\nDiscord ID:  "
-                + src.author.id
-                + "\nMojang UID:  "
-                + uuid,
-            )
-
-            return "Your whitelist request has been successfully submitted :D"
+            if wlreq:
+                await self.client.edit_message(
+                    message=wlreq,
+                    new_content="Whitelist Request from: `"
+                    + src.author.name
+                    + "#"
+                    + src.author.discriminator
+                    + "` with request: "
+                    + submission
+                    + "\nTaggable: <@"
+                    + src.author.id
+                    + ">\nDiscord ID:  "
+                    + src.author.id
+                    + "\nMojang UID:  "
+                    + uuid,
+                )
+                return "Your whitelist request has been successfully submitted :D"
+            else:
+                return "Your request has been submitted, but I could not post the notification. You should DM a member of the Minecraft staff and ask them to check it manually."
         elif reply == -1:
             return "No need, you are already whitelisted :D"
         elif reply == -2:
