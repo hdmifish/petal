@@ -677,7 +677,7 @@ class CommandsMod(core.Commands):
                     colour=member.colour,
                     description=ct,
                     timestamp=message.timestamp,
-                    title="Message __{}__ by {}{} ({} char.)".format(
+                    title="Message __{}__ by {}{} ({} char)".format(
                         mash(member.id, channel.id, message.id),
                         "`[BOT]` " if member.bot else "",
                         member.nick or member.name,
@@ -698,7 +698,7 @@ class CommandsMod(core.Commands):
                     value="\n".join(
                         [
                             (
-                                '#{}. ({} chars) "{}"'.format(
+                                '#{}. ({} char) "{}"'.format(
                                     i + 1,
                                     len(e.get("description", "")),
                                     e.get("title", "(No Title)"),

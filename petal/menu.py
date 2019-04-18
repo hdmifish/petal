@@ -160,7 +160,7 @@ class Menu:
         selection = letters[:onum]
 
         buttons = await self.setup(
-            "**Poll:** Multiple Choice:"
+            "**Poll:** Multiple Choice:\n"
             + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
             selection,
         )
