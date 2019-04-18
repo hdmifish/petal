@@ -681,13 +681,13 @@ class CommandsMod(core.Commands):
                         mash(member.id, channel.id, message.id),
                         "`[BOT]` " if member.bot else "",
                         member.nick or member.name,
-                        len(message.clean_content)
+                        len(message.clean_content),
                     )
                     # + (" ({})".format(member.nick) if member.nick else "")
                     + (" (__EDITED__)" if message.edited_timestamp else ""),
-                ).set_footer(
-                    text=f"{member.name}#{member.discriminator} / {member.id}",
                 )
+                .set_author(icon_url=channel.server.icon_url, name="#" + channel.name)
+                .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
                 .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
             )
 
@@ -726,9 +726,7 @@ class CommandsMod(core.Commands):
                 )
 
             # Add fields for EXTRA INFORMATION (maybe).
-            if _short or _s:
-                e.set_author(icon_url=channel.server.icon_url, name="#" + channel.name)
-            else:
+            if not (_short or _s):
                 e.add_field(
                     name="Author",
                     value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
@@ -768,7 +766,7 @@ class CommandsMod(core.Commands):
                     ),
                     inline=False,
                 )
-            if message.reactions:
+            if message.reactions and not (_short or _s):
                 e.add_field(
                     name=f"Reactions ({len(message.reactions)})",
                     value="\n".join(
