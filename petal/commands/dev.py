@@ -178,18 +178,34 @@ class CommandsMaintenance(core.Commands):
     async def cmd_menu(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
 
-        m.em.title = "Result: `{}`".format(
-            await m.get_choice(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        # m.em.title = "Result: `{}`".format(
+        #     await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        # )
+        # await m.close()
+        await m.add_result(
+            await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
         )
-        await m.close()
+        await m.add_result(
+            await m.get_one(["zxcv", "qazwsx", "yuiop", "poiuytrewq"]), overwrite=0
+        )
+        await m.add_result(
+            await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"]), overwrite=0
+        )
 
     async def cmd_menu2(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
 
-        m.em.title = "Results: `{}`".format(
-            await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        # m.em.title = "Results: `{}`".format(
+        #     await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+        # )
+        # await m.close()
+        await m.add_result(
+            "\n".join(await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"]))
         )
-        await m.close()
+
+    async def cmd_bool(self, src, **_):
+        m = Menu(self.client, src.channel, "Choice", user=src.author)
+        m.add_result(str(await m.get_bool()))
 
     async def cmd_poll(
         self, args, src, _question: str = "", _channel: str = "", _time: int = 0, **_
@@ -197,7 +213,7 @@ class CommandsMaintenance(core.Commands):
         if len(args) < 2:
             return "Must provide at least two options."
 
-        duration = _time or 3600
+        duration = _time if _time > 0 else 3600
 
         title = "Poll"
         if _question:
@@ -212,6 +228,26 @@ class CommandsMaintenance(core.Commands):
 
         poll = Menu(self.client, targ, title=title)
         outcome = await poll.get_poll(args, duration)
+        return str(outcome)
+
+    async def cmd_vote(
+        self, src, _question: str = "", _channel: str = "", _time: int = 0, **_
+    ):
+        duration = _time if _time > 0 else 3600
+
+        title = "Vote"
+        if _question:
+            title += ": " + _question
+
+        if _channel:
+            targ = self.client.get_channel(_channel)
+        else:
+            targ = src.channel
+        if not targ:
+            return "Invalid Channel"
+
+        poll = Menu(self.client, targ, title=title)
+        outcome = await poll.get_vote(duration)
         return str(outcome)
 
 
