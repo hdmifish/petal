@@ -195,13 +195,25 @@ class Petal(discord.Client):
         response = await self.commands.run(message)
         if response is not None:
             self.config.get("stats")["comCount"] += 1
-            await self.send_message(message.author, message.channel, response)
+
+            if type(response) == discord.Embed:
+                await self.send_message(message.author, message.channel, embed=response)
+            else:
+                await self.send_message(message.author, message.channel, str(response))
+
             return True
         else:
             return False
 
     async def send_message(
-        self, author=None, channel=None, message=None, timeout=0, **kwargs
+        self,
+        author=None,
+        channel=None,
+        message=None,
+        timeout=0,
+        *,
+        embed=None,
+        **kwargs
     ):
         """
         Overload on the send_message function
@@ -219,7 +231,7 @@ class Petal(discord.Client):
                         l = list(self.db.ac.find())
                         message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
-            return await super().send_message(channel, message)
+            return await super().send_message(channel, message, embed=embed)
         except discord.errors.InvalidArgument:
             log.err("A message: " + message + " was unable to be sent in " + channel)
             return None
@@ -232,10 +244,10 @@ class Petal(discord.Client):
             )
             return None
 
-    async def embed(self, channel, embedded):
+    async def embed(self, channel, embedded, content=None):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel, embed=embedded)
+        return await super().send_message(channel, content=content, embed=embedded)
 
     async def on_member_join(self, member):
         """
