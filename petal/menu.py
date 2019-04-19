@@ -10,6 +10,13 @@ letters = [chr(n) for n in range(0x1F1E6, 0x1F200)]
 cancel = chr(0x274E)
 confirm = chr(0x2705)
 
+astro = [chr(n) for n in range(0x2648, 0x2654)]  # Zodiac icons because why not
+info = chr(0x2139)  # [i]
+okay = chr(0x1F197)  # [OK]
+
+clock = [chr(n) for n in range(0x1F550, 0x1F55C)]
+clock[0:0] = [clock.pop(-1)]  # Clock symbols: [12, 1, 2, ..., 11]
+
 
 def count_votes(allowed: list, votes: list):
     result = {}
