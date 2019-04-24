@@ -31,6 +31,66 @@ class CommandsPublic(core.Commands):
         )
         return response
 
+    async def bugger(self, message):
+        """Report a bug, adding it to the Trello board.
+
+        Syntax: `{p}bugger "<bug report>"`
+        """
+        if self.config.get("trello") is None:
+            return "Sorry, the bot maintainer has not enabled Trello bug reports."
+        try:
+            url = "https://api.trello.com/1/lists/{}/cards".format(
+                self.config.get("trello")["list_id"]
+            )
+            params = {
+                "key": self.config.get("trello")["app_key"],
+                "token": self.config.get("trello")["token"],
+            }
+            response = requests.request("GET", url, params=params)
+
+        except KeyError:
+            return "The Trello keys are misconfigured, check your config file"
+
+        if response is None:
+            return (
+                "Could not get cards for the list ID provided. Talk to your bot owner."
+            )
+        r = response.json()
+        nums = []
+        for card in r:
+            if card["name"].isnumeric():
+                nums.append(int(card["name"]))
+
+        top = max(nums) + 1
+
+        m = " ".join(message.content.split()[1:])
+
+        url = "https://api.trello.com/1/cards"
+
+        params = {
+            "name": str(top).zfill(3),
+            "desc": m
+            + "\n\n\n\n\nSubmitted by: {}\nTimestamp: {}\nServer: {}\nChannel: {}".format(
+                message.author.name + "(" + message.author.id + ")",
+                str(dt.utcnow()),
+                message.server.name + "(" + message.server.id + ")",
+                message.channel.name + "(" + message.channel.id + ")",
+            ),
+            "pos": "bottom",
+            "idList": self.config.get("trello")["list_id"],
+            "username": self.config.get("trello")["username"],
+            "key": self.config.get("trello")["app_key"],
+            "token": self.config.get("trello")["token"],
+        }
+
+        response = requests.request("POST", url, params=params)
+
+        if response is None:
+            return "Could not create bug report. Talk to your bot owner."
+
+        # print(str(response.text))
+        return "Created bug report with ID: " + str(top)
+
     async def cmd_osu(self, args, src, **_):
         """Display information about an Osu player.
 
