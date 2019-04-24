@@ -1,7 +1,5 @@
 from ruamel import yaml
 from .grasslands import Peacock
-from random import randint
-from datetime import datetime
 
 log = Peacock()
 

@@ -20,7 +20,6 @@ from petal.config import Config
 from petal.dbhandler import DBHandler
 
 
-# from random import randint
 log = grasslands.Peacock()
 
 version = "<UNSET>"
