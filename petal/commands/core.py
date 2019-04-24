@@ -121,17 +121,15 @@ class Commands:
         """
         Get a Discord Member object from an ID.
         """
-        if isinstance(src, discord.Server):
+        if isinstance(src, discord.Guild):
             return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                src.server.members, id=uuid.lstrip("<@!").rstrip(">")
+                src.guild.members, id=uuid.lstrip("<@!").rstrip(">")
             )
 
     def member_on_main(self, uuid):
-        return self.get_member(
-            self.client.get_server(self.client.get_main_server()), uuid
-        )
+        return self.get_member(self.client.main_guild, uuid)
 
     @staticmethod
     def validate_channel(chanlist: list, msg: str) -> bool:
@@ -142,7 +140,9 @@ class Commands:
                 return False
         return True
 
-    async def notify_subscribers(self, source_channel, target_message, key):
+    async def notify_subscribers(
+        self, source_channel: discord.TextChannel, target_message, key
+    ):
         await self.client.send_message(None, source_channel, "Notifying subscribers...")
         sub = self.db.subs.find_one({"code": key})
         if sub is None:

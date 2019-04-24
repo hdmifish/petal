@@ -43,6 +43,12 @@ def mash(*data, digits=4, base=10):
     return hashval
 
 
+def first_role_named(name: str, guild: discord.Guild):
+    for role in guild.roles:
+        if role.name == name:
+            return role
+
+
 class Petal(discord.Client):
     logLock = False
 
@@ -100,11 +106,12 @@ class Petal(discord.Client):
     def remove_prefix(content):
         return content[len(content.split()[0]) :]
 
-    def get_main_server(self):
+    @property
+    def main_guild(self):
         if len(self.guilds) == 0:
             log.err("This client is not a member of any guilds")
             exit(404)
-        return self.config.get("mainServer")
+        return self.get_guild(self.config.get("mainServer"))
 
     async def status_loop(self):
         # interv = 32
@@ -177,7 +184,9 @@ class Petal(discord.Client):
                     print(flush=True)
                     await member.unban()
                     self.db.update_member(member, {"banned": False})
-                    log.f("BANS", "Unbanned " + member.name + " ({}) ".format(member.id))
+                    log.f(
+                        "BANS", "Unbanned " + member.name + " ({}) ".format(member.id)
+                    )
 
                 else:
                     log.f(
@@ -246,14 +255,7 @@ class Petal(discord.Client):
             return False
 
     async def send_message(
-        self,
-        author=None,
-        channel: discord.TextChannel = None,
-        message=None,
-        timeout=0,
-        *,
-        embed=None,
-        **_
+        self, author=None, channel=None, message=None, *, embed=None, **_
     ):
         """
         Overload on the send_message function
@@ -273,7 +275,9 @@ class Petal(discord.Client):
         try:
             return await channel.send(content=message, embed=embed)
         except discord.errors.InvalidArgument:
-            log.err("A message: " + message + " was unable to be sent in " + channel.name)
+            log.err(
+                "A message: " + message + " was unable to be sent in " + channel.name
+            )
             return None
         except discord.errors.Forbidden:
             log.err(
@@ -538,77 +542,77 @@ class Petal(discord.Client):
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
         return
 
-    async def on_voice_state_update(self, before, after):
+    # async def on_voice_state_update(self, before, after):
+    #
+    #     # FIXME: This needs to have a limiter. Use at own risk of spam.
+    #     if self.config.tc is None:
+    #         return
+    #     else:
+    #         return
+    #     tc = self.config.tc
+    #     trackedChan = self.get_channel(tc["monitoredChannel"])
+    #     postChan = self.get_channel(tc["destinationChannel"])
+    #     if trackedChan is None:
+    #         log.err("Invalid tracking channel. Function disabled")
+    #         self.config.tc = None
+    #         return
+    #     if postChan is None:
+    #         log.err("Invalid posting channel. Function disabled")
+    #         self.config.tc = None
+    #         return
+    #     if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
+    #         try:
+    #             await self.send_message(None, after, tc["messageToUser"])
+    #         except discord.errors.HTTPException:
+    #             log.warn("Unable to PM {}".format(before.name))
+    #         else:
+    #             msg = await self.wait_for_message(
+    #                 author=after, check=self.is_pm, timeout=200
+    #             )
+    #             if msg is None:
+    #                 return
+    #             else:
+    #                 if msg.content.lower() in [
+    #                     "yes",
+    #                     "confirm",
+    #                     "please",
+    #                     "yeah",
+    #                     "yep",
+    #                     "mhm",
+    #                 ]:
+    #                     await self.send_message(
+    #                         None,
+    #                         postChan,
+    #                         tc["messageFormat"].format(
+    #                             user=after, channel=after.voice_channel
+    #                         ),
+    #                     )
+    #                 else:
+    #                     await self.send_message(
+    #                         None,
+    #                         channel,
+    #                         "Alright, just to let"
+    #                         + "you know. If you "
+    #                         + "have a spotty "
+    #                         + "connection, you may"
+    #                         + " get PM'd more than "
+    #                         + "once upon joining"
+    #                         + " this channel",
+    #                     )
+    #                 return
 
-        # FIXME: This needs to have a limiter. Use at own risk of spam.
-        if self.config.tc is None:
-            return
-        else:
-            return
-        tc = self.config.tc
-        trackedChan = self.get_channel(tc["monitoredChannel"])
-        postChan = self.get_channel(tc["destinationChannel"])
-        if trackedChan is None:
-            log.err("Invalid tracking channel. Function disabled")
-            self.config.tc = None
-            return
-        if postChan is None:
-            log.err("Invalid posting channel. Function disabled")
-            self.config.tc = None
-            return
-        if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
-            try:
-                await self.send_message(None, after, tc["messageToUser"])
-            except discord.errors.HTTPException:
-                log.warn("Unable to PM {}".format(before.name))
-            else:
-                msg = await self.wait_for_message(
-                    author=after, check=self.is_pm, timeout=200
-                )
-                if msg is None:
-                    return
-                else:
-                    if msg.content.lower() in [
-                        "yes",
-                        "confirm",
-                        "please",
-                        "yeah",
-                        "yep",
-                        "mhm",
-                    ]:
-                        await self.send_message(
-                            None,
-                            postChan,
-                            tc["messageFormat"].format(
-                                user=after, channel=after.voice_channel
-                            ),
-                        )
-                    else:
-                        await self.send_message(
-                            None,
-                            channel,
-                            "Alright, just to let"
-                            + "you know. If you "
-                            + "have a spotty "
-                            + "connection, you may"
-                            + " get PM'd more than "
-                            + "once upon joining"
-                            + " this channel",
-                        )
-                    return
-
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         await self.wait_until_ready()
         content = message.content.strip()
-        if not message.channel.is_private:
+        if isinstance(message.channel, discord.abc.GuildChannel):
             self.db.update_member(
                 message.author,
                 {
                     "aliases": message.author.name,
-                    "guilds": message.server.id,
+                    "guilds": message.guild.id,
                     "last_message_channel": message.channel.id,
-                    "last_active": message.timestamp,
-                    "last_message": message.timestamp,
+                    "last_active": message.created_at,
+                    "last_message": message.created_at,
                 },
                 type=1,
             )
@@ -623,12 +627,11 @@ class Petal(discord.Client):
                 },
             )
 
-        if message.author == self.user:
-            return
-        if message.content == self.config.prefix:
-            return
-
-        if message.author.id in self.config.blacklist:
+        if (
+            message.author == self.user
+            or message.content == self.config.prefix
+            or message.author.id in self.config.blacklist
+        ):
             return
 
         for word in message.content.split():
@@ -637,7 +640,7 @@ class Petal(discord.Client):
             if word in self.config.wordFilter:
                 embed = discord.Embed(
                     title="Word Filter Hit",
-                    description="At least one filtered " + "word was detected",
+                    description="At least one filtered word was detected",
                     colour=0x9F00FF,
                 )
 
@@ -646,7 +649,7 @@ class Petal(discord.Client):
                     value=message.author.name + "#" + message.author.discriminator,
                 )
                 embed.add_field(name="Channel", value=message.channel.name)
-                embed.add_field(name="Server", value=message.server.name)
+                embed.add_field(name="Server", value=message.guild.name)
                 embed.add_field(name="Content", value=message.content)
                 embed.add_field(name="Detected word", value=word, inline=False)
                 embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
@@ -654,51 +657,52 @@ class Petal(discord.Client):
                 await self.embed(self.get_channel(self.config.modChannel), embed)
                 break
 
-        # if (
-        #     message.channel.id == self.config.get("roleGrant")["chan"]
-        #     and discord.utils.get(
-        #         self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-        #     )
-        #     not in message.author.roles
-        # ):
-        #     try:
-        #         if self.config.get("roleGrant")["ignorecase"]:
-        #             check = re.compile(
-        #                 self.config.get("roleGrant")["regex"], re.IGNORECASE
-        #             )
-        #         else:
-        #             check = re.compile(self.config.get("roleGrant")["regex"])
-        #
-        #         if check.match(message.content):
-        #             await self.send_message(
-        #                 None, message.channel, self.config.get("roleGrant")["response"]
-        #             )
-        #             await self.add_roles(
-        #                 message.author,
-        #                 discord.utils.get(
-        #                     self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-        #                 ),
-        #             )
-        #             log.member(
-        #                 message.author.name
-        #                 + " (id: "
-        #                 + message.author.id
-        #                 + ") was given access"
-        #             )
-        #             # Add logging later
-        #             return
-        #
-        #     except Exception as e:
-        #         await self.send_message(
-        #             None,
-        #             message.channel,
-        #             "Something went wrong with granting"
-        #             + " your role. Pm a member of staff "
-        #             + str(e),
-        #         )
+        role_member = first_role_named(
+            self.config.get("roleGrant")["role"], self.main_guild
+        )
+        if (
+            role_member
+            and message.channel.id == self.config.get("roleGrant")["chan"]
+            and role_member not in message.author.roles
+        ):
+            try:
+                if self.config.get("roleGrant")["ignorecase"]:
+                    check = re.compile(
+                        self.config.get("roleGrant")["regex"], re.IGNORECASE
+                    )
+                else:
+                    check = re.compile(self.config.get("roleGrant")["regex"])
 
-        if not self.config.pm and message.channel.is_private:
+                if check.match(message.content):
+                    await self.send_message(
+                        None, message.channel, self.config.get("roleGrant")["response"]
+                    )
+                    await message.author.add_roles(
+                        role_member, reason="Message matched the Agreement regex."
+                    )
+                    log.member(
+                        message.author.name
+                        + " (id: "
+                        + str(message.author.id)
+                        + ") was given access"
+                    )
+                    return
+
+            except Exception as e:
+                await self.send_message(
+                    None,
+                    message.channel,
+                    "Something went wrong with granting"
+                    + " your role. Pm a member of staff "
+                    + str(e),
+                )
+                raise e
+
+        if not self.config.pm and isinstance(
+            message.channel, discord.abc.PrivateChannel
+        ):
             if not message.author == self.user:
+                # noinspection PyTypeChecker
                 await self.send_message(
                     None,
                     message.channel,
@@ -714,6 +718,7 @@ class Petal(discord.Client):
                     user=message.author, self=self.user
                 )
                 if reply:
+                    # noinspection PyTypeChecker
                     await self.send_message(None, message.channel, reply)
             return
 
