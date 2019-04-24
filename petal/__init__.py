@@ -23,12 +23,11 @@ from petal.dbhandler import DBHandler
 # from random import randint
 log = grasslands.Peacock()
 
-version = "0.0.0"
+version = "<UNSET>"
 with open("version_info.sh", "r") as f:
-    inf = f.read()
-    inf = inf.split("\nVERSION=", 1)[-1].split("\n", 1)[0]
-    if inf:
-        version = inf
+    for line in f:
+        if line.startswith("VERSION="):
+            version = line.split("=", 1)[1].split("#")[0].strip()
 
 grasslands.version = version
 
