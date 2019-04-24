@@ -26,7 +26,7 @@ log = grasslands.Peacock()
 version = "0.0.0"
 with open("version_info.sh", "r") as f:
     inf = f.read()
-    inf = inf.split("VERSION=", 1)[-1].split("\n", 1)[0]
+    inf = inf.split("\nVERSION=", 1)[-1].split("\n", 1)[0]
     if inf:
         version = inf
 

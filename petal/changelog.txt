@@ -118,8 +118,15 @@ Since the last documented update:
 [v0.9.1] (2019-04-15)
 * Minor bug fixes, optimizations
 
-[v0.10.0] (2019-04-7)
+[v0.10.0] (2019-04-07)
 + Filled in default return for !info.
 + Implemented !quote command; Mods only for right now. May go public in a future patch.
 * Overhauled the Menu system backend.
 = Fixed an issue with !wlme not submitting reports to the MC admin channel.
+
+[v0.11.0] (2019-04-24)
++ Added !bytes
++ Readded !bugger
++ Technical data now cycles through Presence field
+* Allow embeds in messages and messages in embeds
+* Significantly optimized !quote hashing
