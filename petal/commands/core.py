@@ -86,14 +86,14 @@ class Commands:
         if type(user) != discord.Member:
             user = self.member_on_main(user.id)
         if user:
-            server = self.client.get_server(self.config.get("mainServer"))
-            target = discord.utils.get(server.roles, name=role)
+            guild = self.client.get_guild(self.config.get("mainServer"))
+            target = discord.utils.get(guild.roles, name=role)
             # TODO: Make this block a bit more...compact.
             if target is None:
-                # Role is not found on Main Server? Check this one.
+                # Role is not found on Main Guild? Check this one.
                 target = discord.utils.get(user.server.roles, name=role)
                 if target is None:
-                    # Role is not found on this server? Fail.
+                    # Role is not found on this guild? Fail.
                     self.log.err("Role '" + role + "' does not exist.")
                     return False, "bad role"
                 elif target in user.roles:
@@ -103,8 +103,8 @@ class Commands:
                     # Role is found, but does not include member? Fail.
                     return False, "denied"
             else:
-                # Role is found on Main Server. Find the member there and check.
-                user_there = server.get_member(user.id)
+                # Role is found on Main Guild. Find the member there and check.
+                user_there = guild.get_member(user.id)
                 if user_there:
                     # User is there? Check roles.
                     if target in user_there.roles:

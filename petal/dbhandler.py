@@ -17,12 +17,12 @@ def m2id(mem):
     """
     if isinstance(mem, discord.Member) or isinstance(mem, discord.User):
         mid = mem.id
-    elif isinstance(mem, discord.Channel) or isinstance(mem, discord.Server):
+    elif isinstance(mem, discord.TextChannel) or isinstance(mem, discord.Guild):
         print(mem.name)
         mid = None
     else:
         mid = mem
-    return mid
+    return str(mid)
 
 
 def ts(dt):

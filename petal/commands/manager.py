@@ -115,7 +115,7 @@ class CommandsMgr(core.Commands):
             "pa",
             src.author.name
             + " with ID: "
-            + src.author.id
+            + str(src.author.id)
             + " used the force!",
         )
         await self.client.delete_message(src)

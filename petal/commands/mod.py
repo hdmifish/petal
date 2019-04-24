@@ -640,30 +640,26 @@ class CommandsMod(core.Commands):
         if not args:
             return "Must provide at least one URL or ID pair."
 
-        # try:
-        #     await self.client.delete_message(src)
-        # except (discord.Forbidden, discord.HTTPException):
-        #     pass
-
         for arg in args:
-            id_c = str(_channel or _c or src.channel.id)
+            id_c = _channel or _c or src.channel.id
             p = arg.split("/")
             id_m = p.pop(-1)
             if p:
-                id_c = p[-1]
+                id_c = int(p[-1])
 
-            channel: discord.Channel = self.client.get_channel(id_c)
+            channel: discord.TextChannel = self.client.get_channel(id_c)
             if not channel:
                 await self.client.send_message(
                     channel=src.channel,
                     message="Cannot find Channel with id `{}`.".format(id_c),
                 )
                 continue
-            message: discord.Message = await self.client.get_message(channel, id_m)
-            if not message:
+            try:
+                message: discord.Message = await channel.fetch_message(id_m)
+            except discord.NotFound:
                 await self.client.send_message(
                     channel=src.channel,
-                    message="Cannot find Message with id `{}`.".format(id_c),
+                    message="Cannot find Message with id `{}` in channel `{}`.".format(id_m, id_c),
                 )
                 continue
             member: discord.Member = message.author
@@ -676,7 +672,7 @@ class CommandsMod(core.Commands):
                 discord.Embed(
                     colour=member.colour,
                     description=ct,
-                    timestamp=message.timestamp,
+                    timestamp=message.created_at,
                     title="Message __{}__ by {}{} ({} char)".format(
                         mash(member.id, channel.id, message.id),
                         "`[BOT]` " if member.bot else "",
@@ -684,9 +680,9 @@ class CommandsMod(core.Commands):
                         len(message.clean_content),
                     )
                     # + (" ({})".format(member.nick) if member.nick else "")
-                    + (" (__EDITED__)" if message.edited_timestamp else ""),
+                    + (" (__EDITED__)" if message.edited_at else ""),
                 )
-                .set_author(icon_url=channel.server.icon_url, name="#" + channel.name)
+                .set_author(icon_url=channel.guild.icon_url, name="#" + channel.name)
                 .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
                 .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
             )
@@ -741,8 +737,8 @@ class CommandsMod(core.Commands):
                 ).add_field(
                     name="Location",
                     value=(
-                        "{}\n".format(channel.server.name, channel.mention)
-                        if channel.server
+                        "{}\n".format(channel.guild.name, channel.mention)
+                        if channel.guild
                         else ""
                     )
                     + channel.mention
@@ -751,7 +747,7 @@ class CommandsMod(core.Commands):
                 ).add_field(
                     name="Link to original",
                     value="https://discordapp.com/channels/{}/{}/{}".format(
-                        message.server.id, message.channel.id, message.id
+                        message.guild.id, message.channel.id, message.id
                     ),
                     inline=False,
                 )

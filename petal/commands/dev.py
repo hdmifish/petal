@@ -10,9 +10,9 @@ class CommandsMaintenance(core.Commands):
     auth_fail = "This command is whitelisted."
     whitelist = "bot_maintainers"
 
-    async def cmd_servers(self, src, **_):
+    async def cmd_guilds(self, src, **_):
         """Return a list of all guilds Petal is in."""
-        for s in self.client.servers:
+        for s in self.client.guilds:
             await self.client.send_message(src.author, src.channel, s.name + " " + s.id)
 
     async def cmd_hello(self, **_):

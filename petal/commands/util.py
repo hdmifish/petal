@@ -128,7 +128,7 @@ class CommandsUtil(core.Commands):
                     self.config.prefix
                 ),
                 colour=0x0ACDFF,
-                timestamp=self.router.startup,
+                timestamp=self.client.startup,
             )
             em.add_field(name="Version", value=self.router.version)
             em.add_field(name="Uptime", value=self.router.uptime)
@@ -321,7 +321,7 @@ class CommandsUtil(core.Commands):
         em.add_field(name="Version", value=self.router.version, inline=False)
         em.add_field(name="Uptime", value=self.router.uptime, inline=False)
         # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
-        em.add_field(name="Servers", value=str(len(self.client.servers)), inline=False)
+        em.add_field(name="Servers", value=str(len(self.client.guilds)), inline=False)
         em.add_field(
             name="Total Number of Commands run",
             value=str(self.config.get("stats")["comCount"]),
@@ -331,7 +331,7 @@ class CommandsUtil(core.Commands):
         mc = sum(1 for _ in self.client.get_all_members())
         em.add_field(name="Total Members", value=str(mc), inline=False)
         role = discord.utils.get(
-            self.client.get_server(self.config.get("mainServer")).roles,
+            self.client.get_guild(self.config.get("mainServer")).roles,
             name=self.config.get("mainRole"),
         )
         c = 0
