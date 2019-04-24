@@ -250,6 +250,18 @@ class CommandsMaintenance(core.Commands):
         outcome = await poll.get_vote(duration)
         return str(outcome)
 
+    async def cmd_bytes(self, src, **_):
+        """Encode the message provided into a Bytes object. Then, print it.
+
+        Debug utility to sanity check **__exactly__** what is received over Discord.
+
+        Syntax: `{p}bytes <literally anything>...`
+        """
+        raw = src.content.encode("utf-8")
+        return "`discord.Message.content`:```{}```Hexadecimal:```{}```".format(
+            repr(raw)[2:-1], raw.hex()
+        )
+
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
