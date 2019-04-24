@@ -101,24 +101,32 @@ class Petal(discord.Client):
         return content[len(content.split()[0]) :]
 
     def get_main_server(self):
-        if len(self.servers) == 0:
-            log.err("This client is not a member of any servers")
+        if len(self.guilds) == 0:
+            log.err("This client is not a member of any guilds")
             exit(404)
         return self.config.get("mainServer")
 
     async def status_loop(self):
-        interv = 32
-        g_ses = discord.Game(name="Session: " + self.session_id[2:])
-        g_ver = discord.Game(name="Version: " + version)
-        while True:
-            await self.change_presence(game=g_ses)
-            await asyncio.sleep(interv)
-            await self.change_presence(
-                game=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
-            )
-            await asyncio.sleep(interv)
-            await self.change_presence(game=g_ver)
-            await asyncio.sleep(interv)
+        # interv = 32
+        times = {"start": self.startup.timestamp() * 1000}
+        g_ses = discord.Activity(
+            details=self.session_id[2:],
+            name="for commands",
+            timestamps=times,
+            type=discord.ActivityType.watching,
+        )
+        await self.change_presence(activity=g_ses)
+        # g_ver = discord.Activity(
+        #     type=discord.ActivityType.playing,
+        #     name="Version",
+        #     details=version,
+        #     timestamps=times,
+        # )
+        # while True:
+        #     await self.change_presence(activity=g_ses)
+        #     await asyncio.sleep(interv)
+        #     await self.change_presence(activity=g_ver)
+        #     await asyncio.sleep(interv)
 
     async def save_loop(self):
         if self.dev_mode:
@@ -142,7 +150,7 @@ class Petal(discord.Client):
     async def ban_loop(self):
         # if self.dev_mode:
         #     return
-        mainserver = self.get_server(self.config.get("mainServer"))
+        mainguild = self.get_guild(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
         log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
         await asyncio.sleep(interval)
@@ -150,33 +158,33 @@ class Petal(discord.Client):
             epoch = int(time.time())
             log.f("BANS", "Now Timestamp: " + str(epoch))
 
-            banlist = await self.get_bans(mainserver)
+            banlist = await mainguild.get_bans()
 
-            for m in banlist:
+            for member in banlist:
                 # log.f("UNBANS", m.name + "({})".format(m.id))
-                ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
+                ban_expiry = self.db.get_attribute(member, "banExpires", verbose=False)
                 if ban_expiry is None:
                     continue
-                if not self.db.get_attribute(m, "tempBanned"):
+                if not self.db.get_attribute(member, "tempBanned"):
                     print(
                         "Member {}({}) was not tempbanned. Skipping".format(
-                            m.name, m.id
+                            member.name, member.id
                         )
                     )
                     continue
                 elif int(ban_expiry) <= int(epoch):
                     log.f(str(ban_expiry) + " compared to " + str(epoch))
                     print(flush=True)
-                    await self.unban(mainserver, m)
-                    self.db.update_member(m, {"banned": False})
-                    log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
+                    await member.unban()
+                    self.db.update_member(member, {"banned": False})
+                    log.f("BANS", "Unbanned " + member.name + " ({}) ".format(member.id))
 
                 else:
                     log.f(
                         "BANS",
-                        m.name
+                        member.name
                         + " ({}) has {} seconds left".format(
-                            m.id, str((int(ban_expiry) - int(epoch)))
+                            member.id, str((int(ban_expiry) - int(epoch)))
                         ),
                     )
                 await asyncio.sleep(0.5)
@@ -240,17 +248,17 @@ class Petal(discord.Client):
     async def send_message(
         self,
         author=None,
-        channel=None,
+        channel: discord.TextChannel = None,
         message=None,
         timeout=0,
         *,
         embed=None,
-        **kwargs
+        **_
     ):
         """
         Overload on the send_message function
         """
-        if not message or not str(message):
+        if (not message or not str(message)) and not embed:
             # Without a message to send, dont even try; it would just error
             return None
         if self.dev_mode:
@@ -263,9 +271,9 @@ class Petal(discord.Client):
                         l = list(self.db.ac.find())
                         message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
-            return await super().send_message(channel, message, embed=embed)
+            return await channel.send(content=message, embed=embed)
         except discord.errors.InvalidArgument:
-            log.err("A message: " + message + " was unable to be sent in " + channel)
+            log.err("A message: " + message + " was unable to be sent in " + channel.name)
             return None
         except discord.errors.Forbidden:
             log.err(
@@ -279,7 +287,7 @@ class Petal(discord.Client):
     async def embed(self, channel, embedded, content=None):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel, content=content, embed=embedded)
+        return await channel.send(content=content, embed=embedded)
 
     async def on_member_join(self, member):
         """
@@ -321,7 +329,7 @@ class Petal(discord.Client):
                 return
 
         self.db.update_member(
-            member, {"aliases": [member.name], "servers": [member.server.id]}
+            member, {"aliases": [member.name], "guilds": [member.server.id]}
         )
 
         user_embed.set_thumbnail(url=member.avatar_url)
@@ -597,7 +605,7 @@ class Petal(discord.Client):
                 message.author,
                 {
                     "aliases": message.author.name,
-                    "servers": message.server.id,
+                    "guilds": message.server.id,
                     "last_message_channel": message.channel.id,
                     "last_active": message.timestamp,
                     "last_message": message.timestamp,
@@ -646,48 +654,48 @@ class Petal(discord.Client):
                 await self.embed(self.get_channel(self.config.modChannel), embed)
                 break
 
-        if (
-            message.channel.id == self.config.get("roleGrant")["chan"]
-            and discord.utils.get(
-                self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-            )
-            not in message.author.roles
-        ):
-            try:
-                if self.config.get("roleGrant")["ignorecase"]:
-                    check = re.compile(
-                        self.config.get("roleGrant")["regex"], re.IGNORECASE
-                    )
-                else:
-                    check = re.compile(self.config.get("roleGrant")["regex"])
-
-                if check.match(message.content):
-                    await self.send_message(
-                        None, message.channel, self.config.get("roleGrant")["response"]
-                    )
-                    await self.add_roles(
-                        message.author,
-                        discord.utils.get(
-                            self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-                        ),
-                    )
-                    log.member(
-                        message.author.name
-                        + " (id: "
-                        + message.author.id
-                        + ") was given access"
-                    )
-                    # Add logging later
-                    return
-
-            except Exception as e:
-                await self.send_message(
-                    None,
-                    message.channel,
-                    "Something went wrong with granting"
-                    + " your role. Pm a member of staff "
-                    + str(e),
-                )
+        # if (
+        #     message.channel.id == self.config.get("roleGrant")["chan"]
+        #     and discord.utils.get(
+        #         self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
+        #     )
+        #     not in message.author.roles
+        # ):
+        #     try:
+        #         if self.config.get("roleGrant")["ignorecase"]:
+        #             check = re.compile(
+        #                 self.config.get("roleGrant")["regex"], re.IGNORECASE
+        #             )
+        #         else:
+        #             check = re.compile(self.config.get("roleGrant")["regex"])
+        #
+        #         if check.match(message.content):
+        #             await self.send_message(
+        #                 None, message.channel, self.config.get("roleGrant")["response"]
+        #             )
+        #             await self.add_roles(
+        #                 message.author,
+        #                 discord.utils.get(
+        #                     self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
+        #                 ),
+        #             )
+        #             log.member(
+        #                 message.author.name
+        #                 + " (id: "
+        #                 + message.author.id
+        #                 + ") was given access"
+        #             )
+        #             # Add logging later
+        #             return
+        #
+        #     except Exception as e:
+        #         await self.send_message(
+        #             None,
+        #             message.channel,
+        #             "Something went wrong with granting"
+        #             + " your role. Pm a member of staff "
+        #             + str(e),
+        #         )
 
         if not self.config.pm and message.channel.is_private:
             if not message.author == self.user:

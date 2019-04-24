@@ -132,7 +132,7 @@ class DBHandler(object):
             }
 
             try:
-                data["servers"] = [member.server.id]
+                data["guilds"] = [member.server.id]
             except AttributeError:
                 log.f("dbhandler", "user type object, cannot add server attribute")
 

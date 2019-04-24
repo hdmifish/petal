@@ -1,6 +1,6 @@
 from asyncio import ensure_future as create_task, sleep
 
-from discord import Embed, Channel, Message, User
+from discord import Embed, TextChannel, Message, User
 
 
 # Assemble all the emoji we need via hexadecimal values.
@@ -31,7 +31,7 @@ class Menu:
     def __init__(
         self,
         client,
-        channel: Channel,
+        channel: TextChannel,
         title: str,
         desc: str = None,
         user: User = None,
