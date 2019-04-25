@@ -24,9 +24,9 @@ log = grasslands.Peacock()
 
 version = "<UNSET>"
 with open("version_info.sh", "r") as f:
-    for line in f:
-        if line.startswith("VERSION="):
-            version = line.split("=", 1)[1].split("#")[0].strip()
+    for _line in f:
+        if _line.startswith("VERSION="):
+            version = _line.split("=", 1)[1].split("#")[0].strip()
 
 grasslands.version = version
 
@@ -240,18 +240,38 @@ class Petal(discord.Client):
             )
         return
 
+    async def print_response(self, message, response):
+        """Use a discrete method for this, so that it can be used recursively if
+            needed.
+        """
+        if hasattr(response, "__next__"):
+            lines = list(response)
+            if lines[0] is True:
+                # If the first yielded value is True, send each subsequent line
+                #   as its own message.
+                for line in lines[1:]:
+                    await self.print_response(message, line)
+            else:
+                # Otherwise, just split them with newlines in one message.
+                await self.print_response(
+                    message, "\n".join([str(x) for x in response])
+                )
+        elif type(response) == dict:
+            # If the response is a Dict, it is a series of keyword arguments
+            #   intended to be passed directly to `Channel.send()`.
+            await message.channel.send(**response)
+        elif type(response) == discord.Embed:
+            # If the response is an Embed, simply show it as normal.
+            await self.send_message(message.author, message.channel, embed=response)
+        else:
+            # Same with String.
+            await self.send_message(message.author, message.channel, str(response))
+
     async def execute_command(self, message):
         response = await self.commands.run(message)
         if response is not None:
             self.config.get("stats")["comCount"] += 1
-
-            if type(response) == dict:
-                await message.channel.send(**response)
-            elif type(response) == discord.Embed:
-                await self.send_message(message.author, message.channel, embed=response)
-            else:
-                await self.send_message(message.author, message.channel, str(response))
-
+            await self.print_response(message, response)
             return True
         else:
             return False
