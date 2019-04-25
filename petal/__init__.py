@@ -245,7 +245,9 @@ class Petal(discord.Client):
         if response is not None:
             self.config.get("stats")["comCount"] += 1
 
-            if type(response) == discord.Embed:
+            if type(response) == dict:
+                await message.channel.send(**response)
+            elif type(response) == discord.Embed:
                 await self.send_message(message.author, message.channel, embed=response)
             else:
                 await self.send_message(message.author, message.channel, str(response))
