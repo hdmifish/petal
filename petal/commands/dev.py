@@ -2,6 +2,7 @@
 Access: Config Whitelist"""
 
 from petal.commands import core
+from petal.exceptions import CommandError
 from petal.menu import Menu
 from petal.util.grammar import pluralize, sequence_words
 
@@ -47,18 +48,17 @@ class CommandsMaintenance(core.Commands):
         `{p}calias trace <alias>...` - Display the command that would be executed if `{p}<alias>` were invoked.
         """
         if not args:
-            return "This command requires a subcommand."
+            raise CommandError("This command requires a subcommand.")
 
         # The first argument passed is a subcommand; What action should be taken.
         mode = args.pop(0).lower()
         if mode not in ("add", "clear", "list", "remove", "trace"):
-            return "Invalid subcommand `{}`.".format(mode)
+            raise CommandError("Invalid subcommand `{}`.".format(mode))
 
         # Ensure that enough arguments have been supplied.
         if (mode != "list" and not args) or (mode == "add" and len(args) < 2):
-            return "Subcommand `{}` requires more arguments.".format(mode)
+            raise CommandError("Subcommand `{}` requires more arguments.".format(mode))
 
-        out = []
         aliases = self.config.get("aliases")
         p = self.config.prefix
 
@@ -68,87 +68,78 @@ class CommandsMaintenance(core.Commands):
         if mode == "add":
             cmd = args.pop(0)
             if not self.router.find_command(cmd, recursive=False)[1]:
-                return "`{}` cannot be aliased because it is not a valid command.".format(
-                    p + cmd
+                raise CommandError(
+                    "`{}` cannot be aliased because it is not a valid command.".format(
+                        p + cmd
+                    )
                 )
-            out.append(
-                "To command `{}`, add {} {}:".format(
-                    cmd,
-                    pluralize(len(args), "es", "", "alias"),
-                    sequence_words(["`{}`".format(p + a) for a in args]),
-                )
+            yield "To command `{}`, add {} {}:".format(
+                cmd,
+                pluralize(len(args), "es", "", "alias"),
+                sequence_words(["`{}`".format(p + a) for a in args]),
             )
 
             for alias in args:
                 if self.router.find_command(alias, recursive=False)[1]:
-                    out.append(
-                        f"`{p + alias}` cannot be an alias because it is already a command."
-                    )
+                    yield f"`{p + alias}` cannot be an alias because it is already a command."
                 elif alias in aliases:
-                    out.append(
-                        "`{0}{1}` is already an alias for `{0}{2}`.".format(
-                            p, alias, aliases[alias]
-                        )
+                    yield "`{0}{1}` is already an alias for `{0}{2}`.".format(
+                        p, alias, aliases[alias]
                     )
                 else:
                     aliases[alias] = cmd
-                    out.append(
-                        "`{0}{1}` has been added as an alias for `{0}{2}`.".format(
-                            p, alias, cmd
-                        )
+                    yield "`{0}{1}` has been added as an alias for `{0}{2}`.".format(
+                        p, alias, cmd
                     )
         elif mode == "clear":
             cmd = args.pop(0)
             if not self.router.find_command(cmd, recursive=False)[1]:
-                return f"`{p + cmd}` cannot be cleared of aliases because it is not a valid command."
-            out.append(f"From command `{p + cmd}`, remove all aliases:")
+                raise CommandError(
+                    f"`{p + cmd}` cannot be cleared of aliases because it is not a valid command."
+                )
+            yield f"From command `{p + cmd}`, remove all aliases:"
             for alias, target in aliases.copy().items():
                 if target == cmd:
                     del aliases[alias]
-                    out.append(f"Alias `{p + alias}` removed.")
+                    yield f"Alias `{p + alias}` removed."
         elif mode == "list":
             if args:
                 cmd = args.pop(0)
                 if not self.router.find_command(cmd, recursive=False)[1]:
-                    return f"`{p + cmd}` cannot have aliases listed because it is not a valid command."
-                out.append(f"List of aliases for command `{p + cmd}`:")
+                    raise CommandError(
+                        f"`{p + cmd}` cannot have aliases listed because it is not a valid command."
+                    )
+                yield f"List of aliases for command `{p + cmd}`:"
                 for alias, target in aliases.items():
                     if target == cmd:
-                        out.append(f"`{p + alias}`")
+                        yield (f"`{p + alias}`")
             else:
-                out.append("List of aliases:")
-                out += [
-                    "`{}` -> `{}`".format(p + alias, p + cmd)
-                    for alias, cmd in aliases.items()
-                ]
+                yield "List of aliases:"
+                for alias, cmd in aliases.items():
+                    yield "`{}` -> `{}`".format(p + alias, p + cmd)
         elif mode == "remove":
-            out.append(
-                "Remove {} {}:".format(
-                    pluralize(len(args), "es", "", "alias"),
-                    sequence_words(["`{}`".format(p + a) for a in args]),
-                )
+            yield "Remove {} {}:".format(
+                pluralize(len(args), "es", "", "alias"),
+                sequence_words(["`{}`".format(p + a) for a in args]),
             )
             for alias in args:
                 if alias in aliases:
                     del aliases[alias]
-                    out.append("Alias `{}` removed.".format(p + alias))
+                    yield "Alias `{}` removed.".format(p + alias)
                 else:
-                    out.append("`{}` is not a valid alias.".format(p + alias))
+                    yield "`{}` is not a valid alias.".format(p + alias)
         elif mode == "trace":
-            out.append(
-                "Trace {} {}:".format(
-                    pluralize(len(args), "es", "", "alias"),
-                    sequence_words(["`{}`".format(p + a) for a in args]),
-                )
+            yield "Trace {} {}:".format(
+                pluralize(len(args), "es", "", "alias"),
+                sequence_words(["`{}`".format(p + a) for a in args]),
             )
             for alias in args:
                 if alias in aliases:
-                    out.append("`{}` -> `{}`".format(p + alias, p + aliases[alias]))
+                    yield "`{}` -> `{}`".format(p + alias, p + aliases[alias])
                 else:
-                    out.append("`{}` is not a valid alias.".format(p + alias))
+                    yield "`{}` is not a valid alias.".format(p + alias)
 
         self.config.save()
-        return "\n".join(out)
 
     async def cmd_blacklist(self, args, src, **_):
         """Prevent user of given ID(s) from using Petal.
@@ -158,22 +149,23 @@ class CommandsMaintenance(core.Commands):
         Syntax: `{p}blacklist <user_ID>...`
         """
         if not args:
-            return "Provide at least one User ID."
+            yield "Provide at least one User ID."
+            return
         else:
-            report = []
+            # report = []
             for uid in args:
                 mem = self.get_member(src, uid)
                 if mem is None:
-                    report.append("Couldnt find user with ID: " + uid)
+                    yield ("Couldnt find user with ID: " + uid)
 
                 if mem.id in self.config.blacklist:
                     self.config.blacklist.remove(mem.id)
-                    report.append(mem.name + " was removed from the blacklist.")
+                    yield (mem.name + " was removed from the blacklist.")
                 else:
                     self.config.blacklist.append(mem.id)
-                    report.append(mem.name + " was blacklisted.")
+                    yield (mem.name + " was blacklisted.")
             self.config.save()
-            return "\n".join(report)
+            # return "\n".join(report)
 
     async def cmd_menu(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
