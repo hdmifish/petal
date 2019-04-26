@@ -3,7 +3,7 @@
 Manage bridges between Messageables, such as two DMs, or a DM and a Channel.
 """
 
-from asyncio import ensure_future as create_task, TimeoutError
+from asyncio import ensure_future as create_task, CancelledError, TimeoutError
 
 import discord
 
@@ -125,8 +125,7 @@ class Tunnel:
             await self.broadcast(final)
         self.active = False
         if self.waiting:
-            # TODO: Learn how to cancel self.waiting or force an early timeout.
-            pass
+            self.waiting.cancel()
 
     async def receive(self, msg: discord.Message):
         await self.broadcast(exclude=[msg.channel.id], **self.convert(msg))
@@ -137,16 +136,21 @@ class Tunnel:
             if len(self.connected) < 2:
                 await self.kill("Connection closed: No other endpoints.")
                 continue
-            self.waiting = self.client.wait_for(
-                "message",
-                check=(
-                    lambda m: m.channel in self.connected
-                    and m.author.id != self.client.user.id
-                ),
-                timeout=self.timeout,
+            self.waiting = create_task(
+                self.client.wait_for(
+                    "message",
+                    check=(
+                        lambda m: m.channel in self.connected
+                        and m.author.id != self.client.user.id
+                    ),
+                    timeout=self.timeout,
+                )
             )
             try:
                 msg = await self.waiting
+            except CancelledError:
+                # Tunnel was killed.
+                await self.broadcast("Connection closed: Coroutine cancelled.")
             except TimeoutError:
                 # Tunnel timed out.
                 await self.kill("Connection closed due to inactivity.")
