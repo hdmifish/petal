@@ -27,7 +27,7 @@ class CommandsMod(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleMod"
 
-    async def cmd_alias(self, args, src, **_):
+    async def cmd_alias(self, args, src: discord.Message, **_):
         """Return a list of all previous names a user has had.
 
         Syntax: `{p}alias <tag/id>`
@@ -46,7 +46,7 @@ class CommandsMod(core.Commands):
 
         if member is None:
             return (
-                "Could not find that member in the server.\n\nJust a note, "
+                "Could not find that member in the guild.\n\nJust a note, "
                 "I may have record of them, but it's Iso's policy to not "
                 "display userinfo without consent. If you are staff and "
                 "have a justified reason for this request, please "
@@ -71,9 +71,14 @@ class CommandsMod(core.Commands):
             return msg
 
     async def cmd_kick(
-        self, args, src, _reason: str = None, _noconfirm: bool = False, **_
+        self,
+        args,
+        src: discord.Message,
+        _reason: str = None,
+        _noconfirm: bool = False,
+        **_,
     ):
-        """Kick a user from a server.
+        """Kick a user from a guild.
 
         Syntax: `{p}kick [OPTIONS] <user tag/id>`
 
@@ -84,7 +89,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        logChannel = src.server.get_channel(self.config.get("logChannel"))
+        logChannel = src.guild.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -138,7 +143,7 @@ class CommandsMod(core.Commands):
                 )
                 .add_field(name="Issuer", value=src.author.name + "\n" + src.author.id)
                 .add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
-                .add_field(name="Server", value=userToBan.server.name)
+                .add_field(name="Server", value=userToBan.guild.name)
                 .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 .set_thumbnail(url=userToBan.avatar_url)
             )
@@ -157,7 +162,7 @@ class CommandsMod(core.Commands):
     async def cmd_ban(
         self,
         args,
-        src,
+        src: discord.Message,
         _reason: str = None,
         _purge: int = 1,
         _noconfirm: bool = False,
@@ -175,7 +180,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        logChannel = src.server.get_channel(self.config.get("logChannel"))
+        logChannel = src.guild.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -237,7 +242,7 @@ class CommandsMod(core.Commands):
                 )
                 .add_field(name="Issuer", value=src.author.name + "\n" + src.author.id)
                 .add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
-                .add_field(name="Server", value=userToBan.server.name)
+                .add_field(name="Server", value=userToBan.guild.name)
                 .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 .set_thumbnail(url=userToBan.avatar_url)
             )
@@ -273,7 +278,13 @@ class CommandsMod(core.Commands):
                 return "Error occurred trying to generate webhook URI"
 
     async def cmd_tempban(
-        self, args, src, _reason: str = None, _purge: int = 1, _days: int = None, **_
+        self,
+        args,
+        src: discord.Message,
+        _reason: str = None,
+        _purge: int = 1,
+        _days: int = None,
+        **_,
     ):
         """Temporarily ban a user.
 
@@ -287,7 +298,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        logChannel = src.server.get_channel(self.config.get("logChannel"))
+        logChannel = src.guild.get_channel(self.config.get("logChannel"))
         if logChannel is None:
             return (
                 "I'm sorry, you must have logging enabled to"
@@ -328,7 +339,7 @@ class CommandsMod(core.Commands):
                 userToBan,
                 {
                     "banned": True,
-                    "bannedFrom": userToBan.server.id,
+                    "bannedFrom": userToBan.guild.id,
                     "banExpires": str(timex).split(".")[0],
                     "tempBanned": True,
                 },
@@ -347,7 +358,7 @@ class CommandsMod(core.Commands):
             logEmbed.add_field(
                 name="Recipient", value=userToBan.name + "\n" + userToBan.id
             )
-            logEmbed.add_field(name="Server", value=userToBan.server.name)
+            logEmbed.add_field(name="Server", value=userToBan.guild.name)
             logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
             logEmbed.set_thumbnail(url=userToBan.avatar_url)
 
@@ -367,7 +378,7 @@ class CommandsMod(core.Commands):
                 + str(dt.utcnow() + timedelta(days=_days))[:-7]
             )
 
-    async def cmd_warn(self, args, src, **_):
+    async def cmd_warn(self, args, src: discord.Message, **_):
         """
         Send an official and logged warning to a user.
 
@@ -376,7 +387,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        logChannel = src.server.get_channel(self.config.get("logChannel"))
+        logChannel = src.guild.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -403,13 +414,13 @@ class CommandsMod(core.Commands):
             try:
                 warnEmbed = discord.Embed(
                     title="Official Warning",
-                    description="The server has sent " + " you an official warning",
+                    description="The guild has sent " + " you an official warning",
                     colour=0xFFF600,
                 )
 
                 warnEmbed.add_field(name="Reason", value=msg.content)
                 warnEmbed.add_field(
-                    name="Issuing Server", value=src.server.name, inline=False
+                    name="Issuing Server", value=src.guild.name, inline=False
                 )
                 await self.client.embed(userToWarn, warnEmbed)
 
@@ -429,7 +440,7 @@ class CommandsMod(core.Commands):
                 logEmbed.add_field(
                     name="Recipient", value=userToWarn.name + "\n" + userToWarn.id
                 )
-                logEmbed.add_field(name="Server", value=userToWarn.server.name)
+                logEmbed.add_field(name="Server", value=userToWarn.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToWarn.avatar_url)
 
@@ -443,23 +454,23 @@ class CommandsMod(core.Commands):
                     + ") was successfully warned"
                 )
 
-    async def cmd_mute(self, args, src, **_):
+    async def cmd_mute(self, args, src: discord.Message, **_):
         """
-        Toggle the mute tag on a user if your server supports that role.
+        Toggle the mute tag on a user if your guild supports that role.
 
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
             return
 
-        muteRole = discord.utils.get(src.server.roles, name="mute")
+        muteRole = discord.utils.get(src.guild.roles, name="mute")
         if muteRole is None:
             return (
-                "This server does not have a `mute` role. "
+                "This guild does not have a `mute` role. "
                 + "To enable the mute function, set up the "
                 + "roles and name one `mute`."
             )
-        logChannel = src.server.get_channel(self.config.get("logChannel"))
+        logChannel = src.guild.get_channel(self.config.get("logChannel"))
 
         if logChannel is None:
             return (
@@ -487,7 +498,7 @@ class CommandsMod(core.Commands):
 
                 if muteRole in userToWarn.roles:
                     await self.client.remove_roles(userToWarn, muteRole)
-                    await self.client.server_voice_state(userToWarn, mute=False)
+                    await self.client.guild_voice_state(userToWarn, mute=False)
                     warnEmbed = discord.Embed(
                         title="User Unmute",
                         description="You have been unmuted by" + src.author.name,
@@ -496,12 +507,12 @@ class CommandsMod(core.Commands):
 
                     warnEmbed.add_field(name="Reason", value=msg.content)
                     warnEmbed.add_field(
-                        name="Issuing Server", value=src.server.name, inline=False
+                        name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
                 else:
                     await self.client.add_roles(userToWarn, muteRole)
-                    await self.client.server_voice_state(userToWarn, mute=True)
+                    await self.client.guild_voice_state(userToWarn, mute=True)
                     warnEmbed = discord.Embed(
                         title="User Mute",
                         description="You have been " + "muted by" + src.author.name,
@@ -513,7 +524,7 @@ class CommandsMod(core.Commands):
                     )
                     warnEmbed.add_field(name="Reason", value=msg.content)
                     warnEmbed.add_field(
-                        name="Issuing Server", value=src.server.name, inline=False
+                        name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
                 await self.client.embed(userToWarn, warnEmbed)
@@ -533,7 +544,7 @@ class CommandsMod(core.Commands):
                 logEmbed.add_field(
                     name="Recipient", value=userToWarn.name + "\n" + userToWarn.id
                 )
-                logEmbed.add_field(name="Server", value=userToWarn.server.name)
+                logEmbed.add_field(name="Server", value=userToWarn.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 logEmbed.set_thumbnail(url=userToWarn.avatar_url)
 
@@ -547,7 +558,7 @@ class CommandsMod(core.Commands):
                     + ") was successfully {}d".format(muteswitch)
                 )
 
-    async def cmd_purge(self, args, src, **_):
+    async def cmd_purge(self, args, src: discord.Message, **_):
         """
         Purge up to 200 messages in the current channel.
 
@@ -591,7 +602,7 @@ class CommandsMod(core.Commands):
                 + "from {} in {} by {}#{}".format(
                     str(numDelete),
                     src.channel.name,
-                    src.server.name,
+                    src.guild.name,
                     src.author.name,
                     src.author.discriminator,
                 ),
@@ -607,7 +618,7 @@ class CommandsMod(core.Commands):
     async def cmd_quote(
         self,
         args,
-        src,
+        src: discord.Message,
         _channel: int = None,
         _c: int = None,
         _author: bool = False,
@@ -659,7 +670,9 @@ class CommandsMod(core.Commands):
             except discord.NotFound:
                 await self.client.send_message(
                     channel=src.channel,
-                    message="Cannot find Message with id `{}` in channel `{}`.".format(id_m, id_c),
+                    message="Cannot find Message with id `{}` in channel `{}`.".format(
+                        id_m, id_c
+                    ),
                 )
                 continue
             member: discord.Member = message.author
