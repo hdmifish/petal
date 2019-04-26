@@ -403,8 +403,8 @@ class CommandsMod(core.Commands):
         await self.client.send_message(
             src.author, src.channel, "Please give a message to send (just reply below):"
         )
-        msg = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, timeout=30
+        msg = await self.client.wait_for(
+            "message", check=same_author(src), timeout=30
         )
         if msg is None:
             return "Timed out while waiting for message."
@@ -578,10 +578,10 @@ class CommandsMod(core.Commands):
             + "this channel. Type: confirm if this "
             + "is correct.",
         )
-        msg = await self.client.wait_for_message(
-            channel=src.channel, content="confirm", author=src.author, timeout=10
+        msg = await self.client.wait_for(
+            "message", check=same_author(src), timeout=10
         )
-        if msg is None:
+        if msg is None or msg.content.lower() != "confirm":
             return "Purge event cancelled"
         try:
             # petal.logLock = True
@@ -793,6 +793,100 @@ class CommandsMod(core.Commands):
                     channel=src.channel,
                     message="Failed to post embed. Message may have been too long.",
                 )
+
+    async def cmd_send(
+        self, args, src: discord.Message, _identity: str = None, _i: str = None, **_
+    ):
+        """Broadcast an official-looking message into another channel.
+
+        By using the Identity Option, you can specify who the message is from.
+        Valid Identities:```\nadmins\nmods\nstaff```
+
+        Syntax: `{p}send [OPTIONS] <channel-id> ["<message>"]`
+        """
+        if 2 < len(args) < 1:
+            return "Must provide a Channel ID and, optionally, a quoted message."
+        elif not args[0].isdigit():
+            return "Channel ID must be integer."
+
+        destination = self.client.get_channel(int(args.pop(0)))
+        if not destination:
+            return "Invalid Channel."
+
+        if not args:
+            await self.client.send_message(
+                src.author,
+                src.channel,
+                "Please give a message to send (just reply below):",
+            )
+            msg = await self.client.wait_for(
+                "message", check=same_author(src), timeout=30
+            )
+            if msg is None:
+                return "Timed out while waiting for message."
+            else:
+                text = msg.content
+        else:
+            text = args[0]
+
+        identity = (_identity or _i or "staff").lower()
+        idents = {
+            "admins": {"colour": 0xA2E46D, "title": "Administrative Alert"},
+            "mods": {"colour": 0xE67E22, "title": "Moderation Message"},
+            "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
+        }
+        ident = idents.get(identity, idents["staff"])
+        ident["description"] = text
+
+        try:
+            em = discord.Embed(**ident)
+            await src.channel.send(
+                content="Confirm sending this message to {} on behalf of {}? (Say `yes` to confirm)".format(
+                    destination.mention, identity
+                ), embed=em
+            )
+            confirm = await self.client.wait_for(
+                "message", check=same_author(src), timeout=10
+            )
+            if confirm is None:
+                return "Timed out."
+            elif confirm.content.lower() != "yes":
+                return "Message cancelled."
+            else:
+                await self.client.embed(destination, em)
+
+        except discord.errors.Forbidden:
+            return "Failed to send message: Access Denied"
+        else:
+            # logEmbed = discord.Embed(
+            #     title="User Warn", description=msg.content, colour=0xFF600
+            # )
+            # logEmbed.set_author(
+            #     name=self.client.user.name,
+            #     icon_url="https://puu.sh/tADFM/dc80dc3a5d.png",
+            # )
+            # logEmbed.add_field(
+            #     name="Issuer", value=src.author.name + "\n" + str(src.author.id)
+            # )
+            # logEmbed.add_field(
+            #     name="Recipient", value=userToWarn.name + "\n" + str(userToWarn.id)
+            # )
+            # logEmbed.add_field(name="Server", value=userToWarn.guild.name)
+            # logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
+            # logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+            #
+            # await self.client.embed(
+            #     self.client.get_channel(self.config.modChannel), logEmbed
+            # )
+            return (
+                src.author.name
+                + " (ID: `"
+                + str(src.author.id)
+                + "`) sent the following message to {} on behalf of `{}`:\n".format(
+                    destination.mention, identity
+                )
+                + text
+            )
 
 
 # Keep the actual classname unique from this common identifier
