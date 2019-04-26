@@ -365,6 +365,15 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
+    async def cmd_tunnel(self, args, src, **_):
+        dests = [int(x) for x in args if x.isdigit()]
+        if not dests:
+            return "Must provide at least one integer Channel or User ID."
+        await self.client.dig_tunnel(src.channel, *dests)
+
+    async def cmd_disconnect(self, src, **_):
+        await self.client.close_tunnels_to(src.channel)
+
     async def cmd_argtest(
         self,
         args,
