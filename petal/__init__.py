@@ -107,7 +107,7 @@ class Petal(discord.Client):
         return content[len(content.split()[0]) :]
 
     @property
-    def main_guild(self):
+    def main_guild(self) -> discord.Guild:
         if len(self.guilds) == 0:
             log.err("This client is not a member of any guilds")
             exit(404)

@@ -12,6 +12,9 @@ import discord
 from petal.commands import core
 
 
+same_author = lambda m0: lambda m1: m0.author == m1.author and m0.channel == m1.channel
+
+
 # MultiHash function: Generate a small numeric "name" given arbitrary inputs.
 def mash(*data, digits=4, base=10):
     sha = sha256()
@@ -89,29 +92,28 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        logChannel = src.guild.get_channel(self.config.get("logChannel"))
+        if not self.lambdall(args, lambda x: x.isdigit()):
+            return "All IDs must be positive Integers."
 
-        if logChannel is None:
+        guild = self.client.main_guild
+        userToBan = guild.get_member(int(args[0]))
+        if userToBan is None:
+            return "Could not get user with that ID."
+        elif userToBan.id == self.client.user.id:
             return (
-                "I'm sorry, you must have logging enabled to use"
-                + " administrative functions"
+                f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
         if _reason is None:
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
-
-            reason = await self.client.wait_for_message(
-                channel=src.channel, author=src.author, timeout=30
+            reason = await self.client.wait_for(
+                "message", check=same_author(src), timeout=30
             )
             if reason is None:
-                return "Timed out while waiting for input"
+                return "Timed out while waiting for reason."
             _reason = reason.content
-
-        userToBan = self.get_member(src, args[0])
-        if userToBan is None:
-            return "Could not get user with that id"
 
         if not _noconfirm:
             await self.client.send_message(
@@ -121,8 +123,8 @@ class CommandsMod(core.Commands):
                 + userToBan.name
                 + ". If this is correct, type `yes`.",
             )
-            confmsg = await self.client.wait_for_message(
-                channel=src.channel, author=src.author, timeout=10
+            confmsg = await self.client.wait_for(
+                "message", check=same_author(src), timeout=10
             )
             if confmsg is None:
                 return "Timed out. User was not kicked"
@@ -131,7 +133,7 @@ class CommandsMod(core.Commands):
 
         try:
             # petal.logLock = True
-            await self.client.kick(userToBan)
+            await userToBan.kick(reason=_reason)
         except discord.errors.Forbidden:
             return "It seems I don't have perms to kick this user"
         else:
@@ -139,10 +141,10 @@ class CommandsMod(core.Commands):
                 discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
                 .set_author(
                     name=self.client.user.name,
-                    icon_url="https:" + "//puu.sh/tAAjx/2d29a3a79c.png",
+                    icon_url="https://puu.sh/tAAjx/2d29a3a79c.png",
                 )
-                .add_field(name="Issuer", value=src.author.name + "\n" + src.author.id)
-                .add_field(name="Recipient", value=userToBan.name + "\n" + userToBan.id)
+                .add_field(name="Issuer", value=src.author.name + "\n" + str(src.author.id))
+                .add_field(name="Recipient", value=userToBan.name + "\n" + str(userToBan.id))
                 .add_field(name="Server", value=userToBan.guild.name)
                 .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 .set_thumbnail(url=userToBan.avatar_url)
@@ -151,12 +153,11 @@ class CommandsMod(core.Commands):
             await self.client.embed(
                 self.client.get_channel(self.config.modChannel), logEmbed
             )
-            # # await self.client.send_message(message.author, message.channel, "Cleaning up...", )
-            await self.client.send_typing(src.channel)
-            await asyncio.sleep(4)
-            # petal.lockLog = False
             return (
-                userToBan.name + " (ID: " + userToBan.id + ") was successfully kicked"
+                userToBan.name
+                + " (ID: "
+                + str(userToBan.id)
+                + ") was successfully kicked"
             )
 
     async def cmd_ban(

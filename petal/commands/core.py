@@ -78,6 +78,13 @@ class Commands:
 
         return None
 
+    def lambdall(self, values, func, mustbe=True):
+        """Return True if ALL values, run through func, are equal to mustbe."""
+        for v in values:
+            if func(v) != mustbe:
+                return False
+        return True
+
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
@@ -118,14 +125,14 @@ class Commands:
             return False, "private"
 
     def get_member(self, src, uuid):
-        """
-        Get a Discord Member object from an ID.
+        """Get a Discord Member object from an ID. First argument MUST be either
+            a Guild or a Message.
         """
         if isinstance(src, discord.Guild):
             return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                src.guild.members, id=uuid.lstrip("<@!").rstrip(">")
+                src.guild.members, id=int(uuid.lstrip("<@!").rstrip(">"))
             )
 
     def member_on_main(self, uuid):
