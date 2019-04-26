@@ -33,7 +33,7 @@ class Gateway:
 
 
 class Tunnel:
-    def __init__(self, client, origin, *gates, anonymous=False, timeout=30):
+    def __init__(self, client, origin, *gates, anonymous=False, timeout=600):
         self.anon = anonymous
         self.client = client
         self.gates = {origin.id, *gates}
