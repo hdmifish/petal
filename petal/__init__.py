@@ -18,6 +18,8 @@ from petal import grasslands
 from petal.commands import CommandRouter as Commands
 from petal.config import Config
 from petal.dbhandler import DBHandler
+from petal.exceptions import TunnelSetupError
+from petal.tunnel import Tunnel
 
 
 log = grasslands.Peacock()
@@ -69,6 +71,7 @@ class Petal(discord.Client):
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
         self.startup = datetime.utcnow()
         self.tempBanFlag = False
+        self.tunnels = []
 
         self.dev_mode = devmode
         log.info("Configuration object initalized")
@@ -194,6 +197,24 @@ class Petal(discord.Client):
                 await asyncio.sleep(0.5)
 
             await asyncio.sleep(interval)
+
+    async def close_tunnels_to(self, channel):
+        for t in self.tunnels:
+            await t.drop(channel)
+
+    async def dig_tunnel(self, *channels, anon=False):
+        new = Tunnel(self, *channels, anon)
+        try:
+            await new.activate()
+        except TunnelSetupError:
+            return False
+        else:
+            self.tunnels.append(new)
+            return True
+
+    def remove_tunnel(self, t):
+        while t in self.tunnels:
+            self.tunnels.remove(t)
 
     async def on_member_ban(self, member):
         print("Giving database a chance to sync...")

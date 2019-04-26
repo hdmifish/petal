@@ -7,6 +7,8 @@ from asyncio import ensure_future as create_task
 
 import discord
 
+from petal.exceptions import TunnelSetupError
+
 
 class Gateway:
     def __init__(self, m_id: int):
@@ -57,6 +59,7 @@ class Tunnel:
         if len(self.connected) < 2:
             self.connected = []
             await self.broadcast("Failed to establish Tunnel.")
+            raise TunnelSetupError()
         else:
             self.active = True
             create_task(self.run_tunnel())
@@ -96,9 +99,10 @@ class Tunnel:
     async def close(self):
         for gate in self.connected:
             await self.drop(gate)
+        self.client.remove_tunnel(self)
 
     async def drop(self, gate):
-        if gate in self.connected:
+        while gate in self.connected:
             self.connected.remove(gate)
 
     async def kill(self, final=""):
