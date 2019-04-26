@@ -3,7 +3,7 @@
 Manage bridges between Messageables, such as two DMs, or a DM and a Channel.
 """
 
-from asyncio import ensure_future as create_task
+from asyncio import ensure_future as create_task, TimeoutError
 
 import discord
 
@@ -33,10 +33,10 @@ class Gateway:
 
 
 class Tunnel:
-    def __init__(self, client, *gates, anonymous=False, timeout=600):
+    def __init__(self, client, origin, *gates, anonymous=False, timeout=30):
         self.anon = anonymous
         self.client = client
-        self.gates = set(gates)
+        self.gates = {origin.id, *gates}
         self.timeout = timeout
 
         self.active = False
@@ -44,18 +44,30 @@ class Tunnel:
         self.names_c = {}  # Channel aliases
         self.names_u = {}  # User aliases
 
+        self.origin = origin
         self.waiting = None
 
     async def activate(self):
-        for c_id in self.gates:
+        for c_id in [i for i in self.gates if type(i) == int]:
             channel = self.client.get_channel(c_id)
+            user = self.client.get_user(c_id)
+            if user and not channel:
+                channel = user.dm_channel or await user.create_dm()
+
             if channel:
                 try:
                     await channel.send("Connecting to Messaging Tunnel...")
-                except discord.Forbidden:
-                    pass
+                except discord.Forbidden as e:
+                    await self.origin.send(
+                        "Failed to connect to `{}`: {}".format(channel.id, e)
+                    )
                 else:
                     self.connected.append(channel)
+            else:
+                await self.origin.send(
+                    "Failed to connect to `{}`: "
+                    "Channel or User not found.".format(c_id)
+                )
         if len(self.connected) < 2:
             await self.broadcast("Failed to establish Tunnel.")
             self.connected = []
@@ -64,8 +76,9 @@ class Tunnel:
             self.active = True
             create_task(self.run_tunnel())
             await self.broadcast(
-                "Messaging Tunnel between {} channels established.".format(
-                    len(self.connected)
+                "Messaging Tunnel between {} channels established. "
+                "Invoke `{}disconnect` to disconnect from the Tunnel.".format(
+                    len(self.connected), self.client.config.prefix
                 )
             )
 
@@ -73,7 +86,7 @@ class Tunnel:
         em = discord.Embed(
             description=src.content,
             timestamp=src.created_at,
-            title="Message from `{}`".format(src.channel.name)
+            title="Message from `#{}`".format(src.channel.name)
             if hasattr(src.channel, "name")
             else "Message via DM",
         ).set_author(name=src.author.display_name, icon_url=src.author.avatar_url)
@@ -132,11 +145,13 @@ class Tunnel:
                 ),
                 timeout=self.timeout,
             )
-            msg = await self.waiting
-            self.waiting = None
-            if msg is None:
+            try:
+                msg = await self.waiting
+            except TimeoutError:
                 # Tunnel timed out.
                 await self.kill("Connection closed due to inactivity.")
             else:
                 await self.receive(msg)
+            finally:
+                self.waiting = None
         await self.close()

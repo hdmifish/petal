@@ -202,8 +202,8 @@ class Petal(discord.Client):
         for t in self.tunnels:
             await t.drop(channel)
 
-    async def dig_tunnel(self, *channels, anon=False):
-        new = Tunnel(self, *channels, anon)
+    async def dig_tunnel(self, origin, *channels, anon=False):
+        new = Tunnel(self, origin, *channels, anon)
         try:
             await new.activate()
         except TunnelSetupError:
