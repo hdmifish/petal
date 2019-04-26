@@ -381,42 +381,39 @@ class CommandsMod(core.Commands):
             )
 
     async def cmd_warn(self, args, src: discord.Message, **_):
-        """
-        Send an official and logged warning to a user.
+        """Send an official and logged warning to a user.
 
         Syntax: `{p}warn <user tag/id>`
         """
         if not args:
             return
 
-        logChannel = src.guild.get_channel(self.config.get("logChannel"))
+        if not self.lambdall(args, lambda x: x.isdigit()):
+            return "All IDs must be positive Integers."
 
-        if logChannel is None:
+        guild = self.client.main_guild
+        userToWarn = guild.get_member(int(args[0]))
+        if userToWarn is None:
+            return "Could not get user with that ID."
+        elif userToWarn.id == self.client.user.id:
             return (
-                "I'm sorry, you must have logging enabled "
-                + "to use administrative functions"
+                f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
         await self.client.send_message(
-            src.author,
-            src.channel,
-            "Please give a message to send " + "(just reply below): ",
+            src.author, src.channel, "Please give a message to send (just reply below):"
         )
         msg = await self.client.wait_for_message(
             channel=src.channel, author=src.author, timeout=30
         )
         if msg is None:
-            return "Timed out while waiting for input"
-
-        userToWarn = self.get_member(src, args[0])
-        if userToWarn is None:
-            return "Could not get user with that id"
+            return "Timed out while waiting for message."
 
         else:
             try:
                 warnEmbed = discord.Embed(
                     title="Official Warning",
-                    description="The guild has sent " + " you an official warning",
+                    description="The guild has sent you an official warning",
                     colour=0xFFF600,
                 )
 
@@ -437,10 +434,10 @@ class CommandsMod(core.Commands):
                     icon_url="https://puu.sh/tADFM/dc80dc3a5d.png",
                 )
                 logEmbed.add_field(
-                    name="Issuer", value=src.author.name + "\n" + src.author.id
+                    name="Issuer", value=src.author.name + "\n" + str(src.author.id)
                 )
                 logEmbed.add_field(
-                    name="Recipient", value=userToWarn.name + "\n" + userToWarn.id
+                    name="Recipient", value=userToWarn.name + "\n" + str(userToWarn.id)
                 )
                 logEmbed.add_field(name="Server", value=userToWarn.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
@@ -452,91 +449,89 @@ class CommandsMod(core.Commands):
                 return (
                     userToWarn.name
                     + " (ID: "
-                    + userToWarn.id
+                    + str(userToWarn.id)
                     + ") was successfully warned"
                 )
 
     async def cmd_mute(self, args, src: discord.Message, **_):
-        """
-        Toggle the mute tag on a user if your guild supports that role.
+        """Toggle the mute tag on a user if your guild supports that role.
 
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
             return
 
-        muteRole = discord.utils.get(src.guild.roles, name="mute")
-        if muteRole is None:
-            return (
-                "This guild does not have a `mute` role. "
-                + "To enable the mute function, set up the "
-                + "roles and name one `mute`."
-            )
-        logChannel = src.guild.get_channel(self.config.get("logChannel"))
+        if not self.lambdall(args, lambda x: x.isdigit()):
+            return "All IDs must be positive Integers."
 
-        if logChannel is None:
+        guild = self.client.main_guild
+        userToMute = guild.get_member(int(args[0]))
+        if userToMute is None:
+            return "Could not get user with that ID."
+        elif userToMute.id == self.client.user.id:
             return (
-                "I'm sorry, you must have logging enabled to "
-                + "use administrative functions"
+                f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
         await self.client.send_message(
             src.author,
             src.channel,
-            "Please give a " + "reason for the mute " + "(just reply below): ",
+            "Please give a reason for the mute (just reply below): ",
         )
-        msg = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, timeout=30
+        reason = await self.client.wait_for(
+            "message", check=same_author(src), timeout=30
         )
-        if msg is None:
-            return "Timed out while waiting for input"
+        if reason is None:
+            return "Timed out while waiting for reason."
 
-        userToWarn = self.get_member(src, args[0])
-        if userToWarn is None:
-            return "Could not get user with that id"
-
+        muteRole = discord.utils.get(src.guild.roles, name="mute")
+        if muteRole is None:
+            return (
+                "This guild does not have a `mute` role. To enable the mute "
+                "function, set up the roles and name one `mute`."
+            )
         else:
             try:
 
-                if muteRole in userToWarn.roles:
-                    await self.client.remove_roles(userToWarn, muteRole)
-                    await self.client.guild_voice_state(userToWarn, mute=False)
+                if muteRole in userToMute.roles:
+                    await self.client.remove_roles(userToMute, muteRole)
+                    await self.client.guild_voice_state(userToMute, mute=False)
                     warnEmbed = discord.Embed(
                         title="User Unmute",
                         description="You have been unmuted by" + src.author.name,
                         colour=0x00FF11,
                     )
 
-                    warnEmbed.add_field(name="Reason", value=msg.content)
+                    # warnEmbed.add_field(name="Reason", value=reason.content)
                     warnEmbed.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
                 else:
-                    await self.client.add_roles(userToWarn, muteRole)
-                    await self.client.guild_voice_state(userToWarn, mute=True)
+                    await self.client.add_roles(userToMute, muteRole)
+                    await self.client.guild_voice_state(userToMute, mute=True)
                     warnEmbed = discord.Embed(
                         title="User Mute",
-                        description="You have been " + "muted by" + src.author.name,
+                        description="You have been muted by" + src.author.name,
                         colour=0xFF0000,
                     )
                     warnEmbed.set_author(
                         name=self.client.user.name,
-                        icon_url="https://puu.sh/tB2KH/" + "cea152d8f5.png",
+                        icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
                     )
-                    warnEmbed.add_field(name="Reason", value=msg.content)
+                    warnEmbed.add_field(name="Reason", value=reason.content)
                     warnEmbed.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
-                await self.client.embed(userToWarn, warnEmbed)
+                await self.client.embed(userToMute, warnEmbed)
 
             except discord.errors.Forbidden:
                 return "It seems I don't have perms to mute this user"
             else:
                 logEmbed = discord.Embed(
                     title="User {}".format(muteswitch),
-                    description=msg.content,
+                    description=reason.content,
                     colour=0x1200FF,
                 )
 
@@ -544,19 +539,19 @@ class CommandsMod(core.Commands):
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
                 logEmbed.add_field(
-                    name="Recipient", value=userToWarn.name + "\n" + userToWarn.id
+                    name="Recipient", value=userToMute.name + "\n" + userToMute.id
                 )
-                logEmbed.add_field(name="Server", value=userToWarn.guild.name)
+                logEmbed.add_field(name="Server", value=userToMute.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=userToWarn.avatar_url)
+                logEmbed.set_thumbnail(url=userToMute.avatar_url)
 
                 await self.client.embed(
                     self.client.get_channel(self.config.modChannel), logEmbed
                 )
                 return (
-                    userToWarn.name
+                    userToMute.name
                     + " (ID: "
-                    + userToWarn.id
+                    + userToMute.id
                     + ") was successfully {}d".format(muteswitch)
                 )
 
