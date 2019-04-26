@@ -44,12 +44,35 @@ class Tunnel:
 
         self.waiting = None
 
-    def activate(self):
-        self.active = True
-        create_task(self.run_tunnel())
+    async def activate(self):
+        for c_id in self.gates:
+            channel = self.client.get_channel(c_id)
+            if channel:
+                try:
+                    await channel.send("Connecting to Messaging Tunnel...")
+                except discord.Forbidden:
+                    pass
+                else:
+                    self.connected.append(channel)
+        if len(self.connected) < 2:
+            self.connected = []
+            await self.broadcast("Failed to establish Tunnel.")
+        else:
+            self.active = True
+            create_task(self.run_tunnel())
+            await self.broadcast(
+                "Messaging Tunnel between {} channels established.".format(
+                    len(self.connected)
+                )
+            )
 
     def convert(self, src):
-        pass
+        em = discord.Embed(
+            description=src.content,
+            timestamp=src.created_at,
+            title="Message from `{}`".format(src.channel.name),
+        ).set_author(name=src.author.display_name, icon_url=src.author.avatar_url)
+        return {"embed": em}
 
     async def broadcast(
         self,
@@ -58,31 +81,43 @@ class Tunnel:
         file=None,
         exclude: list = None,
     ):
+        exclude = exclude or []
+        to_drop = []
         if content or embed or file:
             for gate in self.connected:
-                if gate not in exclude:
-                    gate.send(content=content, embed=embed, file=file)
+                if gate.id not in exclude:
+                    try:
+                        await gate.send(content=content, embed=embed, file=file)
+                    except:
+                        to_drop.append(gate)
+            for gate in to_drop:
+                await self.drop(gate)
 
     async def close(self):
-        pass
+        for gate in self.connected:
+            await self.drop(gate)
 
-    async def drop(self, gateway):
-        pass
+    async def drop(self, gate):
+        if gate in self.connected:
+            self.connected.remove(gate)
 
-    async def kill(self):
+    async def kill(self, final=""):
+        if final:
+            await self.broadcast(final)
         self.active = False
         if self.waiting:
             # TODO: Learn how to cancel self.waiting or force an early timeout.
             pass
 
     async def receive(self, msg: discord.Message):
-        content = msg.content
-        embeds = msg.embeds
-        files = msg.attachments
-        await self.broadcast(content, embeds, files, [msg.channel])  # TODO
+        await self.broadcast(exclude=[msg.channel.id], **self.convert(msg))
 
     async def run_tunnel(self):
+        """Begin Tunnel operation loop."""
         while self.active:
+            if len(self.connected) < 2:
+                await self.kill("Connection closed: No other endpoints.")
+                continue
             self.waiting = self.client.wait_for(
                 "message",
                 check=(
@@ -95,7 +130,7 @@ class Tunnel:
             self.waiting = None
             if msg is None:
                 # Tunnel timed out.
-                await self.kill()
+                await self.kill("Connection closed due to inactivity.")
             else:
                 await self.receive(msg)
         await self.close()
