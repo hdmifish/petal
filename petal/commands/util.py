@@ -369,10 +369,11 @@ class CommandsUtil(core.Commands):
         dests = [int(x) for x in args if x.isdigit()]
         if not dests:
             return "Must provide at least one integer Channel or User ID."
-        await self.client.dig_tunnel(src.channel, *dests)
+        await self.client.dig_tunnel(src.channel.id, *dests)
 
     async def cmd_disconnect(self, src, **_):
         await self.client.close_tunnels_to(src.channel)
+        return "Disconnected channel from all Messaging Tunnels."
 
     async def cmd_argtest(
         self,

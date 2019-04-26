@@ -36,7 +36,7 @@ class Tunnel:
     def __init__(self, client, *gates, anonymous=False, timeout=600):
         self.anon = anonymous
         self.client = client
-        self.gates = gates
+        self.gates = set(gates)
         self.timeout = timeout
 
         self.active = False
@@ -57,8 +57,8 @@ class Tunnel:
                 else:
                     self.connected.append(channel)
         if len(self.connected) < 2:
-            self.connected = []
             await self.broadcast("Failed to establish Tunnel.")
+            self.connected = []
             raise TunnelSetupError()
         else:
             self.active = True
@@ -73,7 +73,9 @@ class Tunnel:
         em = discord.Embed(
             description=src.content,
             timestamp=src.created_at,
-            title="Message from `{}`".format(src.channel.name),
+            title="Message from `{}`".format(src.channel.name)
+            if hasattr(src.channel, "name")
+            else "Message via DM",
         ).set_author(name=src.author.display_name, icon_url=src.author.avatar_url)
         return {"embed": em}
 
