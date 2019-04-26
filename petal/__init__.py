@@ -157,7 +157,7 @@ class Petal(discord.Client):
     async def ban_loop(self):
         # if self.dev_mode:
         #     return
-        mainguild = self.get_guild(self.config.get("mainServer"))
+        mainguild: discord.Guild = self.get_guild(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
         log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
         await asyncio.sleep(interval)
@@ -165,35 +165,30 @@ class Petal(discord.Client):
             epoch = int(time.time())
             log.f("BANS", "Now Timestamp: " + str(epoch))
 
-            banlist = await mainguild.get_bans()
-
-            for member in banlist:
+            for entry in await mainguild.bans():
+                user = entry["user"]
                 # log.f("UNBANS", m.name + "({})".format(m.id))
-                ban_expiry = self.db.get_attribute(member, "banExpires", verbose=False)
-                if ban_expiry is None:
-                    continue
-                if not self.db.get_attribute(member, "tempBanned"):
-                    print(
-                        "Member {}({}) was not tempbanned. Skipping".format(
-                            member.name, member.id
-                        )
-                    )
+                ban_expiry = self.db.get_attribute(user, "banExpires", verbose=False)
+                if ban_expiry is None or not self.db.get_attribute(user, "tempBanned"):
                     continue
                 elif int(ban_expiry) <= int(epoch):
                     log.f(str(ban_expiry) + " compared to " + str(epoch))
                     print(flush=True)
-                    await member.unban()
-                    self.db.update_member(member, {"banned": False})
-                    log.f(
-                        "BANS", "Unbanned " + member.name + " ({}) ".format(member.id)
-                    )
-
+                    try:
+                        await mainguild.unban(user, reason="Tempban Expired")
+                    except discord.Forbidden:
+                        log.f("BANS", "Lacking permission to unban {}.".format(user.id))
+                    except discord.HTTPException as e:
+                        log.f("BANS", "FAILED to unban {}: {}".format(user.id, e))
+                    else:
+                        self.db.update_member(user, {"banned": False})
+                        log.f("BANS", "Unbanned {} ({}) ".format(user.name, user.id))
                 else:
                     log.f(
                         "BANS",
-                        member.name
+                        user.name
                         + " ({}) has {} seconds left".format(
-                            member.id, str((int(ban_expiry) - int(epoch)))
+                            user.id, str((int(ban_expiry) - int(epoch)))
                         ),
                     )
                 await asyncio.sleep(0.5)
@@ -201,7 +196,7 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def on_member_ban(self, member):
-        print("Giving database a chance ot sync...")
+        print("Giving database a chance to sync...")
         await asyncio.sleep(1)
 
         if not self.db.member_exists(member):
