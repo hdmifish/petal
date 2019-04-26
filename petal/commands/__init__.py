@@ -7,6 +7,7 @@ from typing import get_type_hints, List, Tuple, Optional as Opt
 
 import discord
 
+from petal.exceptions import CommandError
 from petal.social_integration import Integrated
 
 
@@ -293,10 +294,17 @@ class CommandRouter(Integrated):
                         message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                     )
                 return await get_output(func(args=args, **opts, msg=msg, src=src))
+            except CommandError as e:
+                # Petal exception raised. This is not necessarily an "error",
+                #   per se; Mostly it substitutes an early return from a method
+                #   that cannot return, such as a Generator.
+                return str(e)
             except Exception as e:
-                await src.channel.send(content="Sorry, an exception was raised: `{}` (`{}`)".format(
-                    type(e).__name__, e
-                ))
+                await src.channel.send(
+                    content="Sorry, an exception was raised: `{}` (`{}`)".format(
+                        type(e).__name__, e
+                    )
+                )
                 raise e
 
     async def run(self, src: discord.Message):
