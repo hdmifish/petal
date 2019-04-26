@@ -399,7 +399,9 @@ class CommandsUtil(core.Commands):
         `--number=<float>`, `-n <float>` :: Define this Option to be displayed.
         """
         print(args, opts, src)
-        out = ["ARGS:", *args, "OPTS:"]
+        # out = ["ARGS:", *args, "OPTS:"]
+        for x in ["ARGS:", *args, "OPTS:"]:
+            yield x
         for opt, val in [
             ("`--boolean`, `-b`", _boolean or _b),
             ("`--string`, `-s`", _string or _s),
@@ -416,9 +418,11 @@ class CommandsUtil(core.Commands):
             # ("-n", _n),
         ]:
             if val is not None:
-                out.append("{} = `{}` ({})".format(opt, repr(val), type(val).__name__))
-        out.append("MSG: " + msg)
-        return "\n".join(out)
+                # out.append("{} = `{}` ({})".format(opt, repr(val), type(val).__name__))
+                yield "{} = `{}` ({})".format(opt, repr(val), type(val).__name__)
+        yield "MSG: " + msg
+        # out.append("MSG: " + msg)
+        # return "\n".join(out)
 
 
 # Keep the actual classname unique from this common identifier

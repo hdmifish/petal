@@ -102,6 +102,25 @@ def check_types(opts: dict, hints: dict) -> dict:
     return output
 
 
+async def get_output(output):
+    """Transform returned value into something usable.
+
+    A Command Method has been called. It may have returned a Coroutine, a
+        Generator, or even an Asynchronous Generator. However, the last two
+        cannot be used by simply awaiting. We need to compact them into a List,
+        but of course first we need to know whether that is even necessary.
+    """
+    if hasattr(output, "__aiter__"):
+        # Passed object is an Asynchronous Generator. Collect it.
+        return [x async for x in output]
+    elif hasattr(output, "__next__"):
+        # Passed object is a Synchronous Generator. List it.
+        return list(output)
+    else:
+        # Passed object is a Coroutine. Await it.
+        return await output
+
+
 auth_fail_dict = {
     "bad user": "Could not find you on the main server.",
     "bad role": "Could not find the correct role on the main server.",
@@ -231,7 +250,7 @@ class CommandRouter(Integrated):
 
         return args, opts
 
-    async def route(self, command: str, src: discord.Message) -> str:
+    async def route(self, command: str, src: discord.Message):
         """Route a command (and the source message) to the correct method of the
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
@@ -273,11 +292,12 @@ class CommandRouter(Integrated):
                         channel=src.channel,
                         message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                     )
-                return (await func(args=args, **opts, msg=msg, src=src)) or ""
+                return await get_output(func(args=args, **opts, msg=msg, src=src))
             except Exception as e:
-                return "Sorry, an exception was raised: `{}` (`{}`)".format(
+                await src.channel.send(content="Sorry, an exception was raised: `{}` (`{}`)".format(
                     type(e).__name__, e
-                )
+                ))
+                raise e
 
     async def run(self, src: discord.Message):
         """Given a message, determine whether it is a command;

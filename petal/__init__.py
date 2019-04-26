@@ -244,22 +244,37 @@ class Petal(discord.Client):
         """Use a discrete method for this, so that it can be used recursively if
             needed.
         """
-        if hasattr(response, "__next__"):
-            lines = list(response)
-            if lines[0] is True:
-                # If the first yielded value is True, send each subsequent line
-                #   as its own message.
-                for line in lines[1:]:
-                    await self.print_response(message, line)
-            else:
-                # Otherwise, just split them with newlines in one message.
-                await self.print_response(
-                    message, "\n".join([str(x) for x in response])
-                )
+        if type(response) == list:
+            # Response is list, indicating the function used Yielding. Yield
+            #   command returns support switching between Separate and Group
+            #   modes mid-stream. This is quite finnicky, so a Command method
+            #   should NEVER Yield an Embed object, to be safe.
+            # TODO: Thoroughly document Mode switching.
+            clusters = [[]]
+            separate = False
+            for line in response:
+                if line is True:
+                    # Switch to Separate mode.
+                    if not separate:
+                        separate = True
+                elif line is False:
+                    # Switch to Group mode.
+                    separate = False
+                elif separate:
+                    # Add line to new cluster.
+                    clusters.append([line])
+                else:
+                    # Add line to last cluster.
+                    clusters[-1].append(line)
+
+            for cc in [c for c in clusters if c]:
+                await self.print_response(message, "\n".join(cc))
+
         elif type(response) == dict:
             # If the response is a Dict, it is a series of keyword arguments
             #   intended to be passed directly to `Channel.send()`.
             await message.channel.send(**response)
+
         elif type(response) == discord.Embed:
             # If the response is an Embed, simply show it as normal.
             await self.send_message(message.author, message.channel, embed=response)
