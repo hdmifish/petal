@@ -108,10 +108,11 @@ class CommandsMod(core.Commands):
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
-            reason = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
-            )
-            if reason is None:
+            try:
+                reason = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=30
+                )
+            except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
             _reason = reason.content
 
@@ -123,12 +124,13 @@ class CommandsMod(core.Commands):
                 + userToBan.name
                 + ". If this is correct, type `yes`.",
             )
-            confmsg = await self.client.wait_for(
-                "message", check=same_author(src), timeout=10
-            )
-            if confmsg is None:
+            try:
+                confmsg = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=10
+                )
+            except asyncio.TimeoutError:
                 return "Timed out. User was not kicked"
-            elif confmsg.content.lower() != "yes":
+            if confmsg.content.lower() != "yes":
                 return userToBan.name + " was not kicked."
 
         try:
@@ -204,10 +206,11 @@ class CommandsMod(core.Commands):
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
-            reason = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
-            )
-            if reason is None:
+            try:
+                reason = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=30
+                )
+            except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
 
             _reason = reason.content
@@ -220,12 +223,13 @@ class CommandsMod(core.Commands):
                 + userToBan.name
                 + ". If this is correct, type `yes`.",
             )
-            msg = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
-            )
-            if msg is None:
+            try:
+                msg = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=30
+                )
+            except asyncio.TimeoutError:
                 return "Timed out... user was not banned."
-            elif msg.content.lower() != "yes":
+            if msg.content.lower() != "yes":
                 return userToBan.name + " was not banned."
 
         try:
@@ -321,21 +325,23 @@ class CommandsMod(core.Commands):
             await self.client.send_message(
                 src.author, src.channel, "Please give a reason (just reply below): "
             )
-            reason = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
-            )
-            if reason is None:
+            try:
+                reason = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=30
+                )
+            except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
             _reason = reason.content
 
         if not _days:
             await self.client.send_message(src.author, src.channel, "How long? (days) ")
-            msg2 = await self.client.wait_for(
-                "message",
-                check=(lambda x: same_author(src)(x) and x.content.isdigit()),
-                timeout=30,
-            )
-            if msg2 is None:
+            try:
+                msg2 = await self.client.wait_for(
+                    "message",
+                    check=(lambda x: same_author(src)(x) and x.content.isdigit()),
+                    timeout=30,
+                )
+            except asyncio.TimeoutError:
                 return "Timed out while waiting for input"
             _days = msg2.content
 
@@ -403,10 +409,11 @@ class CommandsMod(core.Commands):
         await self.client.send_message(
             src.author, src.channel, "Please give a message to send (just reply below):"
         )
-        msg = await self.client.wait_for(
-            "message", check=same_author(src), timeout=30
-        )
-        if msg is None:
+        try:
+            msg = await self.client.wait_for(
+                "message", check=same_author(src), timeout=30
+            )
+        except asyncio.TimeoutError:
             return "Timed out while waiting for message."
 
         else:
@@ -478,10 +485,11 @@ class CommandsMod(core.Commands):
             src.channel,
             "Please give a reason for the mute (just reply below): ",
         )
-        reason = await self.client.wait_for(
-            "message", check=same_author(src), timeout=30
-        )
-        if reason is None:
+        try:
+            reason = await self.client.wait_for(
+                "message", check=same_author(src), timeout=30
+            )
+        except asyncio.TimeoutError:
             return "Timed out while waiting for reason."
 
         muteRole = discord.utils.get(src.guild.roles, name="mute")
@@ -578,11 +586,16 @@ class CommandsMod(core.Commands):
             + "this channel. Type: confirm if this "
             + "is correct.",
         )
-        msg = await self.client.wait_for(
-            "message", check=same_author(src), timeout=10
-        )
-        if msg is None or msg.content.lower() != "confirm":
+        try:
+            msg = await self.client.wait_for(
+                "message", check=same_author(src), timeout=10
+            )
+        except asyncio.TimeoutError:
+            msg = None
+
+        if not msg or msg.content.lower() != "confirm":
             return "Purge event cancelled"
+
         try:
             # petal.logLock = True
             await self.client.purge_from(
@@ -819,10 +832,11 @@ class CommandsMod(core.Commands):
                 src.channel,
                 "Please give a message to send (just reply below):",
             )
-            msg = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
-            )
-            if msg is None:
+            try:
+                msg = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=30
+                )
+            except asyncio.TimeoutError:
                 return "Timed out while waiting for message."
             else:
                 text = msg.content
@@ -845,12 +859,13 @@ class CommandsMod(core.Commands):
                     destination.mention, identity
                 ), embed=em
             )
-            confirm = await self.client.wait_for(
-                "message", check=same_author(src), timeout=10
-            )
-            if confirm is None:
+            try:
+                confirm = await self.client.wait_for(
+                    "message", check=same_author(src), timeout=10
+                )
+            except asyncio.TimeoutError:
                 return "Timed out."
-            elif confirm.content.lower() != "yes":
+            if confirm.content.lower() != "yes":
                 return "Message cancelled."
             else:
                 await self.client.embed(destination, em)
