@@ -207,8 +207,8 @@ class Petal(discord.Client):
     async def dig_tunnel(self, origin, *channels: List[int], anon=False):
         """Create a new Tunnel.
             The first Positional Argument is the Origin Channel, the Channel to
-            which to report back to in case of problems. All subsequent
-            Positional Arguments are Integer IDs.
+            which to report back in case of problems. All subsequent Positional
+            Arguments are Integer IDs.
         """
         new = Tunnel(self, origin, *channels, anon)
         try:
