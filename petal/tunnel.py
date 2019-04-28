@@ -26,6 +26,9 @@ class Tunnel:
         self.waiting = None
 
     async def activate(self):
+        """Resolve all Channel IDs into usable Channel Objects, and store them
+            in memory in a List.
+        """
         for c_id in [i for i in self.gates if type(i) == int]:
             channel = self.client.get_channel(c_id)
             user = self.client.get_user(c_id)
@@ -66,7 +69,8 @@ class Tunnel:
                 )
             )
 
-    def convert(self, src):
+    def convert(self, src: discord.Message):
+        """Build a Discord Embed representing the passed Message."""
         em = discord.Embed(
             description=src.content,
             timestamp=src.created_at,
@@ -83,6 +87,7 @@ class Tunnel:
         file=None,
         exclude: list = None,
     ):
+        """Post a Message with the supplied values to all connected Channels."""
         exclude = exclude or []
         to_drop = []
         if content or embed or file:
@@ -96,17 +101,23 @@ class Tunnel:
                 await self.drop(gate)
 
     async def close(self):
+        """Remove all connected Gateways, and remove self from the Tunnels field
+            in the Client. If the interface has been used correctly, this will
+            cause the Garbage Collector to delete the Tunnel fully.
+        """
         for gate in self.connected:
             await self.drop(gate)
         self.client.remove_tunnel(self)
 
     async def drop(self, gate):
+        """Remove a connected Channel from the connected Channels."""
         while gate in self.connected:
             self.connected.remove(gate)
         if self.active:
             await self.broadcast("One endpoint has disconnected.")
 
     async def kill(self, final=""):
+        """Induce this Tunnel to close."""
         if final:
             await self.broadcast(final)
         self.active = False
@@ -114,6 +125,7 @@ class Tunnel:
             self.waiting.cancel()
 
     async def receive(self, msg: discord.Message):
+        """Forward a received Message to all connected Channels."""
         await self.broadcast(exclude=[msg.channel.id], **self.convert(msg))
 
     async def run_tunnel(self):
