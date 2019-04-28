@@ -375,6 +375,17 @@ class CommandsUtil(core.Commands):
         _k: bool = False,
         **_
     ):
+        """Establish or manipulate a live connection between multiple Channels.
+
+        A Messaging Tunnel is a live connection between Channels. Any Message sent in any Channel connected to a Tunnel will be forwarded to all other Channels connected to the Tunnel.
+        A Tunnel will close automatically if no Messages are sent through it for a given time. This value defaults to ten minutes.
+
+        Syntax: `{p}tunnel [OPTIONS] [<int:channel_id>...]`
+
+        Options:
+        `--disconnect`, `-d` :: Remove the current Channel from any connected Tunnels. This will NOT close the Tunnel completely.
+        `--kill`, `-k` :: Kill the Tunnel connected to the current Channel. This will disconnect ALL channels from the Tunnel.
+        """
         if _kill or _k:
             await self.client.kill_tunnel(self.client.get_tunnel(src.channel))
             return "Closed Messaging Tunnel connected to this Channel."
