@@ -212,7 +212,16 @@ class Petal(discord.Client):
             self.tunnels.append(new)
             return True
 
-    def remove_tunnel(self, t):
+    def get_tunnel(self, channel):
+        for t in self.tunnels:
+            if channel in t.connected:
+                return t
+
+    async def kill_tunnel(self, t: Tunnel):
+        if t:
+            await t.kill()
+
+    def remove_tunnel(self, t: Tunnel):
         while t in self.tunnels:
             self.tunnels.remove(t)
 

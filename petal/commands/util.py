@@ -353,7 +353,7 @@ class CommandsUtil(core.Commands):
         Syntax: `{p}animalcrossing`
         """
         if not self.db.useDB:
-            return "Sorry, datbase is not enabled..."
+            return "Sorry, database is not enabled..."
 
         if self.db.get_attribute(src.author, "ac") is None:
             self.db.update_member(src.author, {"ac": True}, 2)
@@ -365,15 +365,29 @@ class CommandsUtil(core.Commands):
             self.db.update_member(src.author, {"ac": True}, 2)
             return "Re-Enabled Animal Crossing Endings..."
 
-    async def cmd_tunnel(self, args, src, **_):
-        dests = [int(x) for x in args if x.isdigit()]
-        if not dests:
-            return "Must provide at least one integer Channel or User ID."
-        await self.client.dig_tunnel(src.channel, *dests)
+    async def cmd_tunnel(
+        self,
+        args,
+        src,
+        _disconnect: bool = False,
+        _d: bool = False,
+        _kill: bool = False,
+        _k: bool = False,
+        **_
+    ):
+        if _kill or _k:
+            await self.client.kill_tunnel(self.client.get_tunnel(src.channel))
+            return "Closed Messaging Tunnel connected to this Channel."
 
-    async def cmd_disconnect(self, src, **_):
-        await self.client.close_tunnels_to(src.channel)
-        return "Disconnected channel from all Messaging Tunnels."
+        elif _disconnect or _d:
+            await self.client.close_tunnels_to(src.channel)
+            return "Disconnected channel from all Messaging Tunnels."
+
+        else:
+            dests = [int(x) for x in args if x.isdigit()]
+            if not dests:
+                return "Must provide at least one integer Channel or User ID."
+            await self.client.dig_tunnel(src.channel, *dests)
 
     async def cmd_argtest(
         self,

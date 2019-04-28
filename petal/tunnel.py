@@ -10,28 +10,6 @@ import discord
 from petal.exceptions import TunnelSetupError
 
 
-class Gateway:
-    def __init__(self, m_id: int):
-        self.id = m_id
-
-        self.channel: discord.abc.Messageable = "TODO: Find channel object from ID"
-        self.nicknames = []
-
-    def decode(self, d, field):
-        if d.get(field):
-            for nick, real in self.nicknames:
-                d[field] = d[field].replace(nick, real)
-
-    def encode(self, d, field):
-        if d.get(field):
-            for nick, real in self.nicknames:
-                d[field] = d[field].replace(real, nick)
-
-    async def send(self, **kw):
-        self.decode(kw, "content")
-        await self.channel.send(**kw)
-
-
 class Tunnel:
     def __init__(self, client, origin, *gates, anonymous=False, timeout=600):
         self.anon = anonymous
@@ -41,8 +19,8 @@ class Tunnel:
 
         self.active = False
         self.connected = []
-        self.names_c = {}  # Channel aliases
-        self.names_u = {}  # User aliases
+        # self.names_c = {}  # Channel aliases
+        # self.names_u = {}  # User aliases
 
         self.origin = origin
         self.waiting = None
@@ -55,14 +33,20 @@ class Tunnel:
                 channel = user.dm_channel or await user.create_dm()
 
             if channel:
-                try:
-                    await channel.send("Connecting to Messaging Tunnel...")
-                except discord.Forbidden as e:
-                    await self.origin.send(
-                        "Failed to connect to `{}`: {}".format(channel.id, e)
-                    )
+                if not self.client.get_tunnel(channel):
+                    try:
+                        await channel.send("Connecting to Messaging Tunnel...")
+                    except discord.Forbidden as e:
+                        await self.origin.send(
+                            "Failed to connect to `{}`: {}".format(channel.id, e)
+                        )
+                    else:
+                        self.connected.append(channel)
                 else:
-                    self.connected.append(channel)
+                    await self.origin.send(
+                        "Failed to connect to {}: "
+                        "Channel is already Tunneling.".format(channel.mention)
+                    )
             else:
                 await self.origin.send(
                     "Failed to connect to `{}`: "
@@ -119,6 +103,8 @@ class Tunnel:
     async def drop(self, gate):
         while gate in self.connected:
             self.connected.remove(gate)
+        if self.active:
+            await self.broadcast("One endpoint has disconnected.")
 
     async def kill(self, final=""):
         if final:
@@ -134,7 +120,7 @@ class Tunnel:
         """Begin Tunnel operation loop."""
         while self.active:
             if len(self.connected) < 2:
-                await self.kill("Connection closed: No other endpoints.")
+                await self.kill("Connection closed: No active endpoints.")
                 continue
             self.waiting = create_task(
                 self.client.wait_for(
@@ -142,6 +128,7 @@ class Tunnel:
                     check=(
                         lambda m: m.channel in self.connected
                         and m.author.id != self.client.user.id
+                        and not m.content.startswith(self.client.config.prefix)
                     ),
                     timeout=self.timeout,
                 )
