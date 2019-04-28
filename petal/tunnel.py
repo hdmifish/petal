@@ -47,8 +47,8 @@ class Tunnel:
                         self.connected.append(channel)
                 else:
                     await self.origin.send(
-                        "Failed to connect to {}: "
-                        "Channel is already Tunneling.".format(channel.mention)
+                        "Failed to connect to `{}`: "
+                        "Channel is already Tunneling.".format(channel.id)
                     )
             else:
                 await self.origin.send(
