@@ -64,7 +64,8 @@ class Tunnel:
             create_task(self.run_tunnel())
             await self.broadcast(
                 "Messaging Tunnel between {} channels established. "
-                "Invoke `{}disconnect` to disconnect from the Tunnel.".format(
+                "Invoke `{}tunnel (--disconnect | -d)` to disconnect "
+                "from the Tunnel.".format(
                     len(self.connected), self.client.config.prefix
                 )
             )
@@ -72,6 +73,7 @@ class Tunnel:
     def convert(self, src: discord.Message):
         """Build a Discord Embed representing the passed Message."""
         em = discord.Embed(
+            colour=src.author.colour,
             description=src.content,
             timestamp=src.created_at,
             title="Message from `#{}`".format(src.channel.name)
@@ -115,6 +117,8 @@ class Tunnel:
             self.connected.remove(gate)
         if self.active:
             await self.broadcast("One endpoint has disconnected.")
+        if len(self.connected) < 2:
+            await self.kill("Connection closed: No active endpoints.")
 
     async def kill(self, final=""):
         """Induce this Tunnel to close."""
@@ -149,7 +153,8 @@ class Tunnel:
                 msg = await self.waiting
             except CancelledError:
                 # Tunnel was killed.
-                await self.broadcast("Connection closed: Coroutine cancelled.")
+                if self.active:
+                    await self.broadcast("Connection closed: Coroutine cancelled.")
             except TimeoutError:
                 # Tunnel timed out.
                 await self.kill("Connection closed due to inactivity.")
