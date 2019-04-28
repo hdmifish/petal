@@ -11,6 +11,7 @@ from hashlib import sha256
 import random
 import re
 import time
+from typing import List
 
 import discord
 
@@ -18,7 +19,7 @@ from petal import grasslands
 from petal.commands import CommandRouter as Commands
 from petal.config import Config
 from petal.dbhandler import DBHandler
-from petal.exceptions import TunnelSetupError
+from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 
 
@@ -199,10 +200,16 @@ class Petal(discord.Client):
             await asyncio.sleep(interval)
 
     async def close_tunnels_to(self, channel):
+        """Given a Channel, remove it from any/all Tunnels connecting to it."""
         for t in self.tunnels:
             await t.drop(channel)
 
-    async def dig_tunnel(self, origin, *channels, anon=False):
+    async def dig_tunnel(self, origin, *channels: List[int], anon=False):
+        """Create a new Tunnel.
+            The first Positional Argument is the Origin Channel, the Channel to
+            which to report back to in case of problems. All subsequent
+            Positional Arguments are Integer IDs.
+        """
         new = Tunnel(self, origin, *channels, anon)
         try:
             await new.activate()
@@ -213,15 +220,20 @@ class Petal(discord.Client):
             return True
 
     def get_tunnel(self, channel):
+        """Given a Channel, return the first Tunnel connected to it, if any."""
         for t in self.tunnels:
             if channel in t.connected:
                 return t
 
     async def kill_tunnel(self, t: Tunnel):
+        """Given a Tunnel, kill it. Duh."""
         if t:
             await t.kill()
 
     def remove_tunnel(self, t: Tunnel):
+        """Given a dead Tunnel, remove it from the Client Tunnels."""
+        if t.active:
+            raise TunnelHobbled("Cannot Remove a Tunnel which is still active.")
         while t in self.tunnels:
             self.tunnels.remove(t)
 
