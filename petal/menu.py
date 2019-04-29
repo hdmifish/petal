@@ -6,11 +6,16 @@ from discord import Embed, Channel, Message, User
 # Assemble all the emoji we need via hexadecimal values.
 # I have trust issues when it comes to eclectic characters in my source code, so
 #   this makes me feel slightly safer, while also saving space.
-char = lambda n: bytes.fromhex(hex(n)[2:]).decode("utf-8")
+letters = [chr(n) for n in range(0x1F1E6, 0x1F200)]
+cancel = chr(0x274E)
+confirm = chr(0x2705)
 
-letters = [char(n) for n in range(0x_F0_9F_87_A6, 0x_F0_9F_87_C0)]
-cancel = char(0x_E2_9D_8E)
-confirm = char(0x_E2_9C_85)
+astro = [chr(n) for n in range(0x2648, 0x2654)]  # Zodiac icons because why not
+info = chr(0x2139)  # [i]
+okay = chr(0x1F197)  # [OK]
+
+clock = [chr(n) for n in range(0x1F550, 0x1F55C)]
+clock[0:0] = [clock.pop(-1)]  # Clock symbols: [12, 1, 2, ..., 11]
 
 
 def count_votes(allowed: list, votes: list):

@@ -114,7 +114,6 @@ class CommandRouter(Integrated):
     version = ""
 
     def __init__(self, client, *a, **kw):
-        self.startup = dt.utcnow()
         super().__init__(client)
 
         self.log.info("Loading Command modules...")
@@ -295,7 +294,7 @@ class CommandRouter(Integrated):
 
     @property
     def uptime(self):
-        delta = dt.utcnow() - self.startup
+        delta = dt.utcnow() - self.client.startup
         delta = delta.total_seconds()
 
         d = divmod(delta, 86400)  # days

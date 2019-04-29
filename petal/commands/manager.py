@@ -63,9 +63,9 @@ class CommandsMgr(core.Commands):
             if not targ.isnumeric():
                 return "Entry must be an integer."
 
-            result = self.db.update_motd(int(args[1]))
+            result = self.db.update_motd(int(args[0]))
             if result is None:
-                return "No entries exist with id number: " + args[1]
+                return "No entries exist with id number: " + args[0]
 
             newEmbed = discord.Embed(
                 title="Approved " + str(result["num"]),
@@ -87,9 +87,9 @@ class CommandsMgr(core.Commands):
             if not targ.isnumeric():
                 return "Entry must be an integer"
 
-            result = self.db.update_motd(int(args[1]), approve=False)
+            result = self.db.update_motd(int(args[0]), approve=False)
             if result is None:
-                return "No entries exist with id number: " + args[1]
+                return "No entries exist with id number: " + args[0]
 
             newEmbed = discord.Embed(
                 title="Rejected " + str(result["num"]),

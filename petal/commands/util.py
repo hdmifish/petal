@@ -165,7 +165,9 @@ class CommandsUtil(core.Commands):
             em.add_field(
                 name="Restriction:",
                 value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(
-                    self.config.get(mod.role), mod.op, mod.whitelist
+                    self.config.get(mod.role),
+                    mod.op if 0 <= mod.op <= 4 else None,
+                    mod.whitelist,
                 ),
             )
             em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))

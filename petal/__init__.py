@@ -7,6 +7,7 @@ written by isometricramen
 import asyncio
 from collections import deque
 from datetime import datetime
+from hashlib import sha256
 import random
 import re
 import time
@@ -22,14 +23,25 @@ from petal.dbhandler import DBHandler
 # from random import randint
 log = grasslands.Peacock()
 
-version = "0.0.0"
+version = "<UNSET>"
 with open("version_info.sh", "r") as f:
-    inf = f.read()
-    inf = inf.split("VERSION=", 1)[-1].split("\n", 1)[0]
-    if inf:
-        version = inf
+    for line in f:
+        if line.startswith("VERSION="):
+            version = line.split("=", 1)[1].split("#")[0].strip()
 
 grasslands.version = version
+
+
+def mash(*data, digits=4, base=10):
+    # This is a duplicate of a function in mod.py.
+    # TODO: Put somewhere both can access; Do not repeat.
+    sha = sha256()
+    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
+    hashval = int(sha.hexdigest(), 16)
+    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
+    hashval %= ceiling  # 0000 <= N <= 8999
+    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
+    return hashval
 
 
 class Petal(discord.Client):
@@ -49,6 +61,8 @@ class Petal(discord.Client):
         self.commands = Commands(self)
         self.commands.version = version
         self.potential_typoed_commands = deque([], 3)
+        self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
+        self.startup = datetime.utcnow()
         self.tempBanFlag = False
 
         self.dev_mode = devmode
@@ -72,6 +86,10 @@ class Petal(discord.Client):
             exit(401)
         return
 
+    @property
+    def uptime(self):
+        return datetime.utcnow() - self.startup
+
     @staticmethod
     def is_pm(message):
         if message.channel.is_private:
@@ -88,6 +106,20 @@ class Petal(discord.Client):
             log.err("This client is not a member of any servers")
             exit(404)
         return self.config.get("mainServer")
+
+    async def status_loop(self):
+        interv = 32
+        g_ses = discord.Game(name="Session: " + self.session_id[2:])
+        g_ver = discord.Game(name="Version: " + version)
+        while True:
+            await self.change_presence(game=g_ses)
+            await asyncio.sleep(interv)
+            await self.change_presence(
+                game=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+            )
+            await asyncio.sleep(interv)
+            await self.change_presence(game=g_ver)
+            await asyncio.sleep(interv)
 
     async def save_loop(self):
         if self.dev_mode:
@@ -176,6 +208,8 @@ class Petal(discord.Client):
         log.info("Prefix: " + self.config.prefix)
         log.info("SelfBot: " + ["true", "false"][self.config.useToken])
 
+        self.loop.create_task(self.status_loop())
+        log.ready("Gamestatus coroutine running...")
         self.loop.create_task(self.save_loop())
         log.ready("Autosave coroutine running...")
         self.loop.create_task(self.ban_loop())
@@ -188,20 +222,31 @@ class Petal(discord.Client):
             log.warn(
                 "No dbconf configuration in config.yml," + "motd features are disabled"
             )
-        await self.change_presence(game=discord.Game(name="with cats :3"))
         return
 
     async def execute_command(self, message):
         response = await self.commands.run(message)
         if response is not None:
             self.config.get("stats")["comCount"] += 1
-            await self.send_message(message.author, message.channel, response)
+
+            if type(response) == discord.Embed:
+                await self.send_message(message.author, message.channel, embed=response)
+            else:
+                await self.send_message(message.author, message.channel, str(response))
+
             return True
         else:
             return False
 
     async def send_message(
-        self, author=None, channel=None, message=None, timeout=0, **kwargs
+        self,
+        author=None,
+        channel=None,
+        message=None,
+        timeout=0,
+        *,
+        embed=None,
+        **kwargs
     ):
         """
         Overload on the send_message function
@@ -219,7 +264,7 @@ class Petal(discord.Client):
                         l = list(self.db.ac.find())
                         message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
-            return await super().send_message(channel, message)
+            return await super().send_message(channel, message, embed=embed)
         except discord.errors.InvalidArgument:
             log.err("A message: " + message + " was unable to be sent in " + channel)
             return None
@@ -232,10 +277,10 @@ class Petal(discord.Client):
             )
             return None
 
-    async def embed(self, channel, embedded):
+    async def embed(self, channel, embedded, content=None):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel, embed=embedded)
+        return await super().send_message(channel, content=content, embed=embedded)
 
     async def on_member_join(self, member):
         """
