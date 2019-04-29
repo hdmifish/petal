@@ -118,26 +118,31 @@ class Petal(discord.Client):
         return self.get_guild(self.config.get("mainServer"))
 
     async def status_loop(self):
-        # interv = 32
-        times = {"start": self.startup.timestamp() * 1000}
+        interv = 32
+        # times = {"start": self.startup.timestamp() * 1000}
         g_ses = discord.Activity(
-            details=self.session_id[2:],
-            name="for commands",
-            timestamps=times,
-            type=discord.ActivityType.watching,
+            name="Session: {}".format(self.session_id[2:]),
+            # timestamps=times,
+            type=discord.ActivityType.playing,
         )
-        await self.change_presence(activity=g_ses)
-        # g_ver = discord.Activity(
-        #     type=discord.ActivityType.playing,
-        #     name="Version",
-        #     details=version,
-        #     timestamps=times,
-        # )
-        # while True:
-        #     await self.change_presence(activity=g_ses)
-        #     await asyncio.sleep(interv)
-        #     await self.change_presence(activity=g_ver)
-        #     await asyncio.sleep(interv)
+        g_ver = discord.Activity(
+            name="Version: {}".format(version),
+            # timestamps=times,
+            type=discord.ActivityType.playing,
+        )
+        while True:
+            await self.change_presence(
+                activity=discord.Game(name=self.config.prefix + "info")
+            )
+            await asyncio.sleep(interv)
+            await self.change_presence(activity=g_ses)
+            await asyncio.sleep(interv)
+            await self.change_presence(
+                activity=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+            )
+            await asyncio.sleep(interv)
+            await self.change_presence(activity=g_ver)
+            await asyncio.sleep(interv)
 
     async def save_loop(self):
         if self.dev_mode:
@@ -410,6 +415,8 @@ class Petal(discord.Client):
             member, {"aliases": [member.name], "guilds": [member.server.id]}
         )
 
+        age = datetime.utcnow() - member.created_at
+
         user_embed.set_thumbnail(url=member.avatar_url)
         user_embed.add_field(name="Name", value=member.name)
 
@@ -420,9 +427,10 @@ class Petal(discord.Client):
         else:
             game = member.game.name
         user_embed.add_field(name="Currently Playing", value=game)
-        user_embed.add_field(name="Joined: ", value=str(member.joined_at)[:-7])
+        user_embed.add_field(name="Joined", value=str(member.joined_at)[:-7])
         user_embed.add_field(
-            name="Account Created: ", value=str(member.created_at)[:-7]
+            name="Account Created:",
+            value="{} ({} ago)".format(str(member.created_at)[:-7], str(age)[:-10]),
         )
 
         await self.embed(self.get_channel(self.config.logChannel), user_embed)
@@ -430,8 +438,6 @@ class Petal(discord.Client):
             await self.send_message(
                 None, self.get_channel(self.config.logChannel), response
             )
-
-        age = datetime.utcnow() - member.created_at
         if age.days <= 6:
             # Account is less than a week old, mention its age
             timeago = [int(age.total_seconds() / 60), "minutes"]
@@ -506,6 +512,9 @@ class Petal(discord.Client):
                 name="Message creation", value=str(message.timestamp)[:-7]
             )
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            userEmbed.set_footer(
+                text=f"{message.author.name}#{message.author.discriminator} / {message.author.id}"
+            )
 
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
             await asyncio.sleep(2)
@@ -557,6 +566,9 @@ class Petal(discord.Client):
             .add_field(name="Previous message: ", value=before.content, inline=False)
             .add_field(name="Edited message: ", value=after.content)
             .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
+            .set_footer(
+                text=f"{before.author.name}#{before.author.discriminator} / {before.author.id}"
+            )
         )
 
         try:
