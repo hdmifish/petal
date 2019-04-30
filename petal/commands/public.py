@@ -169,12 +169,10 @@ class CommandsPublic(core.Commands):
 
         Syntax:
         `{p}freehug` - Request a hug.
-        `{p}freehug donate` - Toggle your donor status. Your request counter will reset if you opt out.
-        `{p}freehug add <user-id>` - Add another user to donor list.
-        `{p}freehug del <user-id>` - Remove another user from donor list.
         `{p}freehug status` - If you are a donor, see how many requests you have recieved.
+        `{p}freehug donate` - Toggle your donor status. Your request counter will reset if you opt out.
         """
-        if args[0] == "":
+        if not args:
             valid = []
             for m in self.config.hugDonors:
                 user = self.get_member(src, m)
@@ -208,36 +206,40 @@ class CommandsPublic(core.Commands):
                 self.config.save()
                 return "A hug has been requested of: " + pick.name
 
-        if args[0].lower() == "add":
-            if len(args) < 2:
-                return "To add a user, please tag them after add | "
-            user = self.get_member(src, args[1].lower())
-            if user is None:
-                return "No valid user found for " + args[1]
-            if user.id in self.config.hugDonors:
-                return "That user is already a hug donor"
-
-            self.config.hugDonors[user.id] = {"name": user.name, "donations": 0}
-            self.config.save()
-            return "{} added to the donor list".format(user.name)
-
-        elif args[0].lower() == "del":
-            if len(args) < 2:
-                return "To remove a user, please tag them after del | "
-            user = self.get_member(src, args[1].lower())
-            if user is None:
-                return "No valid user for " + args[1]
-            if user.id not in self.config.hugDonors:
-                return "That user is not a hug donor"
-
-            del self.config.hugDonors[user.id]
-            return "{} was removed from the donor list".format(user.name)
+        # if args[0].lower() == "add":
+        #     if len(args) < 2:
+        #         return "To add a user, please tag them after `{}freehug add`.".format(
+        #             self.config.prefix
+        #         )
+        #     user = self.get_member(src, args[1].lower())
+        #     if user is None:
+        #         return "No valid user found for " + args[1]
+        #     if user.id in self.config.hugDonors:
+        #         return "That user is already a hug donor"
+        #
+        #     self.config.hugDonors[user.id] = {"name": user.name, "donations": 0}
+        #     self.config.save()
+        #     return "{} added to the donor list".format(user.name)
+        #
+        # elif args[0].lower() == "del":
+        #     if len(args) < 2:
+        #         return "To remove a user, please tag them after `{}freehug del`.".format(
+        #             self.config.prefix
+        #         )
+        #     user = self.get_member(src, args[1].lower())
+        #     if user is None:
+        #         return "No valid user for " + args[1]
+        #     if user.id not in self.config.hugDonors:
+        #         return "That user is not a hug donor"
+        #
+        #     del self.config.hugDonors[user.id]
+        #     return "{} was removed from the donor list".format(user.name)
 
         elif args[0].lower() == "status":
             if src.author.id not in self.config.hugDonors:
                 return (
-                    "You are not a hug donor, user `freehug donate` to "
-                    + "add yourself"
+                    "You are not a hug donor, use `{}freehug donate` "
+                    "to add yourself.".format(self.config.prefix)
                 )
 
             return "You have received {} requests since you became a donor".format(
@@ -402,7 +404,9 @@ class CommandsPublic(core.Commands):
         """
         ex = _explain if _explain is not None else _e
         if ex is not None:
-            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(ex)
+            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(
+                ex
+            )
 
         try:
             indexresp = json.loads(

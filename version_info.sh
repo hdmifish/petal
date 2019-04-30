@@ -3,10 +3,10 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION=0.11.0
+VERSION=0.11.1
 
 #(optional) what the webhook message should say.
 UPDATE_TITLE="The Ephemeral Status"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="+ Added !bytes.\n+ Readded !bugger.\n+ Technical data now cycles through Presence field.\n* Allow embeds in messages and messages in embeds.\n* Significantly optimized !quote hashing."
+CHANGELOG="= Fixed !freehug."
