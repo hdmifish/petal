@@ -54,51 +54,47 @@ class CommandsMgr(core.Commands):
 
         elif subcom == "approve":
             if src.channel.id != self.config.get("motdModChannel"):
-                return "You can't use that here"
-
+                return "You can't use that here."
             if not args:
                 return "You need to specify an entry."
-            targ = args[0]
+            if not all([x.isdigit() for x in args]):
+                return "Every entry must be an integer."
 
-            if not targ.isnumeric():
-                return "Entry must be an integer."
+            for targ in args:
+                result = self.db.update_motd(int(targ), approve=True)
+                if result is None:
+                    return "No entries exist with id number: " + targ
 
-            result = self.db.update_motd(int(args[0]))
-            if result is None:
-                return "No entries exist with id number: " + args[0]
+                newEmbed = discord.Embed(
+                    title="Approved " + str(result["num"]),
+                    description=result["content"],
+                    colour=0x00FF00,
+                ).add_field(name="Submitted by", value="<@{}>".format(result["author"]))
 
-            newEmbed = discord.Embed(
-                title="Approved " + str(result["num"]),
-                description=result["content"],
-                colour=0x00FF00,
-            )
-
-            chan = self.client.get_channel(self.config.get("motdModChannel"))
-            await self.client.embed(chan, newEmbed)
+                chan = self.client.get_channel(self.config.get("motdModChannel"))
+                await self.client.embed(chan, newEmbed)
 
         elif subcom == "reject":
             if src.channel.id != self.config.get("motdModChannel"):
-                return "You can't use that here"
-
+                return "You can't use that here."
             if not args:
-                return "You need to specify an entry"
-            targ = args[0]
+                return "You need to specify an entry."
+            if not all([x.isdigit() for x in args]):
+                return "Every entry must be an integer."
 
-            if not targ.isnumeric():
-                return "Entry must be an integer"
+            for targ in args:
+                result = self.db.update_motd(int(targ), approve=False)
+                if result is None:
+                    return "No entries exist with id number: " + targ
 
-            result = self.db.update_motd(int(args[0]), approve=False)
-            if result is None:
-                return "No entries exist with id number: " + args[0]
+                newEmbed = discord.Embed(
+                    title="Rejected " + str(result["num"]),
+                    description=result["content"],
+                    colour=0xFFA500,
+                ).add_field(name="Submitted by", value="<@{}>".format(result["author"]))
 
-            newEmbed = discord.Embed(
-                title="Rejected " + str(result["num"]),
-                description=result["content"],
-                colour=0xFFA500,
-            )
-
-            chan = self.client.get_channel(self.config.get("motdModChannel"))
-            await self.client.embed(chan, newEmbed)
+                chan = self.client.get_channel(self.config.get("motdModChannel"))
+                await self.client.embed(chan, newEmbed)
 
         elif subcom == "count":
             count = self.db.motd.count({"approved": True, "used": False})
@@ -112,11 +108,7 @@ class CommandsMgr(core.Commands):
         response = await self.router.check_pa_updates(force=True)
 
         self.log.f(
-            "pa",
-            src.author.name
-            + " with ID: "
-            + src.author.id
-            + " used the force!",
+            "pa", src.author.name + " with ID: " + src.author.id + " used the force!"
         )
         await self.client.delete_message(src)
         if response is not None:
