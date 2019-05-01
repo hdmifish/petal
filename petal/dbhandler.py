@@ -349,3 +349,13 @@ class DBHandler(object):
             )
 
         return self.motd.find_one({"num": num})
+
+    def read_cmd_image(self, invoker: str) -> (bytes, None):
+        # TODO: `invoker` is a string key in the DB with Base64 image data. Find and return it.
+        # Should return a bytes class object if the data is in the DB, or `None` if not.
+        pass
+
+    def write_cmd_image(self, invoker: str, img: bytes):
+        # TODO: `img` is a bstring of Base64 data. Write it into the DB under the key `invoker`.
+        # Should return `True` if the image was written, or `False` if it was not.
+        pass
