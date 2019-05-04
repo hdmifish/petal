@@ -135,3 +135,6 @@ Since the last documented update:
 + Allow approval/rejection of multiple MOTD submissions in one message.
 = Fixed !freehug.
 = Fixed !mute.
+
+[v0.11.2] (2019-05-04)
+= Fixed all issues with referencing startup time of Router instead of Client.
