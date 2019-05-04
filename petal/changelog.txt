@@ -134,3 +134,4 @@ Since the last documented update:
 [v0.11.1] (2019-04-30)
 + Allow approval/rejection of multiple MOTD submissions in one message.
 = Fixed !freehug.
+= Fixed !mute.
