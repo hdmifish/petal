@@ -263,6 +263,29 @@ class CommandsUtil(core.Commands):
 
         return line_1 + line_2 + ":```" + "\n".join(cl2) + "```"
 
+    async def cmd_avatar(self, args, src, **_):
+        """Given a User ID, post their Avatar."""
+        if not args:
+            user = src.author
+        else:
+            uid = args[0]
+            if not uid.isdigit():
+                return "User IDs are Integers."
+            uid = int(uid)
+            user = self.client.get_user(uid)
+        if not user:
+            return "Cannot find user."
+
+        em = discord.Embed(
+            colour=0x0ACDFF,
+            description="`{}#{}` / `{}` / {}".format(
+                user.name, user.discriminator, user.id, user.mention
+            ),
+            title="Avatar for {}".format(user.name),
+        ).set_image(url=user.avatar_url)
+
+        await src.channel.send(embed=em)
+
     async def cmd_ping(self, src, **_):
         """Show the round trip time from this bot to Discord (not you) and back."""
         msg = await self.client.send_message(src.author, src.channel, "*hugs*")
