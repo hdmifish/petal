@@ -130,3 +130,8 @@ Since the last documented update:
 + Technical data now cycles through Presence field
 * Allow embeds in messages and messages in embeds
 * Significantly optimized !quote hashing
+
+[v0.11.1] (2019-04-30)
++ Allow approval/rejection of multiple MOTD submissions in one message.
+= Fixed !freehug.
+= Fixed !mute.

@@ -487,10 +487,13 @@ class CommandsMod(core.Commands):
 
                 if muteRole in userToWarn.roles:
                     await self.client.remove_roles(userToWarn, muteRole)
-                    await self.client.server_voice_state(userToWarn, mute=False)
+                    try:
+                        await self.client.server_voice_state(userToWarn, mute=False)
+                    except discord.errors.HTTPException:
+                        pass
                     warnEmbed = discord.Embed(
                         title="User Unmute",
-                        description="You have been unmuted by" + src.author.name,
+                        description="You have been unmuted by " + src.author.name,
                         colour=0x00FF11,
                     )
 
@@ -501,10 +504,13 @@ class CommandsMod(core.Commands):
                     muteswitch = "Unmute"
                 else:
                     await self.client.add_roles(userToWarn, muteRole)
-                    await self.client.server_voice_state(userToWarn, mute=True)
+                    try:
+                        await self.client.server_voice_state(userToWarn, mute=True)
+                    except discord.errors.HTTPException:
+                        pass
                     warnEmbed = discord.Embed(
                         title="User Mute",
-                        description="You have been " + "muted by" + src.author.name,
+                        description="You have been muted by " + src.author.name,
                         colour=0xFF0000,
                     )
                     warnEmbed.set_author(
