@@ -56,13 +56,14 @@ class Petal(discord.Client):
         else:
             log.info("Client object initialized")
 
+        self.startup = datetime.utcnow()
+
         self.config = Config()
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
         self.commands.version = version
         self.potential_typoed_commands = deque([], 3)
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
-        self.startup = datetime.utcnow()
         self.tempBanFlag = False
 
         self.dev_mode = devmode
