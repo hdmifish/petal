@@ -31,7 +31,7 @@ class CommandsPublic(core.Commands):
         )
         return response
 
-    async def bugger(self, message):
+    async def cmd_bugger(self, message):
         """Report a bug, adding it to the Trello board.
 
         Syntax: `{p}bugger "<bug report>"`
