@@ -9,4 +9,4 @@ VERSION=0.11.1
 UPDATE_TITLE="The Ephemeral Status"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="+Allow approval/rejection of multiple MOTD submissions in one message.\n= Fixed !freehug.\n= Fixed !mute."
+CHANGELOG="= Fixed all issues with referencing startup time of Router instead of Client."

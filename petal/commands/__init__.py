@@ -115,6 +115,7 @@ class CommandRouter(Integrated):
 
     def __init__(self, client, *a, **kw):
         super().__init__(client)
+        self.startup = client.startup
 
         self.log.info("Loading Command modules...")
         self.engines = []

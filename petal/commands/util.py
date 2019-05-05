@@ -227,6 +227,9 @@ class CommandsUtil(core.Commands):
         else:
             line_2 = ""
 
+        if not cmd_list:
+            return "Sorry, I do not seem to have any commands available."
+
         if _sort or _s:
             cmd_list.sort()
 
@@ -242,12 +245,14 @@ class CommandsUtil(core.Commands):
                     ]
                 )
             ]
+            if not cmd_list:
+                return "Sorry, I could not find any commands that match your search."
 
         # Unless --all or -a, remove any restricted commands.
         cl2 = []
         for cmd in cmd_list.copy():
             mod, func, denied = self.router.find_command(
-                kword=cmd, src=None if any((_all, _a)) else src
+                kword=cmd, src=None if _all or _a else src
             )
             if denied is False:
                 cl2.append(
@@ -255,8 +260,10 @@ class CommandsUtil(core.Commands):
                         self.config.prefix + cmd, mod.__module__.split(".")[-1]
                     )
                 )
+        if not cl2:
+            return "Sorry, I do not seem to have any commands that you can use."
 
-        if any((_all, _a)):
+        if _all or _a:
             line_1 = "List of all commands"
         else:
             line_1 = "List of commands you can access"
