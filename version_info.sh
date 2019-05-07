@@ -3,10 +3,10 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION=0.11.1
+VERSION=0.11.3
 
 #(optional) what the webhook message should say.
 UPDATE_TITLE="The Ephemeral Status"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="= Fixed all issues with referencing startup time of Router instead of Client."
+CHANGELOG="= Fixed an issue with options with defaults not accepting any value."

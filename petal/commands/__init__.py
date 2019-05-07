@@ -77,25 +77,29 @@ def check_types(opts: dict, hints: dict) -> dict:
         # opt name back into kwarg name
         kwarg = "_" + opt_name.strip("-").replace("-", "_")
         want = hints[kwarg]
-        err = TypeError("{} wants {}, got {}".format(opt_name, want, repr(val)))
+        err = TypeError(
+            "{} wants {}, got {} {}".format(
+                opt_name, want, type(val).__name__, repr(val)
+            )
+        )
 
-        if want == bool:
+        if want == bool or want == Opt[bool]:
             print(repr(val))
             val = True
 
-        elif want == Opt[int]:
+        elif want == int or want == Opt[int]:
             if val.lstrip("-").isdigit() and val.count("-") <= 1:
                 val = int(val)
             else:
                 raise err
 
-        elif want == Opt[float]:
+        elif want == float or want == Opt[float]:
             if val.replace(".", "", 1).lstrip("-").isdigit() and val.count("-") <= 1:
                 val = float(val)
             else:
                 raise err
 
-        elif want != Opt[type(val)]:
+        elif want != type(val) and want != Opt[type(val)]:
             raise err
 
         output[kwarg] = val

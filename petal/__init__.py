@@ -56,6 +56,8 @@ class Petal(discord.Client):
         else:
             log.info("Client object initialized")
 
+        self.startup = datetime.utcnow()
+
         self.config = Config()
         self.db = DBHandler(self.config)
         self.startup = datetime.utcnow()

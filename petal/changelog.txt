@@ -138,3 +138,6 @@ Since the last documented update:
 
 [v0.11.2] (2019-05-04)
 = Fixed all issues with referencing startup time of Router instead of Client.
+
+[v0.11.3] (2019-05-07)
+= Fixed an issue with options with defaults not accepting any value.
