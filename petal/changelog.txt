@@ -141,3 +141,6 @@ Since the last documented update:
 
 [v0.11.3] (2019-05-07)
 = Fixed an issue with options with defaults not accepting any value.
+
+[v0.11.4] (2019-05-11)
+= Fixed an issue with a command not accepting conversational numbers.

@@ -3,10 +3,10 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION=0.11.3
+VERSION=0.11.4
 
 #(optional) what the webhook message should say.
 UPDATE_TITLE="The Ephemeral Status"
 
 # Separate bullet points with hyphens and use \n characters please.
-CHANGELOG="= Fixed an issue with options with defaults not accepting any value."
+CHANGELOG="= Fixed an issue with a command not accepting conversational numbers."
