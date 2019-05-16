@@ -9,7 +9,7 @@ import time
 import discord
 
 from petal.commands import core
-from petal.etc import mash
+from petal.etc import lambdall, mash
 
 
 same_author = lambda m0: lambda m1: m0.author == m1.author and m0.channel == m1.channel
@@ -81,7 +81,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        if not self.lambdall(args, lambda x: x.isdigit()):
+        if not lambdall(args, lambda x: x.isdigit()):
             return "All IDs must be positive Integers."
 
         guild = self.client.main_guild
@@ -176,7 +176,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        if not self.lambdall(args, lambda x: x.isdigit()):
+        if not lambdall(args, lambda x: x.isdigit()):
             return "All IDs must be positive Integers."
 
         guild = self.client.main_guild
@@ -295,7 +295,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        if not self.lambdall(args, lambda x: x.isdigit()):
+        if not lambdall(args, lambda x: x.isdigit()):
             return "All IDs must be positive Integers."
 
         guild = self.client.main_guild
@@ -383,7 +383,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        if not self.lambdall(args, lambda x: x.isdigit()):
+        if not lambdall(args, lambda x: x.isdigit()):
             return "All IDs must be positive Integers."
 
         guild = self.client.main_guild
@@ -457,7 +457,7 @@ class CommandsMod(core.Commands):
         if not args:
             return
 
-        if not self.lambdall(args, lambda x: x.isdigit()):
+        if not lambdall(args, lambda x: x.isdigit()):
             return "All IDs must be positive Integers."
 
         guild = self.client.main_guild

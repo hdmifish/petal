@@ -64,27 +64,6 @@ class Commands:
         else:
             return True, None
 
-    def any(self, sample: dict, *allowed: str):
-        """Try to find any specifically non-None (rather than simple logically
-            True) value in a dict.
-        """
-        if not allowed:
-            # If no values are supplied, search all.
-            allowed = list(sample)
-
-        for key in allowed:
-            if sample.get(key, None) is not None:
-                return sample[key]
-
-        return None
-
-    def lambdall(self, values, func, mustbe=True):
-        """Return True if ALL values, run through func, are equal to mustbe."""
-        for v in values:
-            if func(v) != mustbe:
-                return False
-        return True
-
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
