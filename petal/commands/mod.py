@@ -78,7 +78,7 @@ class CommandsMod(core.Commands):
         Syntax: `{p}kick [OPTIONS] <user tag/id>`
 
         Options:
-        `--reason=<str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
+        `--reason <str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
         `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
         """
         if not args:
@@ -168,8 +168,8 @@ class CommandsMod(core.Commands):
         Syntax: `{p}ban [OPTIONS] <user tag/id>`
 
         Options:
-        `--reason=<str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
-        `--purge=<int>` :: Determine how many days of messages by the banned user to delete. Default is 1. Can be between 0 and 7, inclusive.
+        `--reason <str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
+        `--purge <int>` :: Determine how many days of messages by the banned user to delete. Default is 1. Can be between 0 and 7, inclusive.
         `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
         """
         if not args:
@@ -280,9 +280,9 @@ class CommandsMod(core.Commands):
         Syntax: `{p}tempban [OPTIONS] <user tag/id>`
 
         Options:
-        `--reason=<str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
-        `--purge=<int>` :: Determine how many days of messages by the banned user to delete. Default is 1. Can be between 0 and 7, inclusive.
-        `--days=<int>` :: Provide a ban duration immediately, rather than typing a number of days in a subsequent message.
+        `--reason <str>` :: Provide a reason immediately, rather than typing a reason in a subsequent message.
+        `--purge <int>` :: Determine how many days of messages by the banned user to delete. Default is 1. Can be between 0 and 7, inclusive.
+        `--days <int>` :: Provide a ban duration immediately, rather than typing a number of days in a subsequent message.
         """
         if not args:
             return
@@ -311,11 +311,13 @@ class CommandsMod(core.Commands):
         if not _days:
             await self.client.send_message(src.author, src.channel, "How long? (days) ")
             msg2 = await self.client.wait_for_message(
-                channel=src.channel, author=src.author, check=str.isnumeric, timeout=30
+                channel=src.channel, author=src.author, timeout=30
             )
             if msg2 is None:
                 return "Timed out while waiting for input"
-            _days = msg2.content
+            if not msg2.content.isdigit():
+                return "Ban length must be an integer number."
+            _days = int(msg2.content)
 
         userToBan = self.get_member(src, args[0])
         if userToBan is None:
@@ -368,8 +370,7 @@ class CommandsMod(core.Commands):
             )
 
     async def cmd_warn(self, args, src, **_):
-        """
-        Send an official and logged warning to a user.
+        """Send an official and logged warning to a user.
 
         Syntax: `{p}warn <user tag/id>`
         """
@@ -444,8 +445,7 @@ class CommandsMod(core.Commands):
                 )
 
     async def cmd_mute(self, args, src, **_):
-        """
-        Toggle the mute tag on a user if your server supports that role.
+        """Toggle the mute tag on a user if your server supports that role.
 
         Syntax: `{p}mute <user tag/id>`
         """
@@ -554,8 +554,7 @@ class CommandsMod(core.Commands):
                 )
 
     async def cmd_purge(self, args, src, **_):
-        """
-        Purge up to 200 messages in the current channel.
+        """Purge up to 200 messages in the current channel.
 
         Syntax: `{p}purge <number of messages to delete>`
         """
