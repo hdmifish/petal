@@ -52,16 +52,20 @@ class CommandsCustom(core.Commands):
                 return output
 
         # Specify the docstring and name so that !help will work on this.
-        short = response.replace("{", "{{").replace("}", "}}")
-        if len(short) > 80:
-            short = short[:77] + "..."
+        if len(response) > 80:
+            short = response[:77] + "..."
+        else:
+            short = response
+        short = short.replace("{", "{{").replace("}", "}}")
         cmd_custom.__doc__ = (
             "__Custom command__: Return the following text: ```{}```\n\n".format(short)
-            + cmd_dict.get("desc")
-            or "This is a custom command, so available help text is limited, "
-            "but at the same time, the command is very simple. All it does is "
-            "return a string, although the string may include formatting tags "
-            "for invoker name, invoker ID, and a targeted mention."
+            + (
+                cmd_dict.get("desc", "")
+                or "This is a custom command, so available help text is limited, "
+                "but at the same time, the command is very simple. All it does is "
+                "return a string, although the string may include formatting tags "
+                "for invoker name, invoker ID, and a targeted mention."
+            )
             + "\n\nSyntax: `{p}"
             + kword.lower()
             + (" <user_ID>" if "{tag}" in response else "")
