@@ -3,27 +3,16 @@ Access: Role-based"""
 
 import asyncio
 from datetime import datetime as dt, timedelta
-from hashlib import sha256
 from operator import attrgetter
 import time
 
 import discord
 
 from petal.commands import core
+from petal.etc import mash
 
 
 same_author = lambda m0: lambda m1: m0.author == m1.author and m0.channel == m1.channel
-
-
-# MultiHash function: Generate a small numeric "name" given arbitrary inputs.
-def mash(*data, digits=4, base=10):
-    sha = sha256()
-    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
-    hashval = int(sha.hexdigest(), 16)
-    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
-    hashval %= ceiling  # 0000 <= N <= 8999
-    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
-    return hashval
 
 
 class CommandsMod(core.Commands):

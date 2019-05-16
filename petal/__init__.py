@@ -7,7 +7,6 @@ written by isometricramen
 import asyncio
 from collections import deque
 from datetime import datetime
-from hashlib import sha256
 import random
 import re
 import time
@@ -19,6 +18,7 @@ from petal import grasslands
 from petal.commands import CommandRouter as Commands
 from petal.config import Config
 from petal.dbhandler import DBHandler
+from petal.etc import mash
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 
@@ -32,18 +32,6 @@ with open("version_info.sh", "r") as f:
             version = _line.split("=", 1)[1].split("#")[0].strip()
 
 grasslands.version = version
-
-
-def mash(*data, digits=4, base=10):
-    # This is a duplicate of a function in mod.py.
-    # TODO: Put somewhere both can access; Do not repeat.
-    sha = sha256()
-    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
-    hashval = int(sha.hexdigest(), 16)
-    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
-    hashval %= ceiling  # 0000 <= N <= 8999
-    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
-    return hashval
 
 
 def first_role_named(name: str, guild: discord.Guild):
