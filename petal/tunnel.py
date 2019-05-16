@@ -61,7 +61,7 @@ class Tunnel:
             raise TunnelSetupError()
         else:
             self.active = True
-            create_task(self.run_tunnel())
+            tunnel_coro = create_task(self.run_tunnel())
             await self.broadcast(
                 "Messaging Tunnel between {} channels established. "
                 "Invoke `{}tunnel (--disconnect | -d)` to disconnect "
@@ -69,6 +69,7 @@ class Tunnel:
                     len(self.connected), self.client.config.prefix
                 )
             )
+            return tunnel_coro
 
     def convert(self, src: discord.Message):
         """Build a Discord Embed representing the passed Message."""

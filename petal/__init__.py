@@ -205,12 +205,12 @@ class Petal(discord.Client):
         """
         new = Tunnel(self, origin, *channels, anon)
         try:
-            await new.activate()
+            tunnel_coro = new.activate()
         except TunnelSetupError:
             return False
         else:
             self.tunnels.append(new)
-            return True
+            await tunnel_coro
 
     def get_tunnel(self, channel):
         """Given a Channel, return the first Tunnel connected to it, if any."""
