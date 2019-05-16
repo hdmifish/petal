@@ -57,16 +57,18 @@ class CommandsCustom(core.Commands):
         else:
             short = response
         short = short.replace("{", "{{").replace("}", "}}")
+        #             ^TODO: Use Regex replacement instead.
         cmd_custom.__doc__ = (
             "__Custom command__: Return the following text: ```{}```\n\n".format(short)
             + (
-                cmd_dict.get("desc", "")
-                or "This is a custom command, so available help text is limited, "
-                "but at the same time, the command is very simple. All it does is "
-                "return a string, although the string may include formatting tags "
-                "for invoker name, invoker ID, and a targeted mention."
+                (cmd_dict.get("desc", "") + "\n\n")
+                or "This is a custom command, so available help text is "
+                "limited, but at the same time, the command is very simple. "
+                "All it does is return a string, although the string may "
+                "include formatting tags for invoker name, invoker ID, and a "
+                "targeted mention.\n\n"
             )
-            + "\n\nSyntax: `{p}"
+            + "Syntax: `{p}"
             + kword.lower()
             + (" <user_ID>" if "{tag}" in response else "")
             + "`"
