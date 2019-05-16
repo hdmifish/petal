@@ -37,3 +37,15 @@ def mash(*data, digits=4, base=10):
     hashval %= ceiling  # 0000 <= N <= 8999
     hashval += base ** (digits - 1)  # 1000 <= N <= 9999
     return hashval
+
+
+class PreFunc:
+    def __init__(self, func, *a, **kw):
+        self.func = func
+        self.a = a
+        self.kw0 = kw
+
+    def run(self, _pre=None, _post=None, **kw1):
+        kw2 = self.kw0.copy()
+        kw2.update(kw1)
+        return self.func(*(_pre or []), *self.a, *(_post or []), **kw2)
