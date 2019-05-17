@@ -4,11 +4,16 @@ import getopt
 import importlib
 import shlex
 import sys
-from typing import get_type_hints, List, Tuple, Optional as Opt
+from typing import get_type_hints, List, Optional as Opt, Tuple
 
 import discord
 
-from petal.exceptions import CommandAuthError, CommandInputError, CommandOperationError
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandInputError,
+    CommandOperationError,
+)
 from petal.social_integration import Integrated
 
 
@@ -80,7 +85,7 @@ def check_types(opts: dict, hints: dict) -> dict:
         kwarg = "_" + opt_name.strip("-").replace("-", "_")
         want = hints[kwarg]
         err = TypeError(
-            "{} wants {}, got {} {}".format(
+            "Option `{}` wants {}, got {}, `{}`".format(
                 opt_name, want, type(val).__name__, repr(val)
             )
         )
@@ -166,6 +171,9 @@ class CommandPending:
         try:
             # Run the Command through the Router.
             response = await self.router.run(self.src)
+        except CommandArgsError as e:
+            # Arguments not valid. Cease, but do not necessarily desist.
+            self.reply = await self.src.channel.send(e)
         except CommandAuthError as e:
             # Access denied. Cease and desist.
             self.unlink()
@@ -177,6 +185,13 @@ class CommandPending:
             # Command could not finish, but was accepted. Cease and desist.
             self.unlink()
             await self.src.channel.send("Command failed; {}".format(e))
+        except Exception as e:
+            # Command could not finish. We do not know why, so play it safe.
+            self.unlink()
+            await self.src.channel.send(
+                "Sorry, something went wrong, but I do not know what"
+                + (": `{}`".format(e) if str(e) else ".")
+            )
         else:
             # Command routed without errors.
             if response is not None:
@@ -334,43 +349,34 @@ class CommandRouter(Integrated):
         try:
             cline, msg = split(command)
         except ValueError as e:
-            return "Could not parse arguments: {}".format(e)
+            raise CommandArgsError("Could not parse arguments: {}".format(e))
         cword = cline.pop(0)
 
         # Find the method, if one exists.
         engine, func, denied = self.find_command(cword, src)
         if denied:
             # User is not permitted to use this.
-            return "Authentication failure: " + denied
+            # TODO: This is redundant. Remove all references to `denied` outside of `find_command`.
+            raise CommandAuthError(denied)
         elif func:
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
-                return "Invalid Option: {}".format(e)
+                bad_opt = ("-{}" if len(e.opt) == 1 else "--{}").format(e.opt)
+                raise CommandArgsError(
+                    "Sorry, option is not recognized (`{} {}`).".format(cword, bad_opt)
+                )
             except TypeError as e:
-                return "Invalid Type: {}".format(e)
+                raise CommandArgsError("Sorry, an option is mistyped: {}".format(e))
 
             # Execute the method, passing the arguments as a list and the options
             #     as keyword arguments.
-            try:
-                if cword != "argtest" and "|" in args:
-                    await self.client.send_message(
-                        channel=src.channel,
-                        message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
-                    )
-                return await get_output(func(args=args, **opts, msg=msg, src=src))
-            except CommandInputError as e:
-                # Petal exception raised. This is not necessarily an "error",
-                #   per se; Mostly it substitutes an early return from a method
-                #   that cannot return, such as a Generator.
-                return str(e)
-            except Exception as e:
-                await src.channel.send(
-                    content="Sorry, an exception was raised: `{}` (`{}`)".format(
-                        type(e).__name__, e
-                    )
+            if cword != "argtest" and "|" in args:
+                await self.client.send_message(
+                    channel=src.channel,
+                    message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                 )
-                raise e
+            return await get_output(func(args=args, **opts, msg=msg, src=src))
 
     async def run(self, src: discord.Message):
         """Given a message, determine whether it is a command;

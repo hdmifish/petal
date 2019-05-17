@@ -1,6 +1,11 @@
 """Petal Exception module"""
 
 
+class CommandArgsError(Exception):
+    """Raised when a Command is invoked with malformed arguments."""
+    pass
+
+
 class CommandAuthError(Exception):
     """Raised when a Command is invoked with insufficient permissions."""
     pass
