@@ -342,17 +342,7 @@ class CommandRouter(Integrated):
         if denied:
             # User is not permitted to use this.
             return "Authentication failure: " + denied
-
-        # elif not func and src.id not in self.client.potential_typo:
-        #     # This is not a command. However, might it have been a typo? Add the
-        #     #   message ID to a deque.
-        #     self.client.potential_typo.append(src.id)
-        #     return ""
-
         elif func:
-            # if src.id in self.client.potential_typo:
-            #     self.client.potential_typo.remove(src.id)
-
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
