@@ -8,7 +8,7 @@ from typing import get_type_hints, List, Tuple, Optional as Opt
 
 import discord
 
-from petal.exceptions import CommandError
+from petal.exceptions import CommandAuthError, CommandInputError, CommandOperationError
 from petal.social_integration import Integrated
 
 
@@ -136,33 +136,70 @@ auth_fail_dict = {
 
 
 class CommandPending:
+    """Class for storing a Command while it is executed. If it cannot be
+        executed, it will be saved for a set time limit. During that timeout
+        period, if the message is edited, the Command will attempt to rerun.
+    """
+
     def __init__(self, dict_, output, router, src):
-        self.active = False
         self.dict_ = dict_
         self.output = output
         self.router = router
-        self.src = src
+        self.src: discord.Message = src
+
+        self.active = False
+        self.reply: discord.Message = None
         self.waiting = create_task(self.wait())
 
     async def run(self):
+        """Try to execute this command. Return True if execution is carried out
+            successfully, False otherwise. Potentially, remove self.
+        """
         if not self.active:
+            # Command is not valid for execution. Cease.
             return False
-        response = await self.router.run(self.src)
-        if response is not None:
-            self.router.config.get("stats")["comCount"] += 1
-            await self.output(self.src, response)
-            return True
+
+        if self.reply:
+            await self.reply.delete()
+            self.reply = None
+
+        try:
+            # Run the Command through the Router.
+            response = await self.router.run(self.src)
+        except CommandAuthError as e:
+            # Access denied. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Sorry, not permitted; {}".format(e))
+        except CommandInputError as e:
+            # Input not valid. Cease, but do not necessarily desist.
+            self.reply = await self.src.channel.send("Bad input: {}".format(e))
+        except CommandOperationError as e:
+            # Command could not finish, but was accepted. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Command failed; {}".format(e))
         else:
+            # Command routed without errors.
+            if response is not None:
+                # Command executed successfully. Desist and respond.
+                self.unlink()
+                self.router.config.get("stats")["comCount"] += 1
+                await self.output(self.src, response)
+                return True
+            else:
+                # Command was not executed. Cease.
+                return False
+        finally:
             return False
 
     async def wait(self):
         self.active = True
         self.dict_[self.src.id] = self
         await sleep(60)
-        self.active = False
         self.unlink()
 
     def unlink(self):
+        """Prevent self from being executed."""
+        self.active = False
         if self.src.id in self.dict_:
             del self.dict_[self.src.id]
 
@@ -206,7 +243,7 @@ class CommandRouter(Integrated):
                 permitted, reason = mod_src.authenticate(src)
                 if not src or permitted:
                     return mod_src, func, False
-                else:
+                else:  # src and not permitted
                     if reason in auth_fail_dict:
                         denied = auth_fail_dict[reason]
                     elif reason == "denied":
@@ -221,6 +258,7 @@ class CommandRouter(Integrated):
                         )
                     else:
                         denied = "`{}`.".format(reason)
+                    raise CommandAuthError(denied)
 
         # This command is not "real". Check whether it is an alias.
         alias = dict(self.config.get("aliases")) or {}
@@ -331,7 +369,7 @@ class CommandRouter(Integrated):
                         message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                     )
                 return await get_output(func(args=args, **opts, msg=msg, src=src))
-            except CommandError as e:
+            except CommandInputError as e:
                 # Petal exception raised. This is not necessarily an "error",
                 #   per se; Mostly it substitutes an early return from a method
                 #   that cannot return, such as a Generator.

@@ -2,7 +2,7 @@
 Access: Config Whitelist"""
 
 from petal.commands import core
-from petal.exceptions import CommandError
+from petal.exceptions import CommandInputError
 from petal.menu import Menu
 from petal.util.grammar import pluralize, sequence_words
 
@@ -48,16 +48,16 @@ class CommandsMaintenance(core.Commands):
         `{p}calias trace <alias>...` - Display the command that would be executed if `{p}<alias>` were invoked.
         """
         if not args:
-            raise CommandError("This command requires a subcommand.")
+            raise CommandInputError("This command requires a subcommand.")
 
         # The first argument passed is a subcommand; What action should be taken.
         mode = args.pop(0).lower()
         if mode not in ("add", "clear", "list", "remove", "trace"):
-            raise CommandError("Invalid subcommand `{}`.".format(mode))
+            raise CommandInputError("Invalid subcommand `{}`.".format(mode))
 
         # Ensure that enough arguments have been supplied.
         if (mode != "list" and not args) or (mode == "add" and len(args) < 2):
-            raise CommandError("Subcommand `{}` requires more arguments.".format(mode))
+            raise CommandInputError("Subcommand `{}` requires more arguments.".format(mode))
 
         aliases = self.config.get("aliases")
         p = self.config.prefix
@@ -68,7 +68,7 @@ class CommandsMaintenance(core.Commands):
         if mode == "add":
             cmd = args.pop(0)
             if not self.router.find_command(cmd, recursive=False)[1]:
-                raise CommandError(
+                raise CommandInputError(
                     "`{}` cannot be aliased because it is not a valid command.".format(
                         p + cmd
                     )
@@ -94,7 +94,7 @@ class CommandsMaintenance(core.Commands):
         elif mode == "clear":
             cmd = args.pop(0)
             if not self.router.find_command(cmd, recursive=False)[1]:
-                raise CommandError(
+                raise CommandInputError(
                     f"`{p + cmd}` cannot be cleared of aliases because it is not a valid command."
                 )
             yield f"From command `{p + cmd}`, remove all aliases:"
@@ -106,7 +106,7 @@ class CommandsMaintenance(core.Commands):
             if args:
                 cmd = args.pop(0)
                 if not self.router.find_command(cmd, recursive=False)[1]:
-                    raise CommandError(
+                    raise CommandInputError(
                         f"`{p + cmd}` cannot have aliases listed because it is not a valid command."
                     )
                 yield f"List of aliases for command `{p + cmd}`:"

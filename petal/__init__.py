@@ -315,6 +315,7 @@ class Petal(discord.Client):
         command = self.potential_typo.get(message.id) or CommandPending(
             self.potential_typo, self.print_response, self.commands, message
         )
+        await asyncio.sleep(0.1)
         return await command.run()
 
     async def send_message(

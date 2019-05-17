@@ -1,8 +1,18 @@
 """Petal Exception module"""
 
 
-class CommandError(Exception):
+class CommandAuthError(Exception):
+    """Raised when a Command is invoked with insufficient permissions."""
+    pass
+
+
+class CommandInputError(Exception):
     """Raised when a Command is given bad input."""
+    pass
+
+
+class CommandOperationError(Exception):
+    """Raised when a Command fails, but NOT due to bad input."""
     pass
 
 
