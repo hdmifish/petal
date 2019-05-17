@@ -271,7 +271,9 @@ class CommandRouter(Integrated):
             except getopt.GetoptError as e:
                 bad_opt = ("-{}" if len(e.opt) == 1 else "--{}").format(e.opt)
                 raise CommandArgsError(
-                    "Sorry, option is not recognized (`{} {}`).".format(cword, bad_opt)
+                    "Sorry, {}.".format(
+                        e.msg.replace(bad_opt, "`{} {}`".format(cword, bad_opt))
+                    )
                 )
             except TypeError as e:
                 raise CommandArgsError("Sorry, an option is mistyped: {}".format(e))
