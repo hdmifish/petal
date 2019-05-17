@@ -1,3 +1,4 @@
+from asyncio import ensure_future as create_task, sleep
 from datetime import datetime as dt
 import getopt
 import importlib
@@ -132,6 +133,38 @@ auth_fail_dict = {
     "bad op": "Command wants MC Operator but is not integrated.",
     "private": "Command cannot be used in DM.",
 }
+
+
+class CommandPending:
+    def __init__(self, dict_, output, router, src):
+        self.active = False
+        self.dict_ = dict_
+        self.output = output
+        self.router = router
+        self.src = src
+        self.waiting = create_task(self.wait())
+
+    async def run(self):
+        if not self.active:
+            return False
+        response = await self.router.run(self.src)
+        if response is not None:
+            self.router.config.get("stats")["comCount"] += 1
+            await self.output(self.src, response)
+            return True
+        else:
+            return False
+
+    async def wait(self):
+        self.active = True
+        self.dict_[self.src.id] = self
+        await sleep(60)
+        self.active = False
+        self.unlink()
+
+    def unlink(self):
+        if self.src.id in self.dict_:
+            del self.dict_[self.src.id]
 
 
 class CommandRouter(Integrated):
@@ -272,15 +305,15 @@ class CommandRouter(Integrated):
             # User is not permitted to use this.
             return "Authentication failure: " + denied
 
-        elif not func and src.id not in self.client.potential_typoed_commands:
-            # This is not a command. However, might it have been a typo? Add the
-            #   message ID to a deque.
-            self.client.potential_typoed_commands.append(src.id)
-            return ""
+        # elif not func and src.id not in self.client.potential_typo:
+        #     # This is not a command. However, might it have been a typo? Add the
+        #     #   message ID to a deque.
+        #     self.client.potential_typo.append(src.id)
+        #     return ""
 
         elif func:
-            if src.id in self.client.potential_typoed_commands:
-                self.client.potential_typoed_commands.remove(src.id)
+            # if src.id in self.client.potential_typo:
+            #     self.client.potential_typo.remove(src.id)
 
             try:
                 args, opts = self.parse_from_hinting(cline, func)
@@ -319,10 +352,10 @@ class CommandRouter(Integrated):
             return
         prefix = self.config.prefix
         if src.content.startswith(prefix):
-            # Message begins with the invocation prefix
+            # Message begins with the invocation prefix.
             command = src.content[len(prefix) :]
+            # Remove the prefix and route the command.
             return await self.route(command, src)
-            # Remove the prefix and route the command
 
     @property
     def uptime(self):

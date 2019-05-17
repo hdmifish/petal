@@ -5,7 +5,6 @@ written by isometricramen
 """
 
 import asyncio
-from collections import deque
 from datetime import datetime
 import random
 import re
@@ -15,7 +14,7 @@ from typing import List
 import discord
 
 from petal import grasslands
-from petal.commands import CommandRouter as Commands
+from petal.commands import CommandPending, CommandRouter as Commands
 from petal.config import Config
 from petal.dbhandler import DBHandler
 from petal.etc import mash
@@ -56,7 +55,7 @@ class Petal(discord.Client):
         self.db = DBHandler(self.config)
         self.commands = Commands(self)
         self.commands.version = version
-        self.potential_typoed_commands = deque([], 3)
+        self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
         self.startup = datetime.utcnow()
         self.tempBanFlag = False
@@ -313,13 +312,10 @@ class Petal(discord.Client):
             await self.send_message(message.author, message.channel, str(response))
 
     async def execute_command(self, message):
-        response = await self.commands.run(message)
-        if response is not None:
-            self.config.get("stats")["comCount"] += 1
-            await self.print_response(message, response)
-            return True
-        else:
-            return False
+        command = self.potential_typo.get(message.id) or CommandPending(
+            self.potential_typo, self.print_response, self.commands, message
+        )
+        return await command.run()
 
     async def send_message(
         self, author=None, channel=None, message=None, *, embed=None, **_
@@ -382,7 +378,7 @@ class Petal(discord.Client):
         if self.db.add_member(member):
             user_embed = discord.Embed(
                 title="User Joined",
-                description="A new user joined: " + member.server.name,
+                description="A new user joined: " + member.guild.name,
                 colour=0x00FF00,
             )
         else:
@@ -391,7 +387,7 @@ class Petal(discord.Client):
                     title="User ReJoined",
                     description=self.db.get_attribute(member, "aliases")[-1]
                     + " rejoined "
-                    + member.server.name
+                    + member.guild.name
                     + " as "
                     + member.name,
                     colour=0x00FF00,
@@ -400,7 +396,7 @@ class Petal(discord.Client):
                 return
 
         self.db.update_member(
-            member, {"aliases": [member.name], "guilds": [member.server.id]}
+            member, {"aliases": [member.name], "guilds": [member.guild.id]}
         )
 
         age = datetime.utcnow() - member.created_at
@@ -451,7 +447,7 @@ class Petal(discord.Client):
 
         userEmbed = discord.Embed(
             title="User Leave",
-            description="A user has left: " + member.server.name,
+            description="A user has left: " + member.guild.name,
             colour=0xFF0000,
         )
 
@@ -477,7 +473,7 @@ class Petal(discord.Client):
 
             if message.channel.is_private:
                 return
-            if message.channel.server.id == "126236346686636032":
+            if message.channel.guild.id == "126236346686636032":
                 return
 
             userEmbed = discord.Embed(
@@ -491,7 +487,7 @@ class Petal(discord.Client):
             userEmbed.set_author(
                 name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5" + ".png"
             )
-            userEmbed.add_field(name="Server", value=message.server.name)
+            userEmbed.add_field(name="Server", value=message.guild.name)
             userEmbed.add_field(name="Channel", value=message.channel.name)
             userEmbed.add_field(
                 name="Message content", value=message.content, inline=False
@@ -511,15 +507,15 @@ class Petal(discord.Client):
         else:
             return
 
-    async def on_message_edit(self, before, after):
-        if Petal.logLock:
-            return
-        if before.content == "":
-            return
-        if before.channel.is_private:
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if (
+            Petal.logLock
+            or before.content == ""
+            or not isinstance(before.channel, discord.TextChannel)
+        ):
             return
 
-        if before.server.id in self.config.get(
+        if before.guild.id in self.config.get(
             "ignoreServers"
         ) or before.channel.id in self.config.get("ignoreChannels"):
             return
@@ -533,9 +529,8 @@ class Petal(discord.Client):
 
         # If the message was marked as a possible typo by the command router,
         #   try running it again.
-        executed = (
-            before.id in self.potential_typoed_commands
-            and await self.execute_command(after)
+        executed = before.id in self.potential_typo and await self.execute_command(
+            after
         )
 
         userEmbed = (
@@ -549,7 +544,7 @@ class Petal(discord.Client):
                 + " edited their message",
                 colour=0xAE00FE,
             )
-            .add_field(name="Server", value=before.server.name)
+            .add_field(name="Server", value=before.guild.name)
             .add_field(name="Channel", value=before.channel.name)
             .add_field(name="Previous message: ", value=before.content, inline=False)
             .add_field(name="Edited message: ", value=after.content)
@@ -589,7 +584,7 @@ class Petal(discord.Client):
 
         if gained is not None:
             userEmbed = discord.Embed(
-                title="({}) User Role ".format(role.server.name) + gained,
+                title="({}) User Role ".format(role.guild.name) + gained,
                 description="{}#{} {} role".format(
                     after.name, after.discriminator, gained
                 ),
@@ -678,7 +673,7 @@ class Petal(discord.Client):
     async def on_message(self, message: discord.Message):
         await self.wait_until_ready()
         content = message.content.strip()
-        if isinstance(message.channel, discord.abc.GuildChannel):
+        if isinstance(message.channel, discord.TextChannel):
             self.db.update_member(
                 message.author,
                 {
