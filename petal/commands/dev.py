@@ -57,7 +57,9 @@ class CommandsMaintenance(core.Commands):
 
         # Ensure that enough arguments have been supplied.
         if (mode != "list" and not args) or (mode == "add" and len(args) < 2):
-            raise CommandInputError("Subcommand `{}` requires more arguments.".format(mode))
+            raise CommandInputError(
+                "Subcommand `{}` requires more arguments.".format(mode)
+            )
 
         aliases = self.config.get("aliases")
         p = self.config.prefix
@@ -175,13 +177,14 @@ class CommandsMaintenance(core.Commands):
         # )
         # await m.close()
         await m.add_result(
-            await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
+            await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"]) or "(None)"
         )
         await m.add_result(
-            await m.get_one(["zxcv", "qazwsx", "yuiop", "poiuytrewq"]), overwrite=0
+            await m.get_one(["zxcv", "qazwsx", "yuiop", "poiuytrewq"]) or "(None)",
+            overwrite=0,
         )
         await m.add_result(
-            await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"]), overwrite=0
+            await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"]) or "(None)", overwrite=0
         )
 
     async def cmd_menu2(self, src, **_):

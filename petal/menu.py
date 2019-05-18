@@ -1,4 +1,4 @@
-from asyncio import ensure_future as create_task, sleep
+from asyncio import ensure_future as create_task, sleep, TimeoutError
 
 from discord import Embed, TextChannel, Message, User
 
@@ -16,6 +16,13 @@ okay = chr(0x1F197)  # [OK]
 
 clock = [chr(n) for n in range(0x1F550, 0x1F55C)]
 clock[0:0] = [clock.pop(-1)]  # Clock symbols: [12, 1, 2, ..., 11]
+
+
+react_same_user = lambda user: lambda r, u: u == user
+react_same_msg = lambda msg: lambda r, u: r.message.id == msg.id
+react_same_user_and_msg = (
+    lambda user, msg: lambda r, u: u.id == user.id and r.message.id == msg.id
+)
 
 
 def count_votes(allowed: list, votes: list):
@@ -51,7 +58,7 @@ class Menu:
         return self.post()
 
     async def clear(self):
-        await self.client.clear_reactions(self.msg)
+        await self.msg.clear_reactions()
 
     async def close(self, text="[ Interaction Closed ]"):
         if text:
@@ -61,14 +68,14 @@ class Menu:
 
     async def post(self):
         if self.msg:
-            self.msg: Message = await self.client.edit_message(self.msg, embed=self.em)
+            await self.msg.edit(embed=self.em)
         else:
-            self.msg: Message = await self.client.embed(self.channel, self.em)
+            self.msg: Message = await self.channel.send(embed=self.em)
 
     async def add_buttons(self, selection: list):
-        await self.client.clear_reactions(self.msg)
+        await self.msg.clear_reactions()
         for opt in selection:
-            await self.client.add_reaction(self.msg, opt)
+            await self.msg.add_reaction(opt)
 
     async def setup(self, text: str, selection: list):
         self.em.description = text
@@ -91,13 +98,19 @@ class Menu:
             selection,
         )
 
-        choice = await self.client.wait_for_reaction(
-            selection, user=self.master, timeout=time, message=self.msg
-        )
-        if not choice or choice.reaction.emoji == cancel:
+        try:
+            choice, _ = await self.client.wait_for(
+                "reaction_add",
+                timeout=time,
+                check=react_same_user_and_msg(self.master, self.msg),
+            )
+        except TimeoutError:
+            choice = None
+
+        if not choice or choice.emoji == cancel:
             result = ""
         else:
-            result = opts[letters.index(choice.reaction.emoji)]
+            result = opts[letters.index(choice.emoji)]
 
         await buttons
         await self.clear()
