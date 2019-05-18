@@ -2,11 +2,6 @@
 Function library for grammatical correctness
 """
 
-def pluralize(num: int, root="", end_plural="s", end_single=""):
-    """Given grammar and a number, return the appropriate singular or plural form."""
-    return root + (end_single if num == 1 else end_plural)
-
-
 def get_a(word, include=False):
     word = word.lstrip()
     loword = word.lower()
@@ -25,6 +20,11 @@ def ordinal(num: int) -> str:
     one = int(num[-1])
     ten = int(num[-2]) if len(num) > 1 else 0
     return num + _ord[ten][one]
+
+
+def pluralize(num: int, root="", end_plural="s", end_single=""):
+    """Given grammar and a number, return the appropriate singular or plural form."""
+    return root + (end_single if num == 1 else end_plural)
 
 
 def sequence_words(words: list) -> str:
