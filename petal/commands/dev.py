@@ -172,10 +172,6 @@ class CommandsMaintenance(core.Commands):
     async def cmd_menu(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
 
-        # m.em.title = "Result: `{}`".format(
-        #     await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
-        # )
-        # await m.close()
         await m.add_result(
             await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"]) or "(None)"
         )
@@ -190,12 +186,9 @@ class CommandsMaintenance(core.Commands):
     async def cmd_menu2(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
 
-        # m.em.title = "Results: `{}`".format(
-        #     await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"])
-        # )
-        # await m.close()
         await m.add_result(
             "\n".join(await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"]))
+            or "(None)"
         )
 
     async def cmd_bool(self, src, **_):

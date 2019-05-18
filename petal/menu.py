@@ -89,14 +89,15 @@ class Menu:
     # Begin methods for actually running the interface
     # ========---
 
-    async def get_one(self, opts: list, time=30) -> str:
+    async def get_one(self, opts: list, time=30, prompt="") -> str:
         """Ask the user to select ONE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
             return ""
         selection = [cancel, *letters[:onum]]
         buttons = await self.setup(
-            "Select One:\n"
+            (prompt or "Select One:")
+            + "\n"
             + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
             selection,
         )
@@ -119,41 +120,57 @@ class Menu:
         await self.clear()
         return result
 
-    async def get_multi(self, opts: list, time=30) -> list:
+    async def get_multi(self, opts: list, time=30, prompt="") -> list:
         """Ask the user to select ONE OR MORE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
             return []
         selection = [cancel, *letters[:onum], confirm]
         buttons = await self.setup(
-            "Select Multiple and Confirm:\n"
+            (prompt or "Select One or More and Confirm:")
+            + "\n"
             + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
             selection,
         )
 
-        results = set()
-        while True:
-            choice = await self.client.wait_for_reaction(
-                selection, user=self.master, timeout=time, message=self.msg
+        def check(react_, user):
+            return react_same_user_and_msg(self.master, self.msg)(react_, user) and str(
+                react_.emoji
+            ) in [str(cancel), str(confirm)]
+
+        try:
+            choice, _ = await self.client.wait_for(
+                "reaction_add", timeout=time, check=check
             )
-            if not choice or choice.reaction.emoji == cancel:
-                await buttons
-                await self.clear()
-                return []
-            elif choice.reaction.emoji == confirm:
-                break
-            else:  # TODO: Check reactions AFTER, do not count during
-                results.add(opts[letters.index(choice.reaction.emoji)])
+        except TimeoutError:
+            choice = None
+
+        if not choice or choice.emoji == cancel:
+            await self.clear()
+            return []
+
+        try:
+            vm = await self.channel.fetch_message(self.msg.id)
+        except:
+            await self.clear()
+            return []
+
+        results = []
+        for react in vm.reactions:
+            if react.emoji in [r for r in selection[1:-1]] and self.master.id in [
+                u.id for u in await react.users().flatten()
+            ]:
+                results.append(opts[letters.index(react.emoji)])
 
         await buttons
         await self.clear()
-        return list(results)
+        return results
 
-    async def get_bool(self, time=30):
+    async def get_bool(self, time=30, prompt=""):
         """Ask the user to click a simple YES or NO."""
         selection = [cancel, confirm]
 
-        self.em.description = "Select Yes or No"
+        self.em.description = prompt or "Select Yes or No"
         await self.post()
         adding = create_task(self.add_buttons(selection))
 
@@ -205,7 +222,9 @@ class Menu:
 
         self.em.description += "\n\n**__RESULTS:__**"
         for k, v in outcome.items():
-            self.em.description += "\n**`{}`**: __`{}`__".format(opts[letters.index(k)], v)
+            self.em.description += "\n**`{}`**: __`{}`__".format(
+                opts[letters.index(k)], v
+            )
         await self.post()
 
         return outcome
