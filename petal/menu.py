@@ -26,11 +26,14 @@ react_same_user_and_msg = (
 
 
 def count_votes(allowed: list, votes: list):
+    allowed = [str(a) for a in allowed]
     result = {}
     for vote in votes:
-        if not vote.me and vote.emoji in allowed:
-            key = str(vote.emoji)
-            result[key] += 1
+        key = str(vote.emoji)
+        if key in allowed:
+            result[key] = vote.count
+            if vote.me:
+                result[key] -= 1
     return result
 
 
@@ -154,14 +157,20 @@ class Menu:
         await self.post()
         adding = create_task(self.add_buttons(selection))
 
-        choice = await self.client.wait_for_reaction(
-            selection, user=self.master, timeout=time, message=self.msg
-        )
+        try:
+            choice, _ = await self.client.wait_for(
+                "reaction_add",
+                timeout=time,
+                check=react_same_user_and_msg(self.master, self.msg),
+            )
+        except TimeoutError:
+            choice = None
+
         if not choice:
             result = None
-        elif choice.reaction.emoji == confirm:
+        elif choice.emoji == confirm:
             result = True
-        elif choice.reaction.emoji == cancel:
+        elif choice.emoji == cancel:
             result = False
         else:
             result = None
@@ -186,13 +195,17 @@ class Menu:
         await buttons
         await sleep(time)
 
-        outcome = count_votes(selection, self.msg.reactions)
+        try:
+            vm = await self.channel.fetch_message(self.msg.id)
+        except:
+            return {}
+
+        outcome = count_votes(selection, vm.reactions)
         await self.clear()
 
-        # TODO: Dont do this
         self.em.description += "\n\n**__RESULTS:__**"
         for k, v in outcome.items():
-            self.em.description += "\n**`{}`**: __`{}`__".format(k, v)
+            self.em.description += "\n**`{}`**: __`{}`__".format(opts[letters.index(k)], v)
         await self.post()
 
         return outcome
@@ -206,10 +219,14 @@ class Menu:
         await buttons
         await sleep(time)
 
-        outcome = count_votes(selection, self.msg.reactions)
+        try:
+            vm = await self.channel.fetch_message(self.msg.id)
+        except:
+            return {}
+
+        outcome = count_votes(selection, vm.reactions)
         await self.clear()
 
-        # TODO: Dont do this
         self.em.description += "\n\n**__RESULTS:__**"
         for k, v in outcome.items():
             self.em.description += "\n**`{}`**: __`{}`__".format(k, v)

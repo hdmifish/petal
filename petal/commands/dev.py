@@ -200,10 +200,10 @@ class CommandsMaintenance(core.Commands):
 
     async def cmd_bool(self, src, **_):
         m = Menu(self.client, src.channel, "Choice", user=src.author)
-        m.add_result(str(await m.get_bool()))
+        await m.add_result(repr(await m.get_bool()))
 
     async def cmd_poll(
-        self, args, src, _question: str = "", _channel: str = "", _time: int = 0, **_
+        self, args, src, _question: str = "", _channel: int = None, _time: int = 0, **_
     ):
         if len(args) < 2:
             return "Must provide at least two options."
@@ -222,11 +222,10 @@ class CommandsMaintenance(core.Commands):
             return "Invalid Channel"
 
         poll = Menu(self.client, targ, title=title)
-        outcome = await poll.get_poll(args, duration)
-        return str(outcome)
+        await poll.get_poll(args, duration)
 
     async def cmd_vote(
-        self, src, _question: str = "", _channel: str = "", _time: int = 0, **_
+        self, src, _question: str = None, _channel: int = None, _time: int = 0, **_
     ):
         duration = _time if _time > 0 else 3600
 
@@ -242,8 +241,7 @@ class CommandsMaintenance(core.Commands):
             return "Invalid Channel"
 
         poll = Menu(self.client, targ, title=title)
-        outcome = await poll.get_vote(duration)
-        return str(outcome)
+        await poll.get_vote(duration)
 
     async def cmd_bytes(self, src, **_):
         """Encode the message provided into a Bytes object. Then, print it.
