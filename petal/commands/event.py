@@ -35,11 +35,11 @@ class CommandsEvent(core.Commands):
                     str(len(channels_list))
                     + ". ("
                     + channel.name
-                    + " [{}]".format(channel.server.name)
+                    + " [{}]".format(channel.guild.name)
                     + ")\n"
                 )
                 channels_list.append(channel)
-                channels_dict[channel.server.name + "/#" + channel.name] = channel
+                channels_dict[channel.guild.name + "/#" + channel.name] = channel
             else:
                 self.log.warn(
                     chan + " is not a valid channel. I'd remove it if I were you."
@@ -55,7 +55,7 @@ class CommandsEvent(core.Commands):
                     "Hi there, "
                     + src.author.name
                     + "! Please select the number of "
-                    + "each server you want to post "
+                    + "each guild you want to post "
                     + "to. (dont separate the numbers)",
                 )
 
@@ -90,7 +90,9 @@ class CommandsEvent(core.Commands):
                 "Where shall the message be posted?",
                 user=src.author,
             )
-            selection = await menu.get_multi(list(channels_dict))
+            selection = await menu.get_multi(
+                list(channels_dict), prompt="Select one or more Target Channels."
+            )
             if not selection:
                 return "No target channels selected; Post canceled."
             post_to = [channels_dict[c] for c in selection]
