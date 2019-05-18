@@ -75,7 +75,7 @@ class CommandsMaintenance(core.Commands):
                 )
             yield "To command `{}`, add {} {}:".format(
                 cmd,
-                pluralize(len(args), "es", "", "alias"),
+                pluralize(len(args), "alias", "es"),
                 sequence_words(["`{}`".format(p + a) for a in args]),
             )
 
@@ -119,7 +119,7 @@ class CommandsMaintenance(core.Commands):
                     yield "`{}` -> `{}`".format(p + alias, p + cmd)
         elif mode == "remove":
             yield "Remove {} {}:".format(
-                pluralize(len(args), "es", "", "alias"),
+                pluralize(len(args), "alias", "es"),
                 sequence_words(["`{}`".format(p + a) for a in args]),
             )
             for alias in args:
@@ -130,7 +130,7 @@ class CommandsMaintenance(core.Commands):
                     yield "`{}` is not a valid alias.".format(p + alias)
         elif mode == "trace":
             yield "Trace {} {}:".format(
-                pluralize(len(args), "es", "", "alias"),
+                pluralize(len(args), "alias", "es"),
                 sequence_words(["`{}`".format(p + a) for a in args]),
             )
             for alias in args:

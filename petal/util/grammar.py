@@ -2,10 +2,9 @@
 Function library for grammatical correctness
 """
 
-
-def pluralize(n, p="s", s="", w=""):
-    # Given grammar and a number, return the appropriate singular or plural form
-    return w + {True: p, False: s}[n != 1]
+def pluralize(num: int, root="", end_plural="s", end_single=""):
+    """Given grammar and a number, return the appropriate singular or plural form."""
+    return root + (end_single if num == 1 else end_plural)
 
 
 def get_a(word, include=False):
