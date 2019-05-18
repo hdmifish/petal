@@ -269,7 +269,7 @@ class Petal(discord.Client):
             )
         return
 
-    async def print_response(self, message, response):
+    async def print_response(self, message, response, to_edit=None):
         """Use a discrete method for this, so that it can be used recursively if
             needed.
         """
@@ -296,20 +296,37 @@ class Petal(discord.Client):
                     # Add line to last cluster.
                     clusters[-1].append(line)
 
+            if to_edit:
+                # Due to the ability to chain multiple messages by yielding, we
+                #   cannot cleanly take advantage of editing. Delete it.
+                await to_edit.delete()
+
             for cc in [c for c in clusters if c]:
                 await self.print_response(message, "\n".join(cc))
 
         elif type(response) == dict:
             # If the response is a Dict, it is a series of keyword arguments
             #   intended to be passed directly to `Channel.send()`.
-            await message.channel.send(**response)
+            if to_edit:
+                vals = {"content": None, "embed": None}
+                vals.update(response)
+                await to_edit.edit(**vals)
+            else:
+                await message.channel.send(**response)
 
         elif type(response) == discord.Embed:
             # If the response is an Embed, simply show it as normal.
-            await self.send_message(message.author, message.channel, embed=response)
+            if to_edit:
+                await to_edit.edit(content=None, embed=response)
+            else:
+                await self.send_message(message.author, message.channel, embed=response)
+
         else:
             # Same with String.
-            await self.send_message(message.author, message.channel, str(response))
+            if to_edit:
+                await to_edit.edit(content=response, embed=None)
+            else:
+                await self.send_message(message.author, message.channel, str(response))
 
     async def execute_command(self, message):
         command = self.potential_typo.get(message.id) or CommandPending(

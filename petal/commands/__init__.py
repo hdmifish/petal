@@ -71,27 +71,35 @@ class CommandPending:
             # Command is not valid for execution. Cease.
             return False
 
-        if self.reply:
-            await self.reply.delete()
-            self.reply = None
-
         try:
             # Run the Command through the Router.
             response = await self.router.run(self.src)
+
         except CommandArgsError as e:
             # Arguments not valid. Cease, but do not necessarily desist.
-            self.reply = await self.src.channel.send(e)
+            if self.reply:
+                await self.reply.edit(content=e)
+            else:
+                self.reply = await self.src.channel.send(e)
+
         except CommandAuthError as e:
             # Access denied. Cease and desist.
             self.unlink()
             await self.src.channel.send("Sorry, not permitted; {}".format(e))
+
         except CommandInputError as e:
             # Input not valid. Cease, but do not necessarily desist.
-            self.reply = await self.src.channel.send("Bad input: {}".format(e))
+            out = "Bad input: {}".format(e)
+            if self.reply:
+                await self.reply.edit(content=out)
+            else:
+                self.reply = await self.src.channel.send(out)
+
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
             self.unlink()
             await self.src.channel.send("Command failed; {}".format(e))
+
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
             self.unlink()
@@ -99,17 +107,19 @@ class CommandPending:
                 "Sorry, something went wrong, but I do not know what"
                 + (": `{}`".format(e) if str(e) else ".")
             )
+
         else:
             # Command routed without errors.
             if response is not None:
                 # Command executed successfully. Desist and respond.
                 self.unlink()
                 self.router.config.get("stats")["comCount"] += 1
-                await self.output(self.src, response)
+                await self.output(self.src, response, self.reply)
                 return True
             else:
                 # Command was not executed. Cease.
                 return False
+
         finally:
             return False
 
