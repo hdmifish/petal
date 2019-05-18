@@ -265,7 +265,7 @@ class Petal(discord.Client):
             pass
         else:
             log.warn(
-                "No dbconf configuration in config.yml," + "motd features are disabled"
+                "No dbconf configuration in config.yml, motd features are disabled"
             )
         return
 
@@ -324,7 +324,7 @@ class Petal(discord.Client):
         else:
             # Same with String.
             if to_edit:
-                await to_edit.edit(content=response, embed=None)
+                await to_edit.edit(content=str(response), embed=None)
             else:
                 await self.send_message(message.author, message.channel, str(response))
 
@@ -484,14 +484,13 @@ class Petal(discord.Client):
 
     async def on_message_delete(self, message):
         try:
-            if Petal.logLock:
-                return
-            if message.channel.id in self.config.get("ignoreChannels"):
-                return
-
-            if message.channel.is_private:
-                return
-            if message.channel.guild.id == "126236346686636032":
+            if (
+                Petal.logLock
+                or message.author == self.user
+                or message.channel.guild.id == "126236346686636032"
+                or message.channel.id in self.config.get("ignoreChannels")
+                or not isinstance(message.channel, discord.TextChannel)
+            ):
                 return
 
             userEmbed = discord.Embed(
@@ -521,7 +520,7 @@ class Petal(discord.Client):
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
             await asyncio.sleep(2)
         except discord.errors.HTTPException:
-            pass
+            return
         else:
             return
 
