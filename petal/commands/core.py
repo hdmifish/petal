@@ -1,9 +1,108 @@
-import asyncio
+from asyncio import ensure_future as create_task, sleep
 from urllib.parse import urlencode, quote_plus
 
 import discord
 
 from petal.dbhandler import m2id
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandInputError,
+    CommandOperationError,
+)
+
+
+class CommandPending:
+    """Class for storing a Command while it is executed. If it cannot be
+        executed, it will be saved for a set time limit. During that timeout
+        period, if the message is edited, the Command will attempt to rerun.
+    """
+
+    def __init__(self, dict_, output, router, src):
+        self.dict_ = dict_
+        self.output = output
+        self.router = router
+        self.src: discord.Message = src
+
+        self.active = False
+        self.reply: discord.Message = None
+        self.waiting = create_task(self.wait())
+
+    async def run(self):
+        """Try to execute this command. Return True if execution is carried out
+            successfully, False otherwise. Potentially, remove self.
+        """
+        if not self.active:
+            # Command is not valid for execution. Cease.
+            return False
+
+        try:
+            # Run the Command through the Router.
+            response = await self.router.run(self.src)
+
+        except CommandArgsError as e:
+            # Arguments not valid. Cease, but do not necessarily desist.
+            if self.reply:
+                await self.reply.edit(content=e)
+            else:
+                self.reply = await self.src.channel.send(e)
+
+        except CommandAuthError as e:
+            # Access denied. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Sorry, not permitted; {}".format(e))
+
+        except CommandInputError as e:
+            # Input not valid. Cease, but do not necessarily desist.
+            out = "Bad input: {}".format(e)
+            if self.reply:
+                await self.reply.edit(content=out)
+            else:
+                self.reply = await self.src.channel.send(out)
+
+        except CommandOperationError as e:
+            # Command could not finish, but was accepted. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Command failed; {}".format(e))
+
+        except Exception as e:
+            # Command could not finish. We do not know why, so play it safe.
+            self.unlink()
+            await self.src.channel.send(
+                "Sorry, something went wrong, but I do not know what"
+                + (
+                    ": `{} / {}`".format(type(e).__name__, e)
+                    if str(e)
+                    else " ({}).".format(type(e).__name__)
+                )
+            )
+
+        else:
+            # Command routed without errors.
+            if response is not None:
+                # Command executed successfully. Desist and respond.
+                self.unlink()
+                self.router.config.get("stats")["comCount"] += 1
+                await self.output(self.src, response, self.reply)
+                return True
+            else:
+                # Command was not executed. Cease.
+                return False
+
+        finally:
+            return False
+
+    async def wait(self):
+        self.active = True
+        self.dict_[self.src.id] = self
+        await sleep(60)
+        self.unlink()
+
+    def unlink(self):
+        """Prevent self from being executed."""
+        self.active = False
+        if self.src.id in self.dict_:
+            del self.dict_[self.src.id]
 
 
 class Commands:
@@ -161,7 +260,7 @@ class Commands:
                     count += 1
             if len(status) > 1900:
                 await self.client.send_message(None, source_channel, status + "```")
-                await asyncio.sleep(0.5)
+                await sleep(0.5)
                 status = "```\n"
         if len(status) > 0:
             await self.client.send_message(None, source_channel, status + "```")

@@ -14,7 +14,8 @@ from typing import List
 import discord
 
 from petal import grasslands
-from petal.commands import CommandPending, CommandRouter as Commands
+from petal.commands import CommandRouter as Commands
+from petal.commands.core import CommandPending
 from petal.config import Config
 from petal.dbhandler import DBHandler
 from petal.etc import mash
