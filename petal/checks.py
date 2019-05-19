@@ -1,5 +1,5 @@
 import asyncio
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import discord
 
@@ -43,25 +43,20 @@ class Messages:
     async def waitfor(
         client,
         check,
-        default="",
+        default=None,
         timeout: int = 30,
         channel: discord.abc.Messageable = None,
         prompt: str = "",
-    ) -> str:
+    ) -> Optional[discord.Message]:
         if channel and prompt:
             try:
                 await channel.send(prompt)
             except (discord.Forbidden, discord.HTTPException):
                 pass
         try:
-            reason = await client.wait_for("message", check=check, timeout=timeout)
+            return await client.wait_for("message", check=check, timeout=timeout)
         except asyncio.TimeoutError:
             return default
-        else:
-            try:
-                return reason.content or default
-            except:
-                return default
 
     @classmethod
     def by_user(cls, user: discord.User):

@@ -5,6 +5,7 @@ import asyncio
 
 import discord
 
+from petal.checks import all_checks, Messages
 from petal.commands import core
 from petal.menu import Menu
 
@@ -61,8 +62,12 @@ class CommandsEvent(core.Commands):
 
                 await self.client.send_message(src.author, src.channel, msg)
 
-                chans = await self.client.wait_for_message(
-                    channel=src.channel, author=src.author, timeout=20
+                chans = await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    timeout=20,
                 )
 
                 if chans is None:
@@ -97,17 +102,32 @@ class CommandsEvent(core.Commands):
                 return "No target channels selected; Post canceled."
             post_to = [channels_dict[c] for c in selection]
 
-        await self.client.send_message(
-            src.author,
-            src.channel,
-            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
-        )
+        # await self.client.send_message(
+        #     src.author,
+        #     src.channel,
+        #     "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
+        # )
+
+        # msgstr = (
+        #     _message
+        #     or (
+        #         await self.client.wait_for_message(
+        #             channel=src.channel, author=src.author, timeout=120
+        #         )
+        #     ).content
+        # ).format(e="@everyone", h="@here")
 
         msgstr = (
             _message
             or (
-                await self.client.wait_for_message(
-                    channel=src.channel, author=src.author, timeout=120
+                await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    timeout=120,
+                    channel=src.channel,
+                    prompt="What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
                 )
             ).content
         ).format(e="@everyone", h="@here")
@@ -119,19 +139,33 @@ class CommandsEvent(core.Commands):
         embed.add_field(name="Channels", value="\n".join([c.mention for c in post_to]))
 
         await self.client.embed(src.channel, embed)
-        await self.client.send_message(
-            src.author,
-            src.channel,
-            "If this is ok, type confirm. "
-            + " Otherwise, wait for it to timeout "
-            + " and try again",
+        # await self.client.send_message(
+        #     src.author,
+        #     src.channel,
+        #     "If this is ok, type confirm. "
+        #     + " Otherwise, wait for it to timeout "
+        #     + " and try again",
+        # )
+
+        # msg2 = await self.client.wait_for_message(
+        #     channel=src.channel, author=src.author, content="confirm", timeout=10
+        # )
+
+        msg2 = await Messages.waitfor(
+            self.client,
+            all_checks(
+                Messages.by_user(src.author),
+                Messages.in_channel(src.channel),
+            ),
+            timeout=20,
+            channel=src.channel,
+            prompt="If this is correct, type `confirm`.",
         )
 
-        msg2 = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, content="confirm", timeout=10
-        )
         if msg2 is None:
-            return "Event post timed out"
+            return "Event post timed out."
+        elif msg2.content.lower() != "confirm":
+            return "Event post cancelled."
 
         posted = []
         for i in post_to:
