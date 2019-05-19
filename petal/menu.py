@@ -1,6 +1,8 @@
-from asyncio import ensure_future as create_task, sleep, TimeoutError
+from asyncio import ensure_future as create_task, sleep
 
 from discord import Embed, TextChannel, Message, User
+
+from petal.checks import all_checks, Reactions
 
 
 # Assemble all the emoji we need via hexadecimal values.
@@ -16,13 +18,6 @@ okay = chr(0x1F197)  # [OK]
 
 clock = [chr(n) for n in range(0x1F550, 0x1F55C)]
 clock[0:0] = [clock.pop(-1)]  # Clock symbols: [12, 1, 2, ..., 11]
-
-
-react_same_user = lambda user: lambda r, u: u == user
-react_same_msg = lambda msg: lambda r, u: r.message.id == msg.id
-react_same_user_and_msg = (
-    lambda user, msg: lambda r, u: u.id == user.id and r.message.id == msg.id
-)
 
 
 def count_votes(allowed: list, votes: list):
@@ -102,14 +97,15 @@ class Menu:
             selection,
         )
 
-        try:
-            choice, _ = await self.client.wait_for(
-                "reaction_add",
+        choice = (
+            await Reactions.waitfor(
+                self.client,
+                all_checks(
+                    Reactions.by_user(self.master), Reactions.on_message(self.msg)
+                ),
                 timeout=time,
-                check=react_same_user_and_msg(self.master, self.msg),
             )
-        except TimeoutError:
-            choice = None
+        )[0]
 
         if not choice or choice.emoji == cancel:
             result = ""
@@ -134,16 +130,11 @@ class Menu:
         )
 
         def check(react_, user):
-            return react_same_user_and_msg(self.master, self.msg)(react_, user) and str(
-                react_.emoji
-            ) in [str(cancel), str(confirm)]
+            return all_checks(
+                Reactions.by_user(self.master), Reactions.on_message(self.msg)
+            )(react_, user) and str(react_.emoji) in [str(cancel), str(confirm)]
 
-        try:
-            choice, _ = await self.client.wait_for(
-                "reaction_add", timeout=time, check=check
-            )
-        except TimeoutError:
-            choice = None
+        choice = (await Reactions.waitfor(self.client, check, timeout=time))[0]
 
         if not choice or choice.emoji == cancel:
             await self.clear()
@@ -174,14 +165,15 @@ class Menu:
         await self.post()
         adding = create_task(self.add_buttons(selection))
 
-        try:
-            choice, _ = await self.client.wait_for(
-                "reaction_add",
+        choice = (
+            await Reactions.waitfor(
+                self.client,
+                all_checks(
+                    Reactions.by_user(self.master), Reactions.on_message(self.msg)
+                ),
                 timeout=time,
-                check=react_same_user_and_msg(self.master, self.msg),
             )
-        except TimeoutError:
-            choice = None
+        )[0]
 
         if not choice:
             result = None
