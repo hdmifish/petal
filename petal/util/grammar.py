@@ -15,11 +15,11 @@ def get_a(word, include=False):
 _zer = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"]
 _ord = [_zer, ["th"] * 10] + [_zer] * 8
 
-def ordinal(num: int) -> str:
+def ordinal(num: int, lone=False) -> str:
     num = str(num)
     one = int(num[-1])
     ten = int(num[-2]) if len(num) > 1 else 0
-    return num + _ord[ten][one]
+    return _ord[ten][one] if lone else num + _ord[ten][one]
 
 
 def pluralize(num: int, root="", end_plural="s", end_single=""):
