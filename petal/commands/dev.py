@@ -221,10 +221,7 @@ class CommandsMaintenance(core.Commands):
         self, src, _question: str = None, _channel: int = None, _time: int = 0, **_
     ):
         duration = _time if _time > 0 else 3600
-
-        title = "Vote"
-        if _question:
-            title += ": " + _question
+        title = "Vote: " + _question if _question else "Vote"
 
         if _channel:
             targ = self.client.get_channel(_channel)
