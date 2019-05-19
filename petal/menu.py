@@ -38,7 +38,7 @@ class Menu:
         client,
         channel: TextChannel,
         title: str,
-        desc: str = None,
+        desc: str,
         user: User = None,
         color=0x0ACDFF,
     ):
@@ -48,17 +48,16 @@ class Menu:
         self.msg = None
         self.master = user
 
-    def add_result(self, result: str, title: str = "Results", overwrite: int = None):
+    def add_section(self, result: str, title: str = "Results", overwrite: int = None):
         if overwrite is not None:
             self.em.set_field_at(overwrite, name=title, value=str(result), inline=False)
         else:
             self.em.add_field(name=title, value=str(result), inline=False)
-        return self.post()
 
     async def clear(self):
         await self.msg.clear_reactions()
 
-    async def close(self, text="[ Interaction Closed ]"):
+    async def close(self, text=""):
         if text:
             self.em.description = text
             await self.post()
@@ -70,32 +69,38 @@ class Menu:
         else:
             self.msg: Message = await self.channel.send(embed=self.em)
 
-    async def add_buttons(self, selection: list):
+    async def _add_buttons(self, selection: list):
         await self.msg.clear_reactions()
         for opt in selection:
             await self.msg.add_reaction(opt)
 
-    async def setup(self, text: str, selection: list):
-        self.em.description = text
-        await self.post()
-        return create_task(self.add_buttons(selection))
+    async def add_buttons(self, selection: list):
+        if not self.msg:
+            await self.post()
+        return create_task(self._add_buttons(selection))
 
     # ========---
     # Begin methods for actually running the interface
     # ========---
 
-    async def get_one(self, opts: list, time=30, prompt="") -> str:
+    ### PRIVATE interfaces; Only one person may respond.
+
+    async def get_one(
+        self, opts: list, time=30, prompt="Select One:", title="Choice"
+    ) -> str:
         """Ask the user to select ONE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
             return ""
         selection = [cancel, *letters[:onum]]
-        buttons = await self.setup(
-            (prompt or "Select One:")
-            + "\n"
-            + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
-            selection,
+        self.add_section(
+            "\n".join(
+                [prompt] + ["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]
+            ),
+            title,
         )
+        buttons = await self.add_buttons(selection)
+        await self.post()
 
         choice = (
             await Reactions.waitfor(
@@ -116,18 +121,26 @@ class Menu:
         await self.clear()
         return result
 
-    async def get_multi(self, opts: list, time=30, prompt="") -> list:
+    async def get_multi(
+        self,
+        opts: list,
+        time=30,
+        prompt="Select One or More and Confirm:",
+        title="Multiple Choice",
+    ) -> list:
         """Ask the user to select ONE OR MORE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
             return []
         selection = [cancel, *letters[:onum], confirm]
-        buttons = await self.setup(
-            (prompt or "Select One or More and Confirm:")
-            + "\n"
-            + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
-            selection,
+        self.add_section(
+            "\n".join(
+                [prompt] + ["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]
+            ),
+            title,
         )
+        buttons = await self.add_buttons(selection)
+        await self.post()
 
         def check(react_, user):
             return all_checks(
@@ -157,13 +170,16 @@ class Menu:
         await self.clear()
         return results
 
-    async def get_bool(self, time=30, prompt=""):
+    async def get_bool(self, time=30, prompt="Select Yes or No", title="Boolean Choice"):
         """Ask the user to click a simple YES or NO."""
         selection = [cancel, confirm]
 
-        self.em.description = prompt or "Select Yes or No"
+        # self.em.description = prompt or "Select Yes or No"
+        # await self.post()
+        # adding = create_task(self.add_buttons(selection))
+        self.add_section(prompt, title)
+        adding = await self.add_buttons(selection)
         await self.post()
-        adding = create_task(self.add_buttons(selection))
 
         choice = (
             await Reactions.waitfor(
@@ -174,19 +190,21 @@ class Menu:
                 timeout=time,
             )
         )[0]
-
-        if not choice:
-            result = None
-        elif choice.emoji == confirm:
-            result = True
-        elif choice.emoji == cancel:
-            result = False
-        else:
-            result = None
+        print(choice)
 
         await adding
         await self.clear()
-        return result
+
+        if not choice:
+            return None
+        elif choice.emoji == confirm:
+            return True
+        elif choice.emoji == cancel:
+            return False
+        else:
+            return None
+
+    ### PUBLIC interfaces; ANYONE may respond.
 
     async def get_poll(self, opts: list, time=3600) -> dict:
         """Run a MULTIPLE CHOICE open poll that anyone can answer."""
@@ -195,7 +213,7 @@ class Menu:
             return {}
         selection = letters[:onum]
 
-        buttons = await self.setup(
+        buttons = await self.add_buttons(
             "**Poll:** Multiple Choice:\n"
             + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
             selection,
@@ -225,7 +243,7 @@ class Menu:
         """Run a YES OR NO open vote that anyone can answer."""
         selection = [cancel, confirm]
 
-        buttons = await self.setup("**Vote:** Yes or No", selection)
+        buttons = await self.add_buttons("**Vote:** Yes or No", selection)
 
         await buttons
         await sleep(time)

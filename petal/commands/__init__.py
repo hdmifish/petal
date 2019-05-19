@@ -105,7 +105,11 @@ class CommandPending:
             self.unlink()
             await self.src.channel.send(
                 "Sorry, something went wrong, but I do not know what"
-                + (": `{}`".format(e) if str(e) else ".")
+                + (
+                    ": `{} / {}`".format(type(e).__name__, e)
+                    if str(e)
+                    else " ({}).".format(type(e).__name__)
+                )
             )
 
         else:

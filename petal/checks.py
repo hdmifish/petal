@@ -61,14 +61,14 @@ class Messages:
     @classmethod
     def by_user(cls, user: discord.User):
         def check(_message: discord.Message):
-            return _message.author.id == user.id
+            return _message and _message.author.id == user.id
 
         return check
 
     @classmethod
     def in_channel(cls, channel: discord.TextChannel):
         def check(_message: discord.Message):
-            return _message.channel.id == channel.id
+            return _message and _message.channel.id == channel.id
 
         return check
 
@@ -97,23 +97,20 @@ class Reactions:
             except (discord.Forbidden, discord.HTTPException):
                 pass
         try:
-            return (
-                await client.wait_for("react_add", check=check, timeout=timeout)
-                or default
-            )
+            return await client.wait_for("reaction_add", check=check, timeout=timeout)
         except asyncio.TimeoutError:
             return default
 
     @classmethod
     def by_user(cls, user: discord.User):
-        def check(_reaction1, _user):
-            return _user.id == user.id
+        def check(_reaction, _user):
+            return _user and _user.id == user.id
 
         return check
 
     @classmethod
     def on_message(cls, message: discord.Message):
         def check(_reaction, _user):
-            return _reaction.message.id == message.id
+            return _reaction and _reaction.message.id == message.id
 
         return check

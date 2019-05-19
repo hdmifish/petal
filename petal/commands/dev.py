@@ -2,6 +2,7 @@
 Access: Config Whitelist"""
 
 from petal.commands import core
+from petal.checks import all_checks, Messages
 from petal.exceptions import CommandInputError
 from petal.menu import Menu
 from petal.util.grammar import pluralize, sequence_words
@@ -170,30 +171,35 @@ class CommandsMaintenance(core.Commands):
             # return "\n".join(report)
 
     async def cmd_menu(self, src, **_):
-        m = Menu(self.client, src.channel, "Choice", user=src.author)
+        m = Menu(self.client, src.channel, "Choice", "Test Function", user=src.author)
 
-        await m.add_result(
+        m.add_section(
             await m.get_one(["asdf", "qwert", "asdfqwert", "qwertyuiop"]) or "(None)"
         )
-        await m.add_result(
+        await m.post()
+        m.add_section(
             await m.get_one(["zxcv", "qazwsx", "yuiop", "poiuytrewq"]) or "(None)",
             overwrite=0,
         )
-        await m.add_result(
+        await m.post()
+        m.add_section(
             await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"]) or "(None)", overwrite=0
         )
+        await m.post()
 
     async def cmd_menu2(self, src, **_):
-        m = Menu(self.client, src.channel, "Choice", user=src.author)
+        m = Menu(self.client, src.channel, "Choice", "Test Function", user=src.author)
 
-        await m.add_result(
+        m.add_section(
             "\n".join(await m.get_multi(["asdf", "qwert", "asdfqwert", "qwertyuiop"]))
             or "(None)"
         )
+        await m.post()
 
     async def cmd_bool(self, src, **_):
-        m = Menu(self.client, src.channel, "Choice", user=src.author)
-        await m.add_result(repr(await m.get_bool()))
+        m = Menu(self.client, src.channel, "Choice", "Test Function", user=src.author)
+        m.add_section(repr(await m.get_bool()))
+        await m.post()
 
     async def cmd_poll(
         self, args, src, _question: str = "", _channel: int = None, _time: int = 0, **_
@@ -214,7 +220,7 @@ class CommandsMaintenance(core.Commands):
         if not targ:
             return "Invalid Channel"
 
-        poll = Menu(self.client, targ, title=title)
+        poll = Menu(self.client, targ, title, "Test Function")
         await poll.get_poll(args, duration)
 
     async def cmd_vote(
@@ -230,8 +236,22 @@ class CommandsMaintenance(core.Commands):
         if not targ:
             return "Invalid Channel"
 
-        poll = Menu(self.client, targ, title=title)
+        poll = Menu(self.client, targ, title, "Test Function")
         await poll.get_vote(duration)
+
+    async def cmd_repeat(self, src, **_):
+        return "You said:```{}```".format(
+            (
+                await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    channel=src.channel,
+                    prompt="say thing",
+                )
+            ).content
+        )
 
     async def cmd_bytes(self, src, **_):
         """Encode the message provided into a Bytes object. Then, print it.
