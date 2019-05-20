@@ -9,7 +9,7 @@ import discord
 import pytz
 
 from petal.commands import core
-from petal.exceptions import CommandExit, CommandInputError, CommandOperationError
+from petal.exceptions import CommandInputError, CommandOperationError
 
 
 # Reference: strftime.org
@@ -95,8 +95,9 @@ class CommandsUtil(core.Commands):
             return
 
         if not args:
-            # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
-            raise CommandExit("`<Default helptext goes here>`\n`#BlameIso`")
+            # With no specified command, show help for "help".
+            args = ["help"]
+            # raise CommandExit("`<Default helptext goes here>`\n`#BlameIso`")
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
@@ -270,14 +271,14 @@ class CommandsUtil(core.Commands):
             if hints:
                 em.add_field(
                     name="Typed Parameters:",
-                    value=str(hints) + str(cmd.__annotations__)
-                    # value="\n".join(
-                    #     [
-                    #         "`{}`: `{}`".format(k, v)
-                    #         for k, v in hints.items()
-                    #         if k.startswith("_")
-                    #     ]
-                    # ),
+                    # value=str(hints) + str(cmd.__annotations__)
+                    value="\n".join(
+                        [
+                            "`{}`: `{}`".format(k, v)
+                            for k, v in hints.items()
+                            if k.startswith("_")
+                        ]
+                    ),
                 )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
@@ -523,14 +524,14 @@ class CommandsUtil(core.Commands):
         args,
         msg,
         src,
-        _b: bool = False,
-        _s: str = None,
-        _d: int = None,
-        _n: float = None,
         _boolean: bool = False,
+        _b: bool = False,
         _string: str = None,
+        _s: str = None,
         _digit: int = None,
+        _d: int = None,
         _number: float = None,
+        _n: float = None,
         _dashed_long_opt: str = None,
         **opts
     ):
