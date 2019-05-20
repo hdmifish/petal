@@ -3,12 +3,14 @@ Access: Public"""
 
 from collections import OrderedDict
 from datetime import datetime as dt
-from typing import get_type_hints
+from typing import get_type_hints, List
 
 import discord
 import pytz
 
 from petal.commands import core
+from petal.exceptions import CommandExit, CommandInputError, CommandOperationError
+
 
 # Reference: strftime.org
 tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
@@ -31,6 +33,10 @@ def zone(tz: str):
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.help_cache = {}
+
     async def cmd_help(
         self,
         args,
@@ -52,6 +58,24 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}help [OPTIONS] [<str>]`
 
+        Parameters
+        ----------
+        args : list
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _short, _s : bool
+            Exclude the Details segment.
+        _extreme : bool
+            Forego normal output and give tutorial.
+        _ : dict
+            Dict of additional Keyword Args.
+
+        Returns
+        -------
+        discord.Embed
+            Embed Object to be embedded into a reply Message.
+
         Options:
         `--short`, `-s` :: Exclude the "details" section of printed help.
         `--extreme` :: Return **extremely verbose** general help on Arguments, Options, and Flags.
@@ -65,52 +89,89 @@ class CommandsUtil(core.Commands):
 
         if not args:
             # TODO: Iso, put your default helptext here; Didnt copy it over in case you wanted it changed
-            return "`<Default helptext goes here>`\n`#BlameIso`"
+            raise CommandExit("`<Default helptext goes here>`\n`#BlameIso`")
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            return "Cannot show help: " + denied
+            raise CommandOperationError("Cannot show help: " + denied)
         elif cmd.__doc__:
-            # Grab the docstring and insert the correct prefix wherever needed
-            doc0 = cmd.__doc__.format(p=self.config.prefix)
-            # Split the docstring up by double-newlines
-            doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
+            if cmd.__name__ in self.help_cache:
+                return self.help_cache[cmd.__name__]
+            else:
+                # Grab the docstring and insert the correct prefix wherever needed
+                doc0 = cmd.__doc__.format(p=self.config.prefix)
 
-            summary = doc.pop(0)
-            em = discord.Embed(
-                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
-                description=summary,
-                colour=0x0ACDFF,
-            )
+                # Ensure that there are no triple-newlines. Make them doubles.
+                while "\n\n\n" in doc0:
+                    doc0 = doc0.replace("\n\n\n", "\n\n")
 
-            details = ""
-            syntax = ""
-            opts = ""
-            while doc:
-                line = doc.pop(0)
-                if line.lower().startswith("syntax"):
-                    syntax = line.split(" ", 1)[1]
-                elif line.lower().startswith("options"):
-                    opts = line.split(" ", 1)[1]
-                else:
-                    details += line + "\n"
-            if details and True not in (_short, _s):
-                em.add_field(name="Details:", value=details.strip())
-            if syntax:
-                em.add_field(name="Syntax:", value=syntax)
-            if opts:
-                em.add_field(name="Options:", value=opts)
+                # Split the docstring up by double-newlines, into a List of
+                #   Lists which are themselves split by single-newlines.
+                doc: List[List[str]] = [doc1.split("\n") for doc1 in doc0.split("\n\n")]
 
-            em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
-            # em.set_thumbnail(url=self.client.user.avatar_url)
-            await self.client.embed(src.channel, em)
+                # First paragraph is Summary.
+                summary = "\n".join([line.strip() for line in doc.pop(0)])
+                em = discord.Embed(
+                    title="`" + self.config.prefix + cmd.__name__[4:] + "`",
+                    description=summary,
+                    colour=0x0ACDFF,
+                )
+                details: List[List[str]] = []
+                syntax: str = ""
+                opts: str = ""
+
+                found_opts = False
+                # while doc:
+                #     paragraph = doc.pop(0)
+                for paragraph in doc:
+                    if paragraph[0].lower().strip().startswith("syntax:"):
+                        # Paragraph is the Syntax block.
+                        paragraph[0] = paragraph[0].strip()[7:]
+                        syntax = "\n".join([x.strip() for x in paragraph if x.strip()])
+
+                    elif not found_opts:
+                        if paragraph[0].lower().strip().startswith("options:"):
+                            # Paragraph is the manual-style Options block.
+                            found_opts = True
+                            paragraph[0] = paragraph[0].strip()[8:]
+                            opts = "\n".join(
+                                [x.strip() for x in paragraph if x.strip()]
+                            )
+
+                        elif [l.strip() for l in paragraph[0:2]] == [
+                            "Parameters",
+                            "----------",
+                        ]:
+                            # Paragraph is a NumPy Parameters block; Derive Options.
+                            # TODO
+                            found_opts = True
+
+                    elif len(paragraph) < 2 or paragraph[1].strip("- "):
+                        # Safe to conclude this is not a NumPy block.
+                        details.append([x.strip() for x in paragraph if x.strip()])
+
+                if details and not (_short or _s):
+                    em.add_field(
+                        name="Details:",
+                        value="\n\n".join(["\n".join(p) for p in details])[:1024],
+                    )
+                if syntax:
+                    em.add_field(name="Syntax:", value=syntax[:1024])
+                if opts:
+                    em.add_field(name="Options:", value=opts[:1024])
+
+                em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
+                self.help_cache[cmd.__name__] = em
+                return em
         else:
             if cmd:
-                return "No help for `{}` available.".format(
-                    self.config.prefix + cmd.__name__[4:]
+                raise CommandOperationError(
+                    "No help for `{}` available.".format(
+                        self.config.prefix + cmd.__name__[4:]
+                    )
                 )
             else:
-                return "Command not found."
+                raise CommandInputError("Command not found.")
 
     async def cmd_info(self, args, src, **_):
         """Print technical information regarding command implementation.
@@ -176,13 +237,14 @@ class CommandsUtil(core.Commands):
             if hints:
                 em.add_field(
                     name="Typed Parameters:",
-                    value="\n".join(
-                        [
-                            "`{}`: `{}`".format(k, v)
-                            for k, v in hints.items()
-                            if k.startswith("_")
-                        ]
-                    ),
+                    value=str(hints) + str(cmd.__annotations__)
+                    # value="\n".join(
+                    #     [
+                    #         "`{}`: `{}`".format(k, v)
+                    #         for k, v in hints.items()
+                    #         if k.startswith("_")
+                    #     ]
+                    # ),
                 )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
