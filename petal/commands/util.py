@@ -23,6 +23,15 @@ helptext = [
 ]
 
 
+zip_zag = lambda sequence, tuple_size=2: [
+    (
+        first,
+        *[sequence[tuple_size * idx + offset + 1] for offset in range(tuple_size - 1)],
+    )
+    for idx, first in enumerate(sequence[::tuple_size])
+]
+
+
 def zone(tz: str):
     try:
         return pytz.timezone(tz)
@@ -39,8 +48,8 @@ class CommandsUtil(core.Commands):
 
     async def cmd_help(
         self,
-        args,
-        src,
+        args: List[str],
+        src: discord.Message,
         _short: bool = False,
         _s: bool = False,
         _extreme: bool = False,
@@ -48,19 +57,23 @@ class CommandsUtil(core.Commands):
     ):
         """Print information regarding command usage.
 
-        Help text is drawn from the docstring of a command method, which should be formatted into four sections -- Summary, Details, Syntax, and Options -- which are separated by double-newlines.
-        The __Summary__ section provides cursory information about a command, and is typically all one needs to understand it.
+        Help text is drawn from the docstring of a command method, which should be formatted into four sections: Summary, Details, Syntax, and Options.
+        The __Summary__ section provides cursory information about a command, and is typically all one needs to understand it on a basic level.
         The __Details__ section contains more involved information about how the command works, possibly including technical information.
-        The __Syntax__ section describes exactly how the command should be invoked. Angle brackets indicate a parameter to be filled, square brackets indicate an optional segment, and parentheses indicate choices, separated by pipes.
-        The __Options__ section details Options and Flags that may be passed to the command. These may significantly alter the operation of a command.
+        The __Syntax__ section describes exactly how the command should be invoked. Angle brackets indicate a parameter to be filled, square brackets indicate an optional segment, and parentheses indicate choices, separated by pipes. If the Syntax section is missing, it indicates that the command takes no arguments.
+        The __Options__ section details Options and Flags that may be passed to the command. These may significantly alter the function of a command.
 
-        For exhaustive help with Arguments and Options, invoke `{p}help extreme`. See also `{p}commands` and `{p}info`.
+        For advanced/exhaustive help with Arguments and Options, invoke `{p}help --extreme`.
+
+        See also: `{p}commands` and `{p}info`.
 
         Syntax: `{p}help [OPTIONS] [<str>]`
 
         Parameters
         ----------
-        args : list
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
             List of Positional Arguments supplied after Command.
         src : discord.Message
             The Discord Message that invoked this Command.
@@ -68,17 +81,11 @@ class CommandsUtil(core.Commands):
             Exclude the Details segment.
         _extreme : bool
             Forego normal output and give tutorial.
-        _ : dict
-            Dict of additional Keyword Args.
 
         Returns
         -------
         discord.Embed
             Embed Object to be embedded into a reply Message.
-
-        Options:
-        `--short`, `-s` :: Exclude the "details" section of printed help.
-        `--extreme` :: Return **extremely verbose** general help on Arguments, Options, and Flags.
         """
         if _extreme:
             for line in helptext:
@@ -120,7 +127,6 @@ class CommandsUtil(core.Commands):
                 syntax: str = ""
                 opts: str = ""
 
-                found_opts = False
                 # while doc:
                 #     paragraph = doc.pop(0)
                 for paragraph in doc:
@@ -129,22 +135,49 @@ class CommandsUtil(core.Commands):
                         paragraph[0] = paragraph[0].strip()[7:]
                         syntax = "\n".join([x.strip() for x in paragraph if x.strip()])
 
-                    elif not found_opts:
-                        if paragraph[0].lower().strip().startswith("options:"):
-                            # Paragraph is the manual-style Options block.
-                            found_opts = True
-                            paragraph[0] = paragraph[0].strip()[8:]
-                            opts = "\n".join(
-                                [x.strip() for x in paragraph if x.strip()]
-                            )
+                    elif paragraph[0].lower().strip().startswith("options:"):
+                        # Paragraph is the manual-style Options block.
+                        if opts:
+                            continue
 
-                        elif [l.strip() for l in paragraph[0:2]] == [
-                            "Parameters",
-                            "----------",
-                        ]:
-                            # Paragraph is a NumPy Parameters block; Derive Options.
-                            # TODO
-                            found_opts = True
+                        paragraph[0] = paragraph[0].strip()[8:]
+                        opts = "\n".join([x.strip() for x in paragraph if x.strip()])
+
+                    elif [l.strip() for l in paragraph[0:2]] == [
+                        "Parameters",
+                        "----------",
+                    ]:
+                        # Paragraph is a NumPy Parameters block; Derive Options.
+                        if opts:
+                            continue
+
+                        opts_list = []
+                        for dat, descrip in zip_zag(
+                            [l.strip() for l in paragraph[2:] if l.strip()]
+                        ):
+                            onames, otype = (
+                                dat.replace(" ", "").split(":")
+                                if ":" in dat
+                                else (dat.replace(" ", ""), "")
+                            )
+                            onames = [
+                                ("`-" if len(name) == 2 else "`--")
+                                + name[1:].replace("_", "-")
+                                + ("`" if otype == "bool" else " <{}>`".format(otype))
+                                for name in onames.split(",")
+                                if name.startswith("_") and len(name) > 1
+                            ]
+                            if onames:
+                                opts_list.append(
+                                    " :: ".join(
+                                        (
+                                            ", ".join(onames),
+                                            "FLAG" if otype == "bool" else "OPT",
+                                            descrip,
+                                        )
+                                    )
+                                )
+                        opts = "\n".join(opts_list)
 
                     elif len(paragraph) < 2 or paragraph[1].strip("- "):
                         # Safe to conclude this is not a NumPy block.
