@@ -122,6 +122,50 @@ class CommandsMgr(core.Commands):
         if response is not None:
             return response
 
+    async def cmd_tunnel(
+        self,
+        args,
+        src,
+        _disconnect: bool = False,
+        _d: bool = False,
+        _kill: bool = False,
+        _k: bool = False,
+        **_
+    ):
+        """Establish or manipulate a live connection between multiple Channels.
+
+        A Messaging Tunnel is a live connection between Channels. Any Message sent in any Channel connected to a Tunnel will be forwarded to all other Channels connected to the Tunnel.
+        A Tunnel will close automatically if no Messages are sent through it for a given time. This value defaults to ten minutes.
+
+        Syntax: `{p}tunnel [OPTIONS] [<int:channel_id>...]`
+
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _disconnect, _d : bool
+            Remove the current Channel from any connected Tunnels. This will NOT close the Tunnel completely.
+        _kill, _k : bool
+            Kill the Tunnel connected to the current Channel. This will disconnect ALL channels from the Tunnel.
+        """
+        if _kill or _k:
+            await self.client.kill_tunnel(self.client.get_tunnel(src.channel))
+            return "Closed Messaging Tunnel connected to this Channel."
+
+        elif _disconnect or _d:
+            await self.client.close_tunnels_to(src.channel)
+            return "Disconnected channel from all Messaging Tunnels."
+
+        else:
+            dests = [int(x) for x in args if x.isdigit()]
+            if not dests:
+                return "Must provide at least one integer Channel or User ID."
+            await self.client.dig_tunnel(src.channel, *dests)
+
 
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
