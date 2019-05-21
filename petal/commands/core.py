@@ -133,6 +133,7 @@ class Commands:
             for attr in dir(self)
             if "__" not in attr and attr.startswith("cmd_")
         ]
+        full.sort(key=lambda f: f.__name__)
         return full
 
     def authenticate(self, src):

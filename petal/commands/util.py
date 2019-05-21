@@ -9,7 +9,7 @@ import discord
 import pytz
 
 from petal.commands import core
-from petal.exceptions import CommandInputError, CommandOperationError
+from petal.exceptions import CommandAuthError, CommandInputError, CommandOperationError
 
 
 # Reference: strftime.org
@@ -329,7 +329,7 @@ class CommandsUtil(core.Commands):
 
         if _custom or _c:
             line_2 = ", including custom commands"
-            cmd_list += list(self.config.get("commands")) or []
+            cmd_list += list(sorted(self.config.get("commands"))) or []
         else:
             line_2 = ""
 
@@ -349,20 +349,33 @@ class CommandsUtil(core.Commands):
                 )
             ]
 
-        # Unless --all or -a, remove any restricted commands.
         cl2 = []
-        for cmd in cmd_list.copy():
-            mod, func, denied = self.router.find_command(
-                kword=cmd, src=None if any((_all, _a)) else src
-            )
-            if denied is False:
-                cl2.append(
-                    "{} - {}".format(
-                        self.config.prefix + cmd, mod.__module__.split(".")[-1]
-                    )
+        for cmd in cmd_list:
+            if _all or _a:
+                mod, func, denied = self.router.find_command(
+                    kword=cmd, src=None
                 )
+            else:
+                # Unless --all or -a, remove any restricted commands.
+                try:
+                    mod, func, denied = self.router.find_command(
+                        kword=cmd, src=src
+                    )
+                except CommandAuthError:
+                    continue
+            cl2.append(
+                "{} - {}".format(
+                    self.config.prefix + cmd, mod.__module__.split(".")[-1]
+                )
+            )
 
-        if any((_all, _a)):
+        if not cl2:
+            raise CommandOperationError(
+                "Sorry, no commands matched your search."
+                if args
+                else "Sorry, no valid commands found."
+            )
+        elif _all or _a:
             line_1 = "List of all commands"
         else:
             line_1 = "List of commands you can access"
