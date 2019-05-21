@@ -332,7 +332,7 @@ class CommandsMod(core.Commands):
                 )
             except asyncio.TimeoutError:
                 return "Timed out while waiting for input"
-            _days = msg2.content
+            _days = int(msg2.content)
 
         try:
             # petal.logLock = True
