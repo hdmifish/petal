@@ -172,8 +172,8 @@ class CommandsUtil(core.Commands):
                                 opts_list.append(
                                     " :: ".join(
                                         (
-                                            ", ".join(onames),
                                             "FLAG" if otype == "bool" else "OPT",
+                                            ", ".join(onames),
                                             descrip,
                                         )
                                     )
@@ -302,10 +302,20 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}commands [OPTIONS] [<search>]`
 
-        Options:
-        `--all`, `-a` :: List **__all__** built-in commands, even ones you cannot use.
-        `--custom`, `-c` :: Include custom commands in the list, created via `{p}new`.
-        `--sort`, `-s` :: Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _all, _a : bool
+            List **__all__** built-in commands, even ones you cannot use.
+        _custom, _c : bool
+            Include custom commands in the list, created via `{p}new`.
+        _sort, _s : bool
+            Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
         # Send through OrderedDict to remove duplicates while maintaining order.
         cmd_list = list(
@@ -501,9 +511,18 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}tunnel [OPTIONS] [<int:channel_id>...]`
 
-        Options:
-        `--disconnect`, `-d` :: Remove the current Channel from any connected Tunnels. This will NOT close the Tunnel completely.
-        `--kill`, `-k` :: Kill the Tunnel connected to the current Channel. This will disconnect ALL channels from the Tunnel.
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _disconnect, _d : bool
+            Remove the current Channel from any connected Tunnels. This will NOT close the Tunnel completely.
+        _kill, _k : bool
+            Kill the Tunnel connected to the current Channel. This will disconnect ALL channels from the Tunnel.
         """
         if _kill or _k:
             await self.client.kill_tunnel(self.client.get_tunnel(src.channel))
@@ -545,12 +564,24 @@ class CommandsUtil(core.Commands):
 
         Syntax: `{p}argtest [OPTIONS] [<arguments>...]`
 
-        Options:
-        `--boolean`, `-b` :: Set the Boolean Flag to display `True`.
-        `--string=<str>`, `-s <str>` :: Define this Option to be displayed.
-        `--dashed-long-opt=<str>`
-        `--digit=<int>`, `-d <int>` :: Define this Option to be displayed.
-        `--number=<float>`, `-n <float>` :: Define this Option to be displayed.
+        Parameters
+        ----------
+        opts : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        msg : str
+            The TEXT of the Message that invoked this Command, minux the Prefix.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _boolean, _b : bool
+            Set the Boolean Flag to display `True`.
+        _string, _s, _dashed_long_opt : str
+            Define this Option to be displayed.
+        _digit, _d : int
+            Define this Option to be displayed.
+        _number, _n : float
+            Define this Option to be displayed.
         """
         print(args, opts, src)
         # out = ["ARGS:", *args, "OPTS:"]
