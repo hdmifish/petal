@@ -322,14 +322,20 @@ class CommandsUtil(core.Commands):
             Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
         # Send through OrderedDict to remove duplicates while maintaining order.
-        cmd_list = list(
-            OrderedDict.fromkeys(
-                [
-                    method.__name__[4:]
-                    for method in self.router.get_all(src=None if _all or _a else src)
-                ]
+        cmd_list = (
+            list(
+                OrderedDict.fromkeys(
+                    [
+                        method.__name__[4:]
+                        for method in self.router.get_all(
+                            src=None if _all or _a else src
+                        )
+                    ]
+                )
             )
-        ) if not (_custom_only or _C) else []
+            if not (_custom_only or _C)
+            else []
+        )
 
         if _custom or _custom_only or _c or _C:
             line_2 = "" if _custom_only or _C else ", including custom commands"
@@ -356,15 +362,11 @@ class CommandsUtil(core.Commands):
         cl2 = []
         for cmd in cmd_list:
             if _all or _a:
-                mod, func, denied = self.router.find_command(
-                    kword=cmd, src=None
-                )
+                mod, func, denied = self.router.find_command(kword=cmd, src=None)
             else:
                 # Unless --all or -a, remove any restricted commands.
                 try:
-                    mod, func, denied = self.router.find_command(
-                        kword=cmd, src=src
-                    )
+                    mod, func, denied = self.router.find_command(kword=cmd, src=src)
                 except CommandAuthError:
                     continue
             cl2.append(
@@ -450,7 +452,36 @@ class CommandsUtil(core.Commands):
             or zone("Etc/" + tz)
             or zone("Etc/" + tz.upper())
             or zone("Etc/" + tz.capitalize())
-            or zone("/".join([term.capitalize() for term in tz.split("/")]))
+            or zone(
+                "/".join(
+                    [
+                        "US" if word.lower() == "us" else word
+                        for word in [term.capitalize() for term in tz.split("/")]
+                    ]
+                )
+            )
+            or zone(
+                "/".join(
+                    [
+                        "US" if word.lower() == "us" else word
+                        for word in [
+                            "_".join([sub.capitalize() for sub in term.split(" ")])
+                            for term in tz.split("/")
+                        ]
+                    ]
+                )
+            )
+            or zone(
+                "/".join(
+                    [
+                        "US" if word.lower() == "us" else word
+                        for word in [
+                            "_".join([sub.capitalize() for sub in term.split("_")])
+                            for term in tz.split("/")
+                        ]
+                    ]
+                )
+            )
         )
         if tzone:
             return dt.now(tzone).strftime(tstring)
