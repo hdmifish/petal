@@ -294,6 +294,8 @@ class CommandsUtil(core.Commands):
         _a: bool = False,
         _custom: bool = False,
         _c: bool = False,
+        _custom_only: bool = False,
+        _C: bool = False,
         _sort: bool = False,
         _s: bool = False,
         **_
@@ -314,6 +316,8 @@ class CommandsUtil(core.Commands):
             List **__all__** built-in commands, even ones you cannot use.
         _custom, _c : bool
             Include custom commands in the list, created via `{p}new`.
+        _custom_only, _C : bool
+            Include **__only__** custom commands in the list. Overrides `--all`, `-a`.
         _sort, _s : bool
             Alphabetize the command list; Commands will, by default, be ordered by module priority, and then by position in source code.
         """
@@ -325,10 +329,10 @@ class CommandsUtil(core.Commands):
                     for method in self.router.get_all(src=None if _all or _a else src)
                 ]
             )
-        )
+        ) if not (_custom_only or _C) else []
 
-        if _custom or _c:
-            line_2 = ", including custom commands"
+        if _custom or _custom_only or _c or _C:
+            line_2 = "" if _custom_only or _C else ", including custom commands"
             cmd_list += list(sorted(self.config.get("commands"))) or []
         else:
             line_2 = ""
@@ -375,12 +379,14 @@ class CommandsUtil(core.Commands):
                 if args
                 else "Sorry, no valid commands found."
             )
+        elif _custom_only or _C:
+            line_1 = "List of custom commands"
         elif _all or _a:
             line_1 = "List of all commands"
         else:
             line_1 = "List of commands you can access"
 
-        return line_1 + line_2 + ":```" + "\n".join(cl2) + "```"
+        return (line_1 + line_2 + ":```" + "\n".join(cl2))[:1997] + "```"
 
     async def cmd_avatar(self, args, src, **_):
         """Given a User ID, post their Avatar."""

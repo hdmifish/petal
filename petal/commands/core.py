@@ -1,4 +1,5 @@
 from asyncio import ensure_future as create_task, sleep
+import traceback
 from urllib.parse import urlencode, quote_plus
 
 import discord
@@ -76,6 +77,7 @@ class CommandPending:
                     else " ({}).".format(type(e).__name__)
                 )
             )
+            traceback.print_exc()
 
         else:
             # Command routed without errors.
