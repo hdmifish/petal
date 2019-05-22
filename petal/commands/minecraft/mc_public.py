@@ -21,7 +21,7 @@ class CommandsMCPublic(auth.CommandsMCAuth):
             )
 
         submission = args[0]
-        reply, uuid = self.minecraft.WLRequest(submission, src.author.id)
+        reply, uuid = self.minecraft.WLRequest(submission, str(src.author.id))
 
         if reply == 0:
             self.log.f(
@@ -44,9 +44,9 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                     + "` with request: "
                     + submission
                     + "\nTaggable: <@"
-                    + src.author.id
+                    + str(src.author.id)
                     + ">\nDiscord ID:  "
-                    + src.author.id
+                    + str(src.author.id)
                     + "\nMojang UID:  "
                     + uuid,
                 )
