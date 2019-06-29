@@ -10,6 +10,7 @@ import requests
 import discord
 
 from petal.commands import core
+from petal.exceptions import CommandArgsError
 from petal.grasslands import Pidgeon, Define
 from petal.util import dice
 
@@ -138,6 +139,29 @@ class CommandsPublic(core.Commands):
         )
         await self.client.embed(src.channel, embedded=em)
         return None
+
+    async def cmd_plane(self, args, **_):
+        """Write down a worry on a piece of paper, then fold it into a plane and send it away."""
+        if not args:
+            raise CommandArgsError(
+                "I can't make a plane without a worry, that would be a waste of"
+                " paper D:\n`#SaveTheTrees`"
+            )
+        elif len(args) > 1:
+            raise CommandArgsError(
+                "You will need to put your worry in quotes so I can write it down."
+            )
+        else:
+            return (
+                "I wrote down your worry on a sheet of paper. Then, I folded it"
+                " into a plane and threw it. It flew {} meters before landing."
+                " Now your worry is {} :D".format(
+                    randint(10000, 99999) / 10,
+                    "far far away"
+                    if randint(0, 1000)
+                    else "farther out than Woodstock",
+                )
+            )
 
     async def cmd_setosu(self, args, src, **_):
         """Specify your Osu username so that `{p}osu` can find you automatically.
@@ -402,7 +426,9 @@ class CommandsPublic(core.Commands):
         """
         ex = _explain if _explain is not None else _e
         if ex is not None:
-            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(ex)
+            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(
+                ex
+            )
 
         try:
             indexresp = json.loads(
