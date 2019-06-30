@@ -23,13 +23,13 @@ helptext = [
 ]
 
 
-zip_zag = lambda sequence, tuple_size=2: [
+zip_zag = lambda sequence, tuple_size=2: (
     (
         first,
         *[sequence[tuple_size * idx + offset + 1] for offset in range(tuple_size - 1)],
     )
     for idx, first in enumerate(sequence[::tuple_size])
-]
+)
 
 
 def zone(tz: str):
@@ -262,7 +262,7 @@ class CommandsUtil(core.Commands):
                 value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(
                     self.config.get(mod.role),
                     mod.op if 0 <= mod.op <= 4 else None,
-                    mod.whitelist,
+                    mod.whitelist or None,
                 ),
             )
             em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
@@ -300,7 +300,7 @@ class CommandsUtil(core.Commands):
         _s: bool = False,
         **_
     ):
-        """List all commands.
+        """List, or search, available commands.
 
         Syntax: `{p}commands [OPTIONS] [<search>]`
 
@@ -431,7 +431,7 @@ class CommandsUtil(core.Commands):
         """Show the current time and date in a specific time zone or location.
 
         This command will accept either a region/location pair, such as `US/Pacific`, or a time zone code, like `UTC` or `CET` or even ones such as `GMT-5`. Great efforts are taken to hopefully ensure that capitalization is not a concern. With no given input, default output is in UTC.
-        The time zones are defined by way of the PyTZ library, and can be found here: http://pytz.sourceforge.net/
+        The time zones are defined by way of the PyTZ library, and can be found here: https://pytz.sourceforge.net/
 
         Syntax:
         `{p}time` - Show date/time in UTC.
@@ -590,30 +590,18 @@ class CommandsUtil(core.Commands):
             Define this Option to be displayed.
         """
         print(args, opts, src)
-        # out = ["ARGS:", *args, "OPTS:"]
         for x in ["ARGS:", *args, "OPTS:"]:
             yield x
-        for opt, val in [
+        for opt, val in (
             ("`--boolean`, `-b`", _boolean or _b),
             ("`--string`, `-s`", _string or _s),
             ("`--dashed-long-opt`", _dashed_long_opt),
             ("`--digit`, `-d`", _digit or _d),
             ("`--number`, `-n`", _number or _n),
-            # ("--boolean", _boolean),
-            # ("--string", _string),
-            # ("--digit", _digit),
-            # ("--number", _number),
-            # ("-b", _b),
-            # ("-s", _s),
-            # ("-d", _d),
-            # ("-n", _n),
-        ]:
+        ):
             if val is not None:
-                # out.append("{} = `{}` ({})".format(opt, repr(val), type(val).__name__))
                 yield "{} = `{}` ({})".format(opt, repr(val), type(val).__name__)
         yield "MSG: " + msg
-        # out.append("MSG: " + msg)
-        # return "\n".join(out)
 
 
 # Keep the actual classname unique from this common identifier
