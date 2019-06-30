@@ -3,6 +3,8 @@ Access: Public"""
 
 from collections import OrderedDict
 from datetime import datetime as dt
+from functools import partial
+from re import compile
 from typing import get_type_hints, List
 
 import discord
@@ -23,6 +25,7 @@ helptext = [
 ]
 
 
+us_cap = partial(compile(r"\b[Uu]s\b").sub, "US")
 zip_zag = lambda sequence, tuple_size=2: (
     (
         first,
@@ -440,53 +443,36 @@ class CommandsUtil(core.Commands):
         `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
         """
         tz = args[0] if args else "UTC"
+
+        # The POSIX Standard dictates that timezones relative to GMT are written
+        #   GMT+X going west, and GMT-X going east, contrary to general use.
+        #   PyTZ takes input assuming it to follow this standard, but then it
+        #   outputs in the form of general use. This is stupid. Therefore,
+        #   change input if necessary.
+        if tz.lower().startswith("gmt+"):
+            tz = tz.replace("+", "-", 1)
+        elif tz.lower().startswith("gmt-"):
+            tz = tz.replace("-", "+", 1)
+
         # Try a bunch of different possibilities for what the user might have
         #     meant. Use the first one found, if any. First, check it plain.
-        #     Then, check it in all caps and CamelCase. Then, look for the same,
-        #     but in 'Etc/*'. Finally, split it and capitalize each part before
-        #     finally giving up.
+        #     Then, check it in title case, all caps and capitalized. Then, look
+        #     for the same, but in 'Etc/*'.
         tzone = (
-            zone(tz)
-            or zone(tz.upper())
-            or zone(tz.capitalize())
+            zone(us_cap(tz))
+            or zone(us_cap(tz.upper()))
+            or zone(us_cap(tz.title()))
+            or zone(us_cap(tz.capitalize()))
+
             or zone("Etc/" + tz)
             or zone("Etc/" + tz.upper())
+            or zone("Etc/" + tz.title())
             or zone("Etc/" + tz.capitalize())
-            or zone(
-                "/".join(
-                    [
-                        "US" if word.lower() == "us" else word
-                        for word in [term.capitalize() for term in tz.split("/")]
-                    ]
-                )
-            )
-            or zone(
-                "/".join(
-                    [
-                        "US" if word.lower() == "us" else word
-                        for word in [
-                            "_".join([sub.capitalize() for sub in term.split(" ")])
-                            for term in tz.split("/")
-                        ]
-                    ]
-                )
-            )
-            or zone(
-                "/".join(
-                    [
-                        "US" if word.lower() == "us" else word
-                        for word in [
-                            "_".join([sub.capitalize() for sub in term.split("_")])
-                            for term in tz.split("/")
-                        ]
-                    ]
-                )
-            )
         )
         if tzone:
             return dt.now(tzone).strftime(tstring)
         else:
-            return "Could not find the `{}` timezone.".format(tz)
+            raise CommandInputError("Could not find the `{}` timezone.".format(tz))
 
     async def cmd_utc(self, **_):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
