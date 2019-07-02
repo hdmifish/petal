@@ -40,11 +40,11 @@ class Menu:
         title: str,
         desc: str,
         user: User = None,
-        color=0x0ACDFF,
+        colour=0x0ACDFF,
     ):
         self.client = client
         self.channel = channel
-        self.em = Embed(title=title, description=desc, colour=color)
+        self.em = Embed(title=title, description=desc, colour=colour)
         self.msg = None
         self.master = user
 

@@ -14,6 +14,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
+from petal.menu import Menu
 
 
 def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
@@ -65,27 +66,20 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         ident["description"] = text
 
         try:
-            em = discord.Embed(**ident)
-            await src.channel.send(
-                content="Confirm sending this message to {} on behalf of {}?"
-                " (Say `yes` to confirm)".format(destination.mention, identity),
-                embed=em,
-            )
-            try:
-                confirm = await self.client.wait_for(
-                    "message",
-                    check=checks.all_checks(
-                        checks.Messages.by_user(src.author),
-                        checks.Messages.in_channel(src.channel),
-                    ),
-                    timeout=10,
-                )
-            except asyncio.TimeoutError:
-                raise CommandInputError("Timed out.")
-            if confirm.content.lower() != "yes":
+            preview = discord.Embed(**ident)
+            menu = Menu(self.client, src.channel, "", "", user=src.author)
+            menu.em = preview
+
+            if not await menu.get_bool(
+                prompt="Send this message to {} on behalf of {}?\n"
+                "(This section will not be sent.)".format(
+                    destination.mention, identity
+                ),
+                title="Confirm",
+            ):
                 raise CommandExit("Message cancelled.")
             else:
-                await self.client.embed(destination, em)
+                await self.client.embed(destination, discord.Embed(**ident))
 
         except discord.errors.Forbidden:
             raise CommandOperationError("Failed to send message: Access Denied")
