@@ -10,7 +10,7 @@ import requests
 import discord
 
 from petal.commands import core
-from petal.exceptions import CommandArgsError
+from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
 from petal.grasslands import Pidgeon, Define
 from petal.util import dice
 
@@ -92,16 +92,40 @@ class CommandsPublic(core.Commands):
         # print(str(response.text))
         return "Created bug report with ID: " + str(top)
 
-    async def cmd_osu(self, args, src, **_):
+    async def cmd_osu(self, args, src, _set: str = None, _s: str = None, **_):
         """Display information about an Osu player.
 
         A username to search may be provided to this command. If no username is provided, the command will try to display your profile instead. If you have not provided your username, your Discord username will be used.
-        Your Osu username may be provided with `{p}setosu`.
+        Your Osu username may be provided with `{p}osu --set <username>`.
 
         Syntax: `{p}osu [<username>]`
+
+        Options:
+        `--set <username>`, `-s <username>` :: Save your Osu username, so you can simply use `{p}osu`.
         """
         if not self.router.osu:
             return "Osu Support is not configured."
+        name = _set or _s
+        if name:
+            osu = args[0] if args else src.author.name
+
+            if not self.db.useDB:
+                raise CommandOperationError(
+                    "Database is not enabled, so you can't save an osu name.\n"
+                    "You can still use `{}osu <username>` though.".format(
+                        self.config.prefix
+                    )
+                )
+
+            self.db.update_member(src.author, {"osu": osu})
+
+            return (
+                "You have set `{}` as your preferred OSU account. You can now"
+                " run `{}osu` and it will use this name automatically!".format(
+                    name, self.config.prefix
+                )
+            )
+
         if not args:
             # No username specified; Print info for invoker
             if self.db.useDB:
@@ -114,11 +138,14 @@ class CommandsPublic(core.Commands):
             user = self.router.osu.get_user(username)
 
             if user is None:
-                return "You have not set an Osu username, and no data was found under your Discord username."
+                raise CommandOperationError(
+                    "You have not set an Osu username, and no data was found"
+                    " under your Discord username."
+                )
         else:
             user = self.router.osu.get_user(args[0])
             if user is None:
-                return "No user found with Osu! name: " + args[0]
+                raise CommandInputError("No user found with Osu! name: " + args[0])
 
         em = discord.Embed(
             title=user.name,
@@ -137,8 +164,7 @@ class CommandsPublic(core.Commands):
             name="Local Rank ({})".format(user.country),
             value="{:,}".format(int(user.country_rank)),
         )
-        await self.client.embed(src.channel, embedded=em)
-        return None
+        return em
 
     async def cmd_plane(self, args, **_):
         """Write down a worry on a piece of paper, then fold it into a plane and send it away."""
@@ -163,28 +189,28 @@ class CommandsPublic(core.Commands):
                 )
             )
 
-    async def cmd_setosu(self, args, src, **_):
-        """Specify your Osu username so that `{p}osu` can find you automatically.
-
-        Syntax: `{p}setosu <name>`
-        """
-        osu = args[0] if args else src.author.name
-
-        if not self.db.useDB:
-            return (
-                "Database is not enabled, so you can't save an osu name.\n"
-                + "You can still use `{}osu <name>` though.".format(self.config.prefix)
-            )
-
-        self.db.update_member(src.author, {"osu": osu})
-
-        return (
-            "You have set `"
-            + osu
-            + "` as your preferred OSU account. "
-            + "You can now run `{}osu` and it ".format(self.config.prefix)
-            + "will use this name automatically!"
-        )
+    # async def cmd_setosu(self, args, src, **_):
+    #     """Specify your Osu username so that `{p}osu` can find you automatically.
+    #
+    #     Syntax: `{p}setosu <name>`
+    #     """
+    #     osu = args[0] if args else src.author.name
+    #
+    #     if not self.db.useDB:
+    #         return (
+    #             "Database is not enabled, so you can't save an osu name.\n"
+    #             + "You can still use `{}osu <name>` though.".format(self.config.prefix)
+    #         )
+    #
+    #     self.db.update_member(src.author, {"osu": osu})
+    #
+    #     return (
+    #         "You have set `"
+    #         + osu
+    #         + "` as your preferred OSU account. "
+    #         + "You can now run `{}osu` and it ".format(self.config.prefix)
+    #         + "will use this name automatically!"
+    #     )
 
     async def cmd_freehug(self, args, src, **_):
         """Request a free hug from, or register as, a hug donor.
