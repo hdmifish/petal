@@ -8,6 +8,12 @@ from typing import Dict, Union
 import discord
 
 from petal import checks
+from petal.exceptions import (
+    CommandArgsError,
+    CommandExit,
+    CommandInputError,
+    CommandOperationError,
+)
 
 
 def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
@@ -22,13 +28,15 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         Syntax: `{{p}}send [OPTIONS] <channel-id> ["<message>"]`
         """
         if 2 < len(args) < 1:
-            return "Must provide a Channel ID and, optionally, a quoted message."
+            raise CommandArgsError(
+                "Must provide a Channel ID and, optionally, a quoted message."
+            )
         elif not args[0].isdigit():
-            return "Channel ID must be integer."
+            raise CommandArgsError("Channel ID must be integer.")
 
         destination = self.client.get_channel(int(args.pop(0)))
         if not destination:
-            return "Invalid Channel."
+            raise CommandArgsError("Invalid Channel.")
 
         if not args:
             await self.client.send_message(
@@ -46,14 +54,14 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
                     timeout=30,
                 )
             except asyncio.TimeoutError:
-                return "Timed out while waiting for message."
+                raise CommandInputError("Timed out while waiting for message.")
             else:
                 text = msg.content
         else:
             text = args[0]
 
         identity = (_identity or _i or default).lower()
-        ident = idents.get(identity, list(idents.values())[0])
+        ident = idents.get(identity, idents[list(idents.keys())[0]])
         ident["description"] = text
 
         try:
@@ -73,14 +81,14 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
                     timeout=10,
                 )
             except asyncio.TimeoutError:
-                return "Timed out."
+                raise CommandInputError("Timed out.")
             if confirm.content.lower() != "yes":
-                return "Message cancelled."
+                raise CommandExit("Message cancelled.")
             else:
                 await self.client.embed(destination, em)
 
         except discord.errors.Forbidden:
-            return "Failed to send message: Access Denied"
+            raise CommandOperationError("Failed to send message: Access Denied")
         else:
             return (
                 "{} (ID: `{}`) sent the following message to {}"
