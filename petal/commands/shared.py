@@ -70,16 +70,20 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             menu = Menu(self.client, src.channel, "", "", user=src.author)
             menu.em = preview
 
-            if not await menu.get_bool(
+            confirm = await menu.get_bool(
                 prompt="Send this message to {} on behalf of {}?\n"
                 "(This section will not be sent.)".format(
                     destination.mention, identity
                 ),
                 title="Confirm",
-            ):
+            )
+
+            if confirm is True:
+                await self.client.embed(destination, discord.Embed(**ident))
+            elif confirm is False:
                 raise CommandExit("Message cancelled.")
             else:
-                await self.client.embed(destination, discord.Embed(**ident))
+                raise CommandExit("Confirmation timed out.")
 
         except discord.errors.Forbidden:
             raise CommandOperationError("Failed to send message: Access Denied")

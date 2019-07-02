@@ -1,5 +1,6 @@
 from asyncio import ensure_future as create_task, sleep
 import traceback
+from typing import Optional
 from urllib.parse import urlencode, quote_plus
 
 import discord
@@ -8,6 +9,7 @@ from petal.dbhandler import m2id
 from petal.exceptions import (
     CommandArgsError,
     CommandAuthError,
+    CommandExit,
     CommandInputError,
     CommandOperationError,
 )
@@ -26,7 +28,7 @@ class CommandPending:
         self.src: discord.Message = src
 
         self.active = False
-        self.reply: discord.Message = None
+        self.reply: Optional[discord.Message] = None
         self.waiting = create_task(self.wait())
 
     async def run(self):
@@ -36,6 +38,8 @@ class CommandPending:
         if not self.active:
             # Command is not valid for execution. Cease.
             return False
+
+        d = "No details specified."
 
         try:
             # Run the Command through the Router.
@@ -51,11 +55,16 @@ class CommandPending:
         except CommandAuthError as e:
             # Access denied. Cease and desist.
             self.unlink()
-            await self.src.channel.send("Sorry, not permitted; {}".format(e))
+            await self.src.channel.send("Sorry, not permitted; {}".format(str(e) or d))
+
+        except CommandExit as e:
+            # Command cancelled itself. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Command exited; {}".format(str(e) or d))
 
         except CommandInputError as e:
             # Input not valid. Cease, but do not necessarily desist.
-            out = "Bad input: {}".format(e)
+            out = "Bad input: {}".format(str(e) or d)
             if self.reply:
                 await self.reply.edit(content=out)
             else:
@@ -64,7 +73,7 @@ class CommandPending:
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
             self.unlink()
-            await self.src.channel.send("Command failed; {}".format(e))
+            await self.src.channel.send("Command failed; {}".format(str(e) or d))
 
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
