@@ -8,11 +8,9 @@ import time
 
 import discord
 
+from petal import checks
 from petal.commands import core, shared
 from petal.etc import lambdall, mash
-
-
-same_author = lambda m0: lambda m1: m0.author == m1.author and m0.channel == m1.channel
 
 
 class CommandsMod(core.Commands):
@@ -99,7 +97,12 @@ class CommandsMod(core.Commands):
             )
             try:
                 reason = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
@@ -115,7 +118,12 @@ class CommandsMod(core.Commands):
             )
             try:
                 confmsg = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=10
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=10,
                 )
             except asyncio.TimeoutError:
                 return "Timed out. User was not kicked"
@@ -197,7 +205,12 @@ class CommandsMod(core.Commands):
             )
             try:
                 reason = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
@@ -214,7 +227,12 @@ class CommandsMod(core.Commands):
             )
             try:
                 msg = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 return "Timed out... user was not banned."
@@ -316,7 +334,12 @@ class CommandsMod(core.Commands):
             )
             try:
                 reason = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 return "Timed out while waiting for reason."
@@ -327,7 +350,13 @@ class CommandsMod(core.Commands):
             try:
                 msg2 = await self.client.wait_for(
                     "message",
-                    check=(lambda x: same_author(src)(x) and x.content.isdigit()),
+                    check=(
+                        lambda x: checks.all_checks(
+                            checks.Messages.by_user(src.author),
+                            checks.Messages.in_channel(src.channel),
+                        )(x)
+                        and x.content.isdigit()
+                    ),
                     timeout=30,
                 )
             except asyncio.TimeoutError:
@@ -400,7 +429,12 @@ class CommandsMod(core.Commands):
         )
         try:
             msg = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
+                "message",
+                check=checks.all_checks(
+                    checks.Messages.by_user(src.author),
+                    checks.Messages.in_channel(src.channel),
+                ),
+                timeout=30,
             )
         except asyncio.TimeoutError:
             return "Timed out while waiting for message."
@@ -476,7 +510,12 @@ class CommandsMod(core.Commands):
         )
         try:
             reason = await self.client.wait_for(
-                "message", check=same_author(src), timeout=30
+                "message",
+                check=checks.all_checks(
+                    checks.Messages.by_user(src.author),
+                    checks.Messages.in_channel(src.channel),
+                ),
+                timeout=30,
             )
         except asyncio.TimeoutError:
             return "Timed out while waiting for reason."
@@ -577,7 +616,12 @@ class CommandsMod(core.Commands):
         )
         try:
             msg = await self.client.wait_for(
-                "message", check=same_author(src), timeout=10
+                "message",
+                check=checks.all_checks(
+                    checks.Messages.by_user(src.author),
+                    checks.Messages.in_channel(src.channel),
+                ),
+                timeout=10,
             )
         except asyncio.TimeoutError:
             msg = None

@@ -7,8 +7,7 @@ from typing import Dict, Union
 
 import discord
 
-
-same_author = lambda m0: lambda m1: m0.author == m1.author and m0.channel == m1.channel
+from petal import checks
 
 
 def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
@@ -39,7 +38,12 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             )
             try:
                 msg = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 return "Timed out while waiting for message."
@@ -61,7 +65,12 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             )
             try:
                 confirm = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=10
+                    "message",
+                    check=checks.all_checks(
+                        checks.Messages.by_user(src.author),
+                        checks.Messages.in_channel(src.channel),
+                    ),
+                    timeout=10,
                 )
             except asyncio.TimeoutError:
                 return "Timed out."
