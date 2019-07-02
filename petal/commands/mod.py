@@ -8,7 +8,7 @@ import time
 
 import discord
 
-from petal.commands import core
+from petal.commands import core, shared
 from petal.etc import lambdall, mash
 
 
@@ -796,82 +796,13 @@ class CommandsMod(core.Commands):
                     message="Failed to post embed. Message may have been too long.",
                 )
 
-    async def cmd_send(
-        self, args, src: discord.Message, _identity: str = None, _i: str = None, **_
-    ):
-        """Broadcast an official-looking message into another channel.
-
-        By using the Identity Option, you can specify who the message is from.
-        Valid Identities:```\nadmins\nmods\nstaff```
-
-        Syntax: `{p}send [OPTIONS] <channel-id> ["<message>"]`
-        """
-        if 2 < len(args) < 1:
-            return "Must provide a Channel ID and, optionally, a quoted message."
-        elif not args[0].isdigit():
-            return "Channel ID must be integer."
-
-        destination = self.client.get_channel(int(args.pop(0)))
-        if not destination:
-            return "Invalid Channel."
-
-        if not args:
-            await self.client.send_message(
-                src.author,
-                src.channel,
-                "Please give a message to send (just reply below):",
-            )
-            try:
-                msg = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=30
-                )
-            except asyncio.TimeoutError:
-                return "Timed out while waiting for message."
-            else:
-                text = msg.content
-        else:
-            text = args[0]
-
-        identity = (_identity or _i or "staff").lower()
-        idents = {
-            "admins": {"colour": 0xA2E46D, "title": "Administrative Alert"},
+    cmd_send = shared.factory_send(
+        {
             "mods": {"colour": 0xE67E22, "title": "Moderation Message"},
             "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
-        }
-        ident = idents.get(identity, list(idents.values())[0])
-        ident["description"] = text
-
-        try:
-            em = discord.Embed(**ident)
-            await src.channel.send(
-                content="Confirm sending this message to {} on behalf of {}?"
-                " (Say `yes` to confirm)".format(destination.mention, identity),
-                embed=em,
-            )
-            try:
-                confirm = await self.client.wait_for(
-                    "message", check=same_author(src), timeout=10
-                )
-            except asyncio.TimeoutError:
-                return "Timed out."
-            if confirm.content.lower() != "yes":
-                return "Message cancelled."
-            else:
-                await self.client.embed(destination, em)
-
-        except discord.errors.Forbidden:
-            return "Failed to send message: Access Denied"
-        else:
-            return (
-                "{} (ID: `{}`) sent the following message to {}"
-                " on behalf of `{}`:\n{}".format(
-                    src.author.name,
-                    str(src.author.id),
-                    destination.mention,
-                    identity,
-                    text,
-                )
-            )
+        },
+        "mods",
+    )
 
 
 # Keep the actual classname unique from this common identifier
