@@ -838,15 +838,15 @@ class CommandsMod(core.Commands):
             "mods": {"colour": 0xE67E22, "title": "Moderation Message"},
             "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
         }
-        ident = idents.get(identity, idents["staff"])
+        ident = idents.get(identity, list(idents.values())[0])
         ident["description"] = text
 
         try:
             em = discord.Embed(**ident)
             await src.channel.send(
-                content="Confirm sending this message to {} on behalf of {}? (Say `yes` to confirm)".format(
-                    destination.mention, identity
-                ), embed=em
+                content="Confirm sending this message to {} on behalf of {}?"
+                " (Say `yes` to confirm)".format(destination.mention, identity),
+                embed=em,
             )
             try:
                 confirm = await self.client.wait_for(
@@ -862,34 +862,15 @@ class CommandsMod(core.Commands):
         except discord.errors.Forbidden:
             return "Failed to send message: Access Denied"
         else:
-            # logEmbed = discord.Embed(
-            #     title="User Warn", description=msg.content, colour=0xFF600
-            # )
-            # logEmbed.set_author(
-            #     name=self.client.user.name,
-            #     icon_url="https://puu.sh/tADFM/dc80dc3a5d.png",
-            # )
-            # logEmbed.add_field(
-            #     name="Issuer", value=src.author.name + "\n" + str(src.author.id)
-            # )
-            # logEmbed.add_field(
-            #     name="Recipient", value=userToWarn.name + "\n" + str(userToWarn.id)
-            # )
-            # logEmbed.add_field(name="Server", value=userToWarn.guild.name)
-            # logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-            # logEmbed.set_thumbnail(url=userToWarn.avatar_url)
-            #
-            # await self.client.embed(
-            #     self.client.get_channel(self.config.modChannel), logEmbed
-            # )
             return (
-                src.author.name
-                + " (ID: `"
-                + str(src.author.id)
-                + "`) sent the following message to {} on behalf of `{}`:\n".format(
-                    destination.mention, identity
+                "{} (ID: `{}`) sent the following message to {}"
+                " on behalf of `{}`:\n{}".format(
+                    src.author.name,
+                    str(src.author.id),
+                    destination.mention,
+                    identity,
+                    text,
                 )
-                + text
             )
 
 
