@@ -104,7 +104,7 @@ class CommandsPublic(core.Commands):
         `--set <username>`, `-s <username>` :: Save your Osu username, so you can simply use `{p}osu`.
         """
         if not self.router.osu:
-            return "Osu Support is not configured."
+            raise CommandOperationError("Osu Support is not configured.")
         name = _set or _s
         if name:
             osu = args[0] if args else src.author.name
