@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 import getopt
 import importlib
+from re import compile
 import sys
 from typing import get_type_hints, List, Tuple
 
@@ -44,6 +45,12 @@ auth_fail_dict = {
 }
 
 
+_uquote_1 = compile(r"[‹›‘’]")
+_uquote_2 = compile(r"[«»“”]")
+
+_unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub("\"", s))
+
+
 class CommandRouter(Integrated):
     version = ""
 
@@ -56,16 +63,16 @@ class CommandRouter(Integrated):
         # Load all command engines.
         for MODULE in LoadModules:
             # Get the module.
-            self.log.info("Loading {} commands...".format(MODULE.capitalize()))
+            self.log.info("Loading {} commands...".format(MODULE.title()))
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
                 # Instantiate its command engine.
                 cmod = mod.CommandModule(client, self, *a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
-                self.log.ready("{} commands loaded.".format(MODULE.capitalize()))
+                self.log.ready("{} commands loaded.".format(MODULE.title()))
             else:
-                self.log.warn("FAILED to load {} commands.".format(MODULE.capitalize()))
+                self.log.warn("FAILED to load {} commands.".format(MODULE.title()))
 
         self.log.ready("Command modules loaded.")
 
@@ -171,6 +178,7 @@ class CommandRouter(Integrated):
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
         """
+        command = _unquote(command)
         try:
             cline, msg = split(command)
         except ValueError as e:
