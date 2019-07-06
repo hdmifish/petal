@@ -19,7 +19,14 @@ from petal.menu import Menu
 
 def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
     async def cmd_send(
-        self, args, src: discord.Message, _identity: str = None, _i: str = None, **_
+        self,
+        args,
+        src: discord.Message,
+        _identity: str = None,
+        _i: str = None,
+        _image: str = None,
+        _I: str = None,
+        **_
     ):
         """Broadcast an official-looking message into another channel.
 
@@ -27,6 +34,21 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         Valid Identities:```\n{}```
 
         Syntax: `{{p}}send [OPTIONS] <channel-id> ["<message>"]`
+
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        self
+            self
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _identity, _i : str
+            Select the group/team on whose behalf this message is being sent.
+        _image, _I : str
+            Provide the URL of an image to be included in the embed.
         """
         if 2 < len(args) < 1:
             raise CommandArgsError(
@@ -64,9 +86,12 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         identity = (_identity or _i or default).lower()
         ident = idents.get(identity, idents[list(idents.keys())[0]])
         ident["description"] = text
+        img = _image or _I
 
         try:
             preview = discord.Embed(**ident)
+            if img:
+                preview.set_image(url=img)
             menu = Menu(self.client, src.channel, "", "", user=src.author)
             menu.em = preview
 
@@ -79,7 +104,10 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             )
 
             if confirm is True:
-                await self.client.embed(destination, discord.Embed(**ident))
+                em = discord.Embed(**ident)
+                if img:
+                    em.set_image(url=img)
+                await self.client.embed(destination, em)
             elif confirm is False:
                 raise CommandExit("Message cancelled.")
             else:
