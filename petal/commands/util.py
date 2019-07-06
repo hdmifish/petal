@@ -472,7 +472,7 @@ class CommandsUtil(core.Commands):
         """Show the current time and date in a specific time zone or location.
 
         This command will accept either a region/location pair, such as `US/Pacific`, or a time zone code, like `UTC` or `CET` or even ones such as `GMT-5`. Great efforts are taken to hopefully ensure that capitalization is not a concern. With no given input, default output is in UTC.
-        The time zones are defined by way of the PyTZ library, and can be found here: https://pytz.sourceforge.net/
+        The time zones are defined by way of the PyTZ library, and can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
         Syntax:
         `{p}time` - Show date/time in UTC.
@@ -493,52 +493,61 @@ class CommandsUtil(core.Commands):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
         return await self.cmd_time(["UTC"])
 
-    async def cmd_when(self, args, **_):
+    async def cmd_when(self, args, _from: str = None, _to: str = None, **_):
         """Take a given time and convert it to another time zone (Default UTC).
 
-        Syntax:
-        `{p}when "<Description of some time>"` - Parse the description of a time and print the same time in UTC.
-        `{p}when "<Description of some time>" [<Other time zone>]` - Parse the description of a time and print the same time in a different time zone.
-        """
-        if not args:
-            # Cannot run with zero arguments.
-            raise CommandArgsError(
-                "`{p}when` requires at least one argument.".format(p=self.config.prefix)
-            )
-        elif len(args) > 2:
-            # Also cannot run with above two.
-            raise CommandArgsError(
-                "`{p}when` can only take two arguments. Did you forget to quote"
-                " the first one?".format(p=self.config.prefix)
-            )
+        Syntax: `{p}when [OPTIONS] <Description of some time>` - Parse the description of a time and print the same time in another time zone.
 
-        # First argument is a human-written description of a time.
-        desc: str = args.pop(0)
-        when: dt = dateparser.parse(desc)
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        _from : str
+            Provide the original time zone of the time description you want to convert. Defaults to UTC.
+        _to : str
+            Provide the target time zone to which you want to convert the given time description. Defaults to UTC.
+        """
+        # Arguments make up a human-written time description.
+        source_time: str = " ".join(args) if args else "now"
+
+        if _from:
+            # Determine the time zone of the time provided by the user.
+            tz_from = get_tz(_from)
+            if not tz_from:
+                raise CommandInputError("Cannot find the `{}` timezone.".format(_from))
+        else:
+            tz_from = pytz.UTC
+
+        if _to:
+            # Determine the time zone the user wants to receive.
+            tz_to = get_tz(_to)
+            if not tz_to:
+                raise CommandInputError("Cannot find the `{}` timezone.".format(_to))
+        else:
+            tz_to = pytz.UTC
+
+        when: dt = dateparser.parse(
+            source_time,
+            settings={"TIMEZONE": str(tz_from), "RETURN_AS_TIMEZONE_AWARE": True},
+        )
 
         if not when:
             # Cannot parse the input.
             raise CommandArgsError(
-                'Sorry, I can\'t understand when you mean by "{}".'.format(desc)
+                'Sorry, I can\'t understand when you mean by "{}".'.format(source_time)
             )
 
-        if args:
-            # Second argument? Target given time zone.
-            tz = args.pop(0)
-            tzone = get_tz(tz)
-            if not tzone:
-                raise CommandInputError(
-                    "Could not find the `{}` timezone.".format(
-                        args[0] if args else "UTC"
-                    )
-                )
-        else:
-            # No second argument? Target UTC.
-            tzone = pytz.UTC
-
-        return "The time described by `'{}'` is equivalent to {}.".format(
-            desc, when.astimezone(tzone).strftime(tstring)
+        yield (
+            "Current time:"
+            if source_time.lower() == "now"
+            else "Time described by `'{}'`:".format(source_time)
         )
+        yield when.strftime(tstring)
+
+        if tz_to != tz_from:
+            yield when.astimezone(tz_to).strftime(tstring)
 
     async def cmd_stats(self, src, **_):
         """Display detailed technical statistics."""
