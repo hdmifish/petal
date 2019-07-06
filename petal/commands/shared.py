@@ -22,6 +22,8 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         self,
         args,
         src: discord.Message,
+        _everyone: bool = False,
+        _here: bool = False,
         _identity: str = None,
         _i: str = None,
         _image: str = None,
@@ -45,6 +47,10 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             List of Positional Arguments supplied after Command.
         src : discord.Message
             The Discord Message that invoked this Command.
+        _everyone : bool
+            Include an `@everyone` ping in the message. Overrides `--here`.
+        _here : bool
+            Include a `@here` ping in the message.
         _identity, _i : str
             Select the group/team on whose behalf this message is being sent.
         _image, _I : str
@@ -57,7 +63,7 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
         elif not args[0].isdigit():
             raise CommandArgsError("Channel ID must be integer.")
 
-        destination = self.client.get_channel(int(args.pop(0)))
+        destination: discord.TextChannel = self.client.get_channel(int(args.pop(0)))
         if not destination:
             raise CommandArgsError("Invalid Channel.")
 
@@ -84,7 +90,7 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             text = args[0]
 
         identity = (_identity or _i or default).lower()
-        ident = idents.get(identity, idents[list(idents.keys())[0]])
+        ident = idents.get(identity, idents[list(sorted(idents.keys()))[0]])
         ident["description"] = text
         img = _image or _I
 
@@ -97,8 +103,11 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
 
             confirm = await menu.get_bool(
                 prompt="Send this message to {} on behalf of {}?\n"
-                "(This section will not be sent.)".format(
-                    destination.mention, identity
+                "(This section will not be sent.)".format(destination.mention, identity)
+                + (
+                    "\n***NOTE: THIS MESSAGE WILL SEND A MASS PING!***"
+                    if _everyone or _here
+                    else ""
                 ),
                 title="Confirm",
             )
@@ -107,7 +116,13 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
                 em = discord.Embed(**ident)
                 if img:
                     em.set_image(url=img)
-                await self.client.embed(destination, em)
+                if _everyone:
+                    await destination.send("(@everyone)", embed=em)
+                elif _here:
+                    await destination.send("(@here)", embed=em)
+                else:
+                    await destination.send(embed=em)
+                # await self.client.embed(destination, em)
             elif confirm is False:
                 raise CommandExit("Message cancelled.")
             else:
