@@ -7,15 +7,21 @@ from functools import partial
 from re import compile
 from typing import get_type_hints, List
 
+import dateparser
 import discord
 import pytz
 
 from petal.commands import core
-from petal.exceptions import CommandAuthError, CommandInputError, CommandOperationError
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandInputError,
+    CommandOperationError,
+)
 
 
 # Reference: strftime.org
-tstring = "Current time is **`%H:%M`** %Z on %A, %B %d, %Y."
+tstring = "**`%H:%M`** %Z on %A, %B %d, %Y"
 helptext = [
     """An __Argument__ is simply any word given to a command. Arguments are separated from each other by spaces.```{p}command asdf qwert zxcv```Running this command would pass three Arguments to the command: `"asdf"`, `"qwert"`, and `"zxcv"`. It is up to the command function to decide what Arguments it wants, and how they are used.""",
     """While spaces separate Arguments, sometimes an Argument is desired to be multiple words. In these cases, one can simply enclose the argument in quotes; For example:```{p}command "asdf qwert" zxcv```This would pass only *two* arguments to the command: `"asdf qwert"` and `"zxcv"`.""",
@@ -474,10 +480,10 @@ class CommandsUtil(core.Commands):
         `{p}time <region>/<location>` - Show d/t somewhere specific, such as `Europe/Rome`.
         `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
         """
-        tzone = get_tz(args[0]) if args else pytz.UTC
+        tzone = get_tz(args[0]) if args else get_tz("UTC")
 
         if tzone:
-            return dt.now(tzone).strftime(tstring)
+            return "Current time is {}.".format(dt.now(tzone).strftime(tstring))
         else:
             raise CommandInputError(
                 "Could not find the `{}` timezone.".format(args[0] if args else "UTC")
@@ -486,6 +492,53 @@ class CommandsUtil(core.Commands):
     async def cmd_utc(self, **_):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
         return await self.cmd_time(["UTC"])
+
+    async def cmd_when(self, args, **_):
+        """Take a given time and convert it to another time zone (Default UTC).
+
+        Syntax:
+        `{p}when "<Description of some time>"` - Parse the description of a time and print the same time in UTC.
+        `{p}when "<Description of some time>" [<Other time zone>]` - Parse the description of a time and print the same time in a different time zone.
+        """
+        if not args:
+            # Cannot run with zero arguments.
+            raise CommandArgsError(
+                "`{p}when` requires at least one argument.".format(p=self.config.prefix)
+            )
+        elif len(args) > 2:
+            # Also cannot run with above two.
+            raise CommandArgsError(
+                "`{p}when` can only take two arguments. Did you forget to quote"
+                " the first one?".format(p=self.config.prefix)
+            )
+
+        # First argument is a human-written description of a time.
+        desc: str = args.pop(0)
+        when: dt = dateparser.parse(desc)
+
+        if not when:
+            # Cannot parse the input.
+            raise CommandArgsError(
+                'Sorry, I can\'t understand when you mean by "{}".'.format(desc)
+            )
+
+        if args:
+            # Second argument? Target given time zone.
+            tz = args.pop(0)
+            tzone = get_tz(tz)
+            if not tzone:
+                raise CommandInputError(
+                    "Could not find the `{}` timezone.".format(
+                        args[0] if args else "UTC"
+                    )
+                )
+        else:
+            # No second argument? Target UTC.
+            tzone = pytz.UTC
+
+        return "The time described by `'{}'` is equivalent to {}.".format(
+            desc, when.astimezone(tzone).strftime(tstring)
+        )
 
     async def cmd_stats(self, src, **_):
         """Display detailed technical statistics."""

@@ -159,6 +159,7 @@ Since the last documented update:
 + Implemented !plane command, for forcing your problems and worries onto anyone environmentally conscious and unfortunate enough to pick up the wrong piece of abandoned paper.
 + Implemented !send command, for posting embeds to other channels.
 + Implemented Channel Tunneling with !tunnel, allowing Petal to act as a bridge between Messageables; Potential for use in future remake of !anon.
++ Implemented !when command, for time zone conversions.
 + Implemented utility functions for generating Ordinals and wording numbers.
 - Removed !setosu.
 - Trimmed many imports.
