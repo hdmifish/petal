@@ -29,7 +29,7 @@ version = "<UNSET>"
 with open("version_info.sh", "r") as f:
     for _line in f:
         if _line.startswith("VERSION="):
-            version = _line.split("=", 1)[1].split("#")[0].strip()
+            version = _line.split("=", 1)[1].split("#")[0].strip(" \n\"'")
 
 grasslands.version = version
 
