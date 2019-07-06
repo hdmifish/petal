@@ -11,10 +11,11 @@ class CommandsAdmin(core.Commands):
     cmd_send = shared.factory_send(
         {
             "admins": {"colour": 0xA2E46D, "title": "Administrative Alert"},
+            "events": {"colour": 0x1B6649, "title": "Event Announcement"},
             "mods": {"colour": 0xE67E22, "title": "Moderation Message"},
             "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
         },
-        "mods",
+        "staff",
     )
 
 

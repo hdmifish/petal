@@ -6,7 +6,7 @@ import asyncio
 import discord
 
 from petal.checks import all_checks, Messages
-from petal.commands import core
+from petal.commands import core, shared
 from petal.menu import Menu
 
 
@@ -232,6 +232,14 @@ class CommandsEvent(core.Commands):
                             await self.client.edit_message(post, content)
 
                     return response
+
+    cmd_send = shared.factory_send(
+        {
+            "events": {"colour": 0x1B6649, "title": "Event Announcement"},
+            "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
+        },
+        "events",
+    )
 
 
 # Keep the actual classname unique from this common identifier
