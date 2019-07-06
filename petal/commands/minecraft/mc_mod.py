@@ -26,7 +26,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         submission = args[0]
         # Send the submission through the function
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
-            submission, src.author.id
+            submission, str(src.author.id)
         )
 
         if reply == 0:

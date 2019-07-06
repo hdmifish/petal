@@ -37,7 +37,7 @@ class CommandsMCAdmin(auth.CommandsMCAuth):
             return "Ambiguous command: {} possible targets found.".format(
                 str(len(victim))
             )
-        elif src.author.id == victim[0]["discord"]:
+        elif str(src.author.id) == victim[0]["discord"]:
             return "You cannot change your own Operator status."
 
         # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)

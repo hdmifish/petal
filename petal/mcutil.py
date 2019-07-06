@@ -1,6 +1,8 @@
 import json
-import requests
 import datetime
+from uuid import UUID
+
+import requests
 
 from collections import OrderedDict
 from .grasslands import Peacock
@@ -59,19 +61,15 @@ SUSPENSION = {
     403: "Discord banned",
 }
 
-# Break apart Mojang UUID with dashes
-def breakUID(str0):
-    str1 = str0[0:8]
-    str2 = str0[8:12]
-    str3 = str0[12:16]
-    str4 = str0[16:20]
-    str5 = str0[20:32]
-    str99 = "-".join([str1, str2, str3, str4, str5])
-    return str99
+
+def break_uid(uuid: str):
+    """Given an undashed UUID, break it into five fields."""
+    f = [hex(c)[2:] for c in UUID(uuid).fields]
+    return "-".join(f[:3] + [f[3] + f[4], f[5]])
 
 
-# User gave us a username? Text is worthless. Hey Mojang, UUID is this name?
-def idFromName(uname_raw):
+# User gave us a username? Text is worthless. Hey Mojang, what UUID is this name?
+def id_from_name(uname_raw):
     uname_low = uname_raw.lower()
     response = requests.get(
         "https://api.mojang.com/users/profiles/minecraft/{}".format(uname_low)
@@ -254,7 +252,7 @@ class WLStuff:
     # User wants to be whitelisted? Add to the database for approval
     def addToLocalDB(self, userdat, submitter):
         uid = userdat["id"]
-        uidF = breakUID(uid)
+        uidF = break_uid(uid)
         uname = userdat["name"]
         eph = {  # Create dict: Ephemeral player profile, to be merged into dbRead
             "name": uname,  # Minecraft username; append to dbase usernames
@@ -283,7 +281,7 @@ class Minecraft:
 
     # !wlme <username>
     def WLRequest(self, nameGiven, discord_id):
-        udict = idFromName(nameGiven)  # Get the id from the name, or an error
+        udict = id_from_name(nameGiven)  # Get the id from the name, or an error
         if udict["code"] == 200:
             # If this is 200, the second part will contain json data; Try to add it
             verdict, uid = self.etc.addToLocalDB(udict["udat"], discord_id)
@@ -306,20 +304,20 @@ class Minecraft:
         doSend = False
 
         # idTarget can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
-        pIndex = next((item for item in dbRead if item["uuid"] == idTarget), False)
+        pIndex = next((item for item in dbRead if item["uuid"] == idTarget), {})
         # Is the target player found in the database?
 
         if not pIndex:
             # Maybe try the Minecraft name?
             pIndex = next(
                 (item for item in dbRead if item["name"].lower() == idTarget.lower()),
-                False,
+                {},
             )
 
         if not pIndex:
             # ...Discord ID?
             pIndex = next(
-                (item for item in dbRead if item["discord"] == idTarget), False
+                (item for item in dbRead if item["discord"] == idTarget), {}
             )
 
         if not pIndex:
@@ -416,7 +414,7 @@ class Minecraft:
         doSend = False
 
         # newmod can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
-        pIndex = next((item for item in dbRead if item["uuid"] == newmod), False)
+        pIndex = next((item for item in dbRead if item["uuid"] == newmod), {})
         # Is the target player found in the database?
 
         if not pIndex:
@@ -456,18 +454,18 @@ class Minecraft:
             return -7
 
         # user can be a Discord ID, Mojang ID, or Minecraft username; Search for all of these
-        pIndex = next((item for item in dbRead if item["uuid"] == user), False)
+        pIndex = next((item for item in dbRead if item["uuid"] == user), {})
         # Is the target player found in the database?
 
         if not pIndex:
             # Maybe try the Minecraft name?
             pIndex = next(
-                (item for item in dbRead if item["name"].lower() == user.lower()), False
+                (item for item in dbRead if item["name"].lower() == user.lower()), {}
             )
 
         if not pIndex:
             # ...Discord ID?
-            pIndex = next((item for item in dbRead if item["discord"] == user), False)
+            pIndex = next((item for item in dbRead if item["discord"] == user), {})
 
         if not pIndex:
             # Fine. Player is not in the database -- Refuse to continue
