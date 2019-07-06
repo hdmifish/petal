@@ -42,6 +42,33 @@ def zone(tz: str):
         return None
 
 
+def get_tz(tz: str):
+    # The POSIX Standard dictates that timezones relative to GMT are written
+    #   GMT+X going west, and GMT-X going east, contrary to general use.
+    #   PyTZ takes input assuming it to follow this standard, but then it
+    #   outputs in the form of general use. This is stupid. Therefore,
+    #   change input if necessary.
+    if tz.lower().startswith("gmt+"):
+        tz = tz.replace("+", "-", 1)
+    elif tz.lower().startswith("gmt-"):
+        tz = tz.replace("-", "+", 1)
+
+    # Try a bunch of different possibilities for what the user might have
+    #     meant. Use the first one found, if any. First, check it plain.
+    #     Then, check it in title case, all caps and capitalized. Then, look
+    #     for the same, but in 'Etc/*'.
+    return (
+        zone(us_cap(tz))
+        or zone(us_cap(tz.upper()))
+        or zone(us_cap(tz.title()))
+        or zone(us_cap(tz.capitalize()))
+        or zone("Etc/" + tz)
+        or zone("Etc/" + tz.upper())
+        or zone("Etc/" + tz.title())
+        or zone("Etc/" + tz.capitalize())
+    )
+
+
 class CommandsUtil(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
@@ -447,37 +474,14 @@ class CommandsUtil(core.Commands):
         `{p}time <region>/<location>` - Show d/t somewhere specific, such as `Europe/Rome`.
         `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
         """
-        tz = args[0] if args else "UTC"
+        tzone = get_tz(args[0]) if args else pytz.UTC
 
-        # The POSIX Standard dictates that timezones relative to GMT are written
-        #   GMT+X going west, and GMT-X going east, contrary to general use.
-        #   PyTZ takes input assuming it to follow this standard, but then it
-        #   outputs in the form of general use. This is stupid. Therefore,
-        #   change input if necessary.
-        if tz.lower().startswith("gmt+"):
-            tz = tz.replace("+", "-", 1)
-        elif tz.lower().startswith("gmt-"):
-            tz = tz.replace("-", "+", 1)
-
-        # Try a bunch of different possibilities for what the user might have
-        #     meant. Use the first one found, if any. First, check it plain.
-        #     Then, check it in title case, all caps and capitalized. Then, look
-        #     for the same, but in 'Etc/*'.
-        tzone = (
-            zone(us_cap(tz))
-            or zone(us_cap(tz.upper()))
-            or zone(us_cap(tz.title()))
-            or zone(us_cap(tz.capitalize()))
-
-            or zone("Etc/" + tz)
-            or zone("Etc/" + tz.upper())
-            or zone("Etc/" + tz.title())
-            or zone("Etc/" + tz.capitalize())
-        )
         if tzone:
             return dt.now(tzone).strftime(tstring)
         else:
-            raise CommandInputError("Could not find the `{}` timezone.".format(tz))
+            raise CommandInputError(
+                "Could not find the `{}` timezone.".format(args[0] if args else "UTC")
+            )
 
     async def cmd_utc(self, **_):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
