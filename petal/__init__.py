@@ -389,15 +389,28 @@ class Petal(discord.Client):
         if (not message or not str(message)) and not embed:
             # Without a message to send, dont even try; it would just error
             return None
+        message = str(message)
+
+        if (
+            author is not None
+            and self.db.get_member(author) is not None
+            and self.db.get_attribute(author, "ac")
+        ):
+            try:
+                ac = list(self.db.ac.find())
+                ac = ac[random.randint(0, len(ac) - 1)]["ending"]
+                i = 0
+                while message[-(i + 1)] in " ,.…¿?¡!":
+                    i += 1
+
+                msg, end = (message[:-i], message[-i:]) if i > 0 else (message, "")
+            except:
+                pass
+            else:
+                message = msg + ", " + ac + end
+
         if self.dev_mode:
             message = "[DEV]  " + str(message) + "  [DEV]"
-        if author is not None:
-            if self.db.get_member(author) is not None:
-                if self.db.get_attribute(author, "ac", verbose=False) is not None:
-                    if self.db.get_attribute(author, "ac"):
-                        # message += " , " + self.commands.get_ac()
-                        l = list(self.db.ac.find())
-                        message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
             return await channel.send(content=message, embed=embed)
         except discord.errors.InvalidArgument:
