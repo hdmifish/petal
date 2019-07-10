@@ -9,7 +9,7 @@ from datetime import datetime
 import random
 import re
 import time
-from typing import List
+from typing import AsyncGenerator, Coroutine, Generator, List
 
 import discord
 
@@ -275,41 +275,73 @@ class Petal(discord.Client):
     async def print_response(self, message, response, to_edit=None):
         """Use a discrete method for this, so that it can be used recursively if
             needed.
-        """
-        if type(response) == list:
-            # Response is list, indicating the function used Yielding. Yield
-            #   command returns support switching between Separate and Group
-            #   modes mid-stream. This is quite finnicky, so a Command method
-            #   should NEVER Yield an Embed object, to be safe.
-            # TODO: Thoroughly document Mode switching.
-            clusters = [[]]
-            separate = False
-            for line in response:
-                if line is True:
-                    # Switch to Separate mode.
-                    if not separate:
-                        separate = True
-                elif line is False:
-                    # Switch to Group mode.
-                    separate = False
-                elif separate:
-                    # Add line to new cluster.
-                    clusters.append([line])
-                else:
-                    # Add line to last cluster.
-                    clusters[-1].append(line)
 
+        Return Types of Command Methods:
+        def, return         ->  Any             - send(value)
+        def, yield          ->  Generator       - for x in value: send(x)
+        async def, return   ->  Coroutine       - recurse(await value)
+        async def, yield    ->  AsyncGenerator  - async for x in value: send(x)
+        """
+        # print("Outputting Response:", repr(response))
+        while isinstance(response, Coroutine):
+            response = await response
+            # print("Awaited Response:", repr(response))
+
+        if response is None:
+            return
+
+        elif isinstance(response, (AsyncGenerator, Generator, list)):
+            # Response is a Generator, indicating the method used Yielding, or a
+            #   List, which should be treated the same. Yield command returns
+            #   support flushing and clearing the List of Buffered Lines, with
+            #   True and False, respectively.
+            # print("Iterating Type:", type(response))
             if to_edit:
                 # Due to the ability to chain multiple messages by yielding, we
                 #   cannot cleanly take advantage of editing. Delete it.
                 await to_edit.delete()
 
-            for cc in [c for c in clusters if c]:
-                await self.print_response(message, "\n".join(cc))
+            buffer = []
 
-        elif type(response) == dict:
+            async def operate(line):
+                # print("  Reading Line:", repr(line))
+                nonlocal buffer
+
+                if line is True:
+                    # Upon reception of True, "flush" the current "buffer" by
+                    #   posting a Message.
+                    # print("    Printing Buffer:", repr(buffer))
+                    if buffer:
+                        await self.print_response(message, "\n".join(map(str, buffer)))
+                        buffer = []
+                elif line is False:
+                    # Upon reception of False, discard the buffer.
+                    # print("    Discarding Buffer:", repr(buffer))
+                    buffer = []
+                else:
+                    # Anything else is added to the buffer.
+                    # TODO: Potentially catch and output yielded Dicts/Embeds?
+                    # print("    Appending to Buffer.")
+                    buffer.append(line)
+
+            if isinstance(response, AsyncGenerator):
+                async for y in response:
+                    await operate(y)
+
+            elif isinstance(response, (Generator, list)):
+                for y in response:
+                    await operate(y)
+
+            # print("Iterator Exhausted; Flushing Buffer.")
+            if buffer:
+                # print("Printing Final Buffer:", repr(buffer))
+                await operate(True)
+                # await self.print_response(message, "\n".join(map(str, buffer)))
+
+        elif isinstance(response, dict):
             # If the response is a Dict, it is a series of keyword arguments
             #   intended to be passed directly to `Channel.send()`.
+            # print("Building from Dict.")
             if to_edit:
                 vals = {"content": None, "embed": None}
                 vals.update(response)
@@ -317,17 +349,27 @@ class Petal(discord.Client):
             else:
                 await message.channel.send(**response)
 
-        elif type(response) == discord.Embed:
+        elif isinstance(response, discord.Embed):
             # If the response is an Embed, simply show it as normal.
+            # print("Sending Embed.")
             if to_edit:
                 await to_edit.edit(content=None, embed=response)
             else:
                 await self.send_message(message.author, message.channel, embed=response)
 
-        else:
+        elif isinstance(response, str):
             # Same with String.
+            # print("Sending String.")
             if to_edit:
-                await to_edit.edit(content=str(response), embed=None)
+                await to_edit.edit(content=response, embed=None)
+            else:
+                await self.send_message(message.author, message.channel, str(response))
+
+        else:
+            # And everything else.
+            # print("Sending Other.")
+            if to_edit:
+                await to_edit.edit(content=repr(response), embed=None)
             else:
                 await self.send_message(message.author, message.channel, str(response))
 
@@ -381,9 +423,9 @@ class Petal(discord.Client):
         """
         To be called When a new member joins the server
         """
-
         response = ""
-        if self.config.get("welcomeMessage") != "null":
+        welcome = self.config.get("welcomeMessage", None)
+        if welcome and welcome != "null":
             try:
                 await self.send_message(
                     channel=member, message=self.config.get("welcomeMessage")

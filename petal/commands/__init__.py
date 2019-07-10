@@ -7,7 +7,7 @@ from typing import get_type_hints, List, Tuple
 
 import discord
 
-from petal.etc import check_types, get_output, split, unquote
+from petal.etc import check_types, split, unquote
 from petal.exceptions import (
     CommandArgsError,
     CommandAuthError,
@@ -212,7 +212,7 @@ class CommandRouter(Integrated):
                     channel=src.channel,
                     message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
                 )
-            return await get_output(func(args=args, **opts, msg=msg, src=src))
+            return func(args=args, **opts, msg=msg, src=src)
 
     async def run(self, src: discord.Message):
         """Given a message, determine whether it is a command;

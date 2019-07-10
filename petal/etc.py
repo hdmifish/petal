@@ -2,7 +2,7 @@
 
 from hashlib import sha256
 import shlex
-from typing import Tuple, Optional as Opt
+from typing import Optional as Opt, Tuple
 
 
 def any_(sample: dict, *allowed: str):
@@ -53,25 +53,6 @@ def check_types(opts: dict, hints: dict) -> dict:
 
         output[kwarg] = val
     return output
-
-
-async def get_output(output):
-    """Transform returned value into something usable.
-
-    A Command Method has been called. It may have returned a Coroutine, a
-        Generator, or even an Asynchronous Generator. However, the last two
-        cannot be used by simply awaiting. We need to compact them into a List,
-        but of course first we need to know whether that is even necessary.
-    """
-    if hasattr(output, "__aiter__"):
-        # Passed object is an Asynchronous Generator. Collect it.
-        return [x async for x in output]
-    elif hasattr(output, "__next__"):
-        # Passed object is a Synchronous Generator. List it.
-        return list(output)
-    else:
-        # Passed object is a Coroutine. Await it.
-        return await output
 
 
 def lambdall(values, func, mustbe=True):
