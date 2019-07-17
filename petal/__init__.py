@@ -284,43 +284,54 @@ class Petal(discord.Client):
         """
         # print("Outputting Response:", repr(response))
         while isinstance(response, Coroutine):
+            # Ensure that the Response is actually final.
             response = await response
             # print("Awaited Response:", repr(response))
 
         if response is None:
+            # Ignore Void Responses.
             return
 
-        elif isinstance(response, (AsyncGenerator, Generator, list)):
+        elif isinstance(response, (AsyncGenerator, Generator, list, tuple)):
             # Response is a Generator, indicating the method used Yielding, or a
-            #   List, which should be treated the same. Yield command returns
-            #   support flushing and clearing the List of Buffered Lines, with
-            #   True and False, respectively.
+            #   List or Tuple, which should be treated the same. Yield command
+            #   returns support flushing and clearing the List of Buffered
+            #   Lines, with True and False, respectively.
             # print("Iterating Type:", type(response))
             if to_edit:
                 # Due to the ability to chain multiple messages by yielding, we
                 #   cannot cleanly take advantage of editing. Delete it.
                 await to_edit.delete()
 
-            buffer = []
+            buffer: list = []
 
             async def operate(line):
                 # print("  Reading Line:", repr(line))
-                nonlocal buffer
-
                 if line is True:
                     # Upon reception of True, "flush" the current "buffer" by
                     #   posting a Message.
                     # print("    Printing Buffer:", repr(buffer))
                     if buffer:
                         await self.print_response(message, "\n".join(map(str, buffer)))
-                        buffer = []
+                        buffer.clear()
+
                 elif line is False:
                     # Upon reception of False, discard the buffer.
                     # print("    Discarding Buffer:", repr(buffer))
-                    buffer = []
+                    buffer.clear()
+
+                elif isinstance(line, (dict, discord.Embed)):
+                    # Upon reception of a Dict or an Embed, send it in a Message
+                    #   immediately.
+                    await self.print_response(message, line)
+
+                elif isinstance(line, (list, tuple)):
+                    # Upon reception of a List or Tuple, treat it the same as
+                    #   reception of its elements in sequence.
+                    await operate(line)
+
                 else:
                     # Anything else is added to the buffer.
-                    # TODO: Potentially catch and output yielded Dicts/Embeds?
                     # print("    Appending to Buffer.")
                     buffer.append(line)
 
@@ -328,7 +339,7 @@ class Petal(discord.Client):
                 async for y in response:
                     await operate(y)
 
-            elif isinstance(response, (Generator, list)):
+            elif isinstance(response, (Generator, list, tuple)):
                 for y in response:
                     await operate(y)
 
@@ -337,6 +348,8 @@ class Petal(discord.Client):
                 # print("Printing Final Buffer:", repr(buffer))
                 await operate(True)
                 # await self.print_response(message, "\n".join(map(str, buffer)))
+
+            del buffer
 
         elif isinstance(response, dict):
             # If the response is a Dict, it is a series of keyword arguments
