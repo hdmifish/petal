@@ -15,6 +15,7 @@ ERROR CODES:
 
 import json
 from pathlib import Path
+from typing import Any, Dict, List, NewType, Type, Union
 from uuid import UUID
 
 import requests
@@ -25,9 +26,13 @@ from collections import OrderedDict
 log = Peacock()
 
 
+type_entry_db: Type = NewType("DB Entry", Dict[str, Union[bool, int, List[str], str]])
+type_db: Type = NewType("Database", List[type_entry_db])
+
+
 # The default profile for a new player being added to the database
 # (Do not use this for other stuff)
-PLAYERDEFAULT = OrderedDict(
+PLAYERDEFAULT: type_entry_db = OrderedDict(
     [
         ("name", "PLAYERNAME"),
         ("uuid", "00000000-0000-0000-0000-000000000000"),
@@ -87,7 +92,7 @@ class Interface:
         self.client = client
         self.config = client.config
 
-    def cget(self, prop: str, default=None):
+    def cget(self, prop: str, default: Any = None) -> Any:
         v = self.config.get(prop, default)
         return v
 
@@ -103,7 +108,7 @@ class Interface:
     def path_op(self) -> Path:
         return Path(self.cget("minecraftOP", "ops.json"))
 
-    def db_read(self):
+    def db_read(self) -> Union[int, type_db]:
         try:
             with self.path_db.open("r") as file_db:
                 data = json.load(file_db, object_pairs_hook=OrderedDict)
@@ -113,7 +118,7 @@ class Interface:
             return -7
         return data
 
-    def db_write(self, data):
+    def db_write(self, data) -> int:
         try:
             with self.path_db.open("w") as file_db:
                 # Save all the things.
@@ -124,7 +129,7 @@ class Interface:
             log.err("OSError on DB save: " + str(e))
             return -7
 
-    def whitelist_rebuild(self, refreshall=False, refreshnet=False):
+    def whitelist_rebuild(self, refreshall=False, refreshnet=False) -> int:
         """Export the local database into the whitelist file itself. If Mojang
             ever changes the format of the server whitelist file, this is the
             function that will need to be updated.
