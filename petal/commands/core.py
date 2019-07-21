@@ -75,6 +75,13 @@ class CommandPending:
             self.unlink()
             await self.src.channel.send("Command failed; {}".format(str(e) or d))
 
+        except NotImplementedError as e:
+            # Command ran into something that is not done. Cease and desist.
+            self.unlink()
+            await self.src.channel.send(
+                "Sorry, this Command is not completely done; {}".format(str(e) or d)
+            )
+
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
             self.unlink()
