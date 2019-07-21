@@ -58,6 +58,11 @@ class CommandOperationError(CommandError):
     pass
 
 
+class MinecraftError(PetalError):
+    """Superclass for Exceptions regarding the Minecraft subsystem."""
+    pass
+
+
 class TunnelError(PetalError):
     """Superclass for Exceptions regarding Tunnels."""
     pass
