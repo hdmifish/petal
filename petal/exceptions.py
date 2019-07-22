@@ -63,6 +63,16 @@ class MinecraftError(PetalError):
     pass
 
 
+class EntryExistsError(PetalError):
+    """Raised when trying to add a Whitelist Entry with a duplicate UUID."""
+    pass
+
+
+class WhitelistError(PetalError):
+    """Raised when the Minecraft Whitelist cannot be accessed."""
+    pass
+
+
 class TunnelError(PetalError):
     """Superclass for Exceptions regarding Tunnels."""
     pass

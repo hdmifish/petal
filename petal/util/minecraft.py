@@ -13,6 +13,7 @@ ERROR CODES:
 -9: Malign error: Incomplete function (fault of developer)
 """
 
+from collections import OrderedDict
 import json
 from pathlib import Path
 from typing import Any, Dict, List, NewType, Type, Union
@@ -20,8 +21,8 @@ from uuid import UUID
 
 import requests
 
+from ..exceptions import WhitelistError
 from ..grasslands import Peacock
-from collections import OrderedDict
 
 log = Peacock()
 
@@ -74,6 +75,37 @@ def break_uid(uuid: str) -> str:
     return "-".join(f[:3] + [f[3] + f[4], f[5]])
 
 
+# TODO: Implement
+# if (  # Yield each Entry if looking for something specific.
+#     (pending is None or pending is bool(entry.get("approved", [])))
+#     and (
+#         suspended is None
+#         or (
+#             suspended is True
+#             and entry.get("suspended", 0) not in (0, False, None)
+#         )
+#         or suspended is entry.get("suspended", False)
+#     )
+# ) or
+
+
+def find(data: type_db, *params: str) -> List[type_entry_db]:
+    out = []
+    for entry in data:
+        for p in params:
+            if (  # Yield each Entry if any parameter...
+                # ...Matches the Discord UUID.
+                p == str(entry.get("discord"))
+                # ...Matches the Mojang UUID.
+                or p.lower().replace("-", "") == entry["uuid"].lower().replace("-", "")
+                # ...Can be found in the Username History.
+                or p.lower() in map(str.lower, entry["altname"])
+            ):
+                out.append(entry)
+                break
+    return out
+
+
 def id_from_name(uname_raw: str):
     """Given a Minecraft Username, get its UUID."""
     uname_low: str = uname_raw.lower()
@@ -91,6 +123,22 @@ class Interface:
     def __init__(self, client):
         self.client = client
         self.config = client.config
+        self.ctx = None
+
+    def __enter__(self) -> type_db:
+        if self.ctx is not None:
+            raise RuntimeError("Attempting to lock locked Whitelist.")
+        else:
+            data: type_db = self.db_read()
+            self.ctx = data
+            return data
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.ctx is None:
+            raise RuntimeError("Attempting to unlock unlocked Whitelist.")
+        else:
+            self.db_write(self.ctx)
+            self.ctx = None
 
     def cget(self, prop: str, default: Any = None) -> Any:
         v = self.config.get(prop, default)
@@ -108,26 +156,28 @@ class Interface:
     def path_op(self) -> Path:
         return Path(self.cget("minecraftOP", "ops.json"))
 
-    def db_read(self) -> Union[int, type_db]:
+    def db_read(self) -> type_db:
         try:
             with self.path_db.open("r") as file_db:
-                data = json.load(file_db, object_pairs_hook=OrderedDict)
+                data: type_db = json.load(file_db, object_pairs_hook=OrderedDict)
+
         except OSError as e:
             # File does not exist: Pointless to continue.
             log.err("OSError on DB read: " + str(e))
-            return -7
+            raise WhitelistError("Cannot read PlayerDB file.") from e
+
         return data
 
-    def db_write(self, data) -> int:
+    def db_write(self, data):
         try:
             with self.path_db.open("w") as file_db:
                 # Save all the things.
                 json.dump(data, file_db, indent=2)
-            return 0
+
         except OSError as e:
             # Cannot write file: Well this was all rather pointless.
             log.err("OSError on DB save: " + str(e))
-            return -7
+            raise WhitelistError("Cannot write PlayerDB file.") from e
 
     def whitelist_rebuild(self, refreshall=False, refreshnet=False) -> int:
         """Export the local database into the whitelist file itself. If Mojang
@@ -137,10 +187,9 @@ class Interface:
         try:
             # Stage 0: Load the full database as ordered dicts, and the
             #   whitelist as dicts.
-            strict = self.cget("minecraftStrictWL")
             with self.path_db.open("r") as file_db, self.path_wl.open("r") as file_wl:
                 data = json.load(file_db, object_pairs_hook=OrderedDict)
-                if strict:
+                if self.cget("minecraftStrictWL", False):
                     data_wl = []
                 else:
                     data_wl = json.load(file_wl)
@@ -218,3 +267,23 @@ class Interface:
         return 1
 
 
+class Minecraft(object):
+    def __init__(self, client):
+        self.client = client
+        self.config = client.config
+        self.interface = Interface(client)
+
+    def add_entry(self, entry: type_entry_db):
+        raise NotImplementedError
+
+    def get_entry(self, ident: str) -> List[type_entry_db]:
+        raise NotImplementedError
+
+    def edit(self, ident: str):
+        """Yield a search for Entries. Then pause with the Interface open, and
+            wait until the Generator is resumed. Immediately after resume, the
+            Interface will close, writing changes to the file.
+        """
+        with self.interface as file:
+            target = find(file, ident)
+            yield target
