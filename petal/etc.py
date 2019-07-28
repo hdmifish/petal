@@ -2,10 +2,26 @@
 
 from hashlib import sha256
 import shlex
-from typing import Optional as Opt, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    NewType,
+    Optional as Opt,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 
-def any_(sample: dict, *allowed: str):
+kwopt: type = NewType("Keyword Option", Union[bool, float, int, str])
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+
+
+def any_(sample: Dict[str, T1], *allowed: str) -> T1:
     """Try to find any specifically non-None (rather than simple logically
         True) value in a dict.
     """
@@ -20,7 +36,7 @@ def any_(sample: dict, *allowed: str):
     return None
 
 
-def check_types(opts: dict, hints: dict) -> dict:
+def check_types(opts: Dict[str, Any], hints: Dict[str, T1]) -> Dict[str, T1]:
     output = {}
     for opt_name, val in opts.items():
         # opt name back into kwarg name
@@ -55,7 +71,7 @@ def check_types(opts: dict, hints: dict) -> dict:
     return output
 
 
-def lambdall(values, func, mustbe=True):
+def lambdall(values: Sequence[T1], func: Callable[[T1], T2], mustbe: T2 = True):
     """Return True if ALL values, run through `func`, are equal to `mustbe`."""
     for v in values:
         if func(v) != mustbe:
@@ -63,7 +79,7 @@ def lambdall(values, func, mustbe=True):
     return True
 
 
-def mash(*data, digits=4, base=10):
+def mash(*data: Any, digits: int = 4, base: int = 10) -> int:
     """MultiHash function: Generate a small numeric "name" given arbitrary
         inputs.
     """
@@ -76,19 +92,7 @@ def mash(*data, digits=4, base=10):
     return hashval
 
 
-class PreFunc:
-    def __init__(self, func, *a, **kw):
-        self.func = func
-        self.a = a
-        self.kw0 = kw
-
-    def run(self, _pre=None, _post=None, **kw1):
-        kw2 = self.kw0.copy()
-        kw2.update(kw1)
-        return self.func(*(_pre or []), *self.a, *(_post or []), **kw2)
-
-
-def split(line: str) -> Tuple[list, str]:
+def split(line: str) -> Tuple[List[str], str]:
     """Break an input line into a list of tokens, and a "regular" message."""
     # Split the full command line into a list of tokens, each its own arg.
     tokens = shlex.shlex(line, posix=False)
