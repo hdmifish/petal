@@ -7,18 +7,13 @@ from typing import (
     Callable,
     Dict,
     List,
-    NewType,
     Optional as Opt,
     Sequence,
     Tuple,
-    TypeVar,
-    Union,
 )
 
-
-kwopt: type = NewType("Keyword Option", Union[bool, float, int, str])
-T1 = TypeVar("T1")
-T2 = TypeVar("T2")
+from petal.types import kwopt, T1, T2
+from petal.exceptions import CommandArgsError
 
 
 def any_(sample: Dict[str, T1], *allowed: str) -> T1:
@@ -36,7 +31,7 @@ def any_(sample: Dict[str, T1], *allowed: str) -> T1:
     return None
 
 
-def check_types(opts: Dict[str, Any], hints: Dict[str, T1]) -> Dict[str, T1]:
+def check_types(opts: Dict[str, kwopt], hints: Dict[str, T1]) -> Dict[str, T1]:
     output = {}
     for opt_name, val in opts.items():
         # opt name back into kwarg name

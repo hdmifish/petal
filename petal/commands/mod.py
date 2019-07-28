@@ -17,7 +17,7 @@ class CommandsMod(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleMod"
 
-    async def cmd_alias(self, args, src: discord.Message, **_):
+    async def cmd_alias(self, args, src, **_):
         """Return a list of all previous names a user has had.
 
         Syntax: `{p}alias <tag/id>`

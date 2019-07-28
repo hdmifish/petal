@@ -8,9 +8,10 @@ from asyncio import ensure_future as create_task, CancelledError, TimeoutError
 import discord
 
 from petal.exceptions import TunnelSetupError
+from petal.types import TunnelABC
 
 
-class Tunnel:
+class Tunnel(TunnelABC):
     def __init__(self, client, origin, *gates, anonymous=False, timeout=600):
         self.anon = anonymous
         self.client = client

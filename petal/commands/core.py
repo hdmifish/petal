@@ -1,5 +1,5 @@
-from asyncio import ensure_future as create_task, sleep
-import traceback
+from asyncio import ensure_future as create_task, Future, sleep
+from traceback import print_exc
 from typing import Optional
 from urllib.parse import urlencode, quote_plus
 
@@ -13,6 +13,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
+from petal.types import Src, Printer
 
 
 class CommandPending:
@@ -21,15 +22,15 @@ class CommandPending:
         period, if the message is edited, the Command will attempt to rerun.
     """
 
-    def __init__(self, dict_, output, router, src):
+    def __init__(self, dict_, output, router, src: Src):
         self.dict_ = dict_
-        self.output = output
+        self.output: Printer = output
         self.router = router
-        self.src: discord.Message = src
+        self.src: Src = src
 
         self.active = False
         self.reply: Optional[discord.Message] = None
-        self.waiting = create_task(self.wait())
+        self.waiting: Future = create_task(self.wait())
 
     async def run(self):
         """Try to execute this command. Return True if execution is carried out
@@ -93,7 +94,7 @@ class CommandPending:
                     else " ({}).".format(type(e).__name__)
                 )
             )
-            traceback.print_exc()
+            print_exc()
 
         else:
             # Command routed without errors.
@@ -154,7 +155,7 @@ class Commands:
         full.sort(key=lambda f: f.__name__)
         return full
 
-    def authenticate(self, src):
+    def authenticate(self, src: Src):
         """
         Take a Discord message and return True if:
           1. The author of the message is allowed to access this package.
@@ -221,7 +222,7 @@ class Commands:
         else:
             return False, "private"
 
-    def get_member(self, src, uuid):
+    def get_member(self, src: Src, uuid):
         """Get a Discord Member object from an ID. First argument MUST be either
             a Guild or a Message.
         """

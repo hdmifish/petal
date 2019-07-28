@@ -5,14 +5,13 @@ from re import compile
 import sys
 from typing import get_type_hints, List, Tuple
 
-import discord
-
 from petal.etc import check_types, split, unquote
 from petal.exceptions import (
     CommandArgsError,
     CommandAuthError,
 )
 from petal.social_integration import Integrated
+from petal.types import Args, Src
 
 
 # List of modules to load; All Command-providing modules should be included (NOT "core").
@@ -135,7 +134,7 @@ class CommandRouter(Integrated):
 
     def parse_from_hinting(
         self, cline: List[str], func: classmethod
-    ) -> Tuple[list, dict]:
+    ) -> Tuple[Args, dict]:
         """cline is a List of Strings, and func is a Command Method. Generate a
             Dict of Types that can be accepted by the various kwargs of func.
             With that information, use Getopt to break cline down into
@@ -168,13 +167,13 @@ class CommandRouter(Integrated):
         args, opts = self.parse(cline, shorts, longs)
 
         # Args: Remove any outermost quotes.
-        args = [unquote(arg) for arg in args]
+        args: Args = Args([unquote(arg) for arg in args])
         # Opts: Enforce the typing, and if it all passes, send our results back up.
         opts = check_types(opts, hints)
 
         return args, opts
 
-    async def route(self, command: str, src: discord.Message):
+    async def route(self, command: str, src: Src):
         """Route a command (and the source message) to the correct method of the
             correct module. By this point, the prefix should have been stripped
             away already, leaving a plaintext command.
@@ -214,7 +213,7 @@ class CommandRouter(Integrated):
                 )
             return func(args=args, **opts, msg=msg, src=src)
 
-    async def run(self, src: discord.Message):
+    async def run(self, src: Src):
         """Given a message, determine whether it is a command;
         If it is, route it accordingly.
         """

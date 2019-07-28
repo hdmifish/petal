@@ -21,6 +21,7 @@ from petal.dbhandler import DBHandler
 from petal.etc import mash
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
+from petal.types import PetalClientABC, Src
 
 
 log = grasslands.Peacock()
@@ -40,7 +41,7 @@ def first_role_named(name: str, guild: discord.Guild):
             return role
 
 
-class Petal(discord.Client):
+class Petal(PetalClientABC):
     logLock = False
 
     def __init__(self, devmode=False):
@@ -595,7 +596,7 @@ class Petal(discord.Client):
         else:
             return
 
-    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+    async def on_message_edit(self, before: Src, after: Src):
         if (
             Petal.logLock
             or before.content == ""
@@ -758,7 +759,7 @@ class Petal(discord.Client):
     #                     )
     #                 return
 
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: Src):
         await self.wait_until_ready()
         content = message.content.strip()
         if isinstance(message.channel, discord.TextChannel):
@@ -875,7 +876,6 @@ class Petal(discord.Client):
                     user=message.author, self=self.user
                 )
                 if reply:
-                    # noinspection PyTypeChecker
                     await self.send_message(None, message.channel, reply)
             return
 
