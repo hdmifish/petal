@@ -66,7 +66,21 @@ def check_types(opts: Dict[str, kwopt], hints: Dict[str, T1]) -> Dict[str, T1]:
     return output
 
 
-def lambdall(values: Sequence[T1], func: Callable[[T1], T2], mustbe: T2 = True):
+def enforce_quoted_args(args: Sequence[str], wanted: int, text: str = None):
+    """We want only a few Arguments, but one of them is likely to contain
+        whitespace. If we get too many, it indicates that the user probably
+        meant many of them to be one. However, we cannot be SURE, so fail softly
+        with a reminder.
+    """
+    if len(args) > wanted:
+        raise CommandArgsError(
+            text
+            or "Sorry, it looks like you might have meant for an Argument to be"
+            " multiple words, but I cannot be sure. Could you put it in quotes?"
+        )
+
+
+def lambdall(values: Sequence[T1], func: Callable[[T1], T2], mustbe: T2 = True) -> bool:
     """Return True if ALL values, run through `func`, are equal to `mustbe`."""
     for v in values:
         if func(v) != mustbe:
