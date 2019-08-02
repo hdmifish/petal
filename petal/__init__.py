@@ -554,7 +554,7 @@ class Petal(PetalClientABC):
         await self.embed(self.get_channel(self.config.logChannel), userEmbed)
         return
 
-    async def on_message_delete(self, message):
+    async def on_message_delete(self, message: discord.Message):
         try:
             if (
                 Petal.logLock
@@ -582,7 +582,7 @@ class Petal(PetalClientABC):
                 name="Message content", value=message.content, inline=False
             )
             userEmbed.add_field(
-                name="Message creation", value=str(message.timestamp)[:-7]
+                name="Message creation", value=str(message.created_at)[:-7]
             )
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
             userEmbed.set_footer(
