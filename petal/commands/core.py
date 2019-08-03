@@ -1,9 +1,127 @@
-import asyncio
+from asyncio import ensure_future as create_task, Future, sleep
+from traceback import print_exc
+from typing import Optional
 from urllib.parse import urlencode, quote_plus
 
 import discord
 
 from petal.dbhandler import m2id
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandExit,
+    CommandInputError,
+    CommandOperationError,
+)
+from petal.types import Src, Printer
+
+
+class CommandPending:
+    """Class for storing a Command while it is executed. If it cannot be
+        executed, it will be saved for a set time limit. During that timeout
+        period, if the message is edited, the Command will attempt to rerun.
+    """
+
+    def __init__(self, dict_, output, router, src: Src):
+        self.dict_ = dict_
+        self.output: Printer = output
+        self.router = router
+        self.src: Src = src
+
+        self.active = False
+        self.reply: Optional[discord.Message] = None
+        self.waiting: Future = create_task(self.wait())
+
+    async def run(self):
+        """Try to execute this command. Return True if execution is carried out
+            successfully, False otherwise. Potentially, remove self.
+        """
+        if not self.active:
+            # Command is not valid for execution. Cease.
+            return False
+
+        d = "No details specified."
+
+        try:
+            # Run the Command through the Router.
+            response = await self.router.run(self.src)
+
+        except CommandArgsError as e:
+            # Arguments not valid. Cease, but do not necessarily desist.
+            if self.reply:
+                await self.reply.edit(content=e)
+            else:
+                self.reply = await self.src.channel.send(e)
+
+        except CommandAuthError as e:
+            # Access denied. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Sorry, not permitted; {}".format(str(e) or d))
+
+        except CommandExit as e:
+            # Command cancelled itself. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Command exited; {}".format(str(e) or d))
+
+        except CommandInputError as e:
+            # Input not valid. Cease, but do not necessarily desist.
+            out = "Bad input: {}".format(str(e) or d)
+            if self.reply:
+                await self.reply.edit(content=out)
+            else:
+                self.reply = await self.src.channel.send(out)
+
+        except CommandOperationError as e:
+            # Command could not finish, but was accepted. Cease and desist.
+            self.unlink()
+            await self.src.channel.send("Command failed; {}".format(str(e) or d))
+
+        except NotImplementedError as e:
+            # Command ran into something that is not done. Cease and desist.
+            self.unlink()
+            await self.src.channel.send(
+                "Sorry, this Command is not completely done; {}".format(str(e) or d)
+            )
+
+        except Exception as e:
+            # Command could not finish. We do not know why, so play it safe.
+            self.unlink()
+            await self.src.channel.send(
+                "Sorry, something went wrong, but I do not know what"
+                + (
+                    ": `{} / {}`".format(type(e).__name__, e)
+                    if str(e)
+                    else " ({}).".format(type(e).__name__)
+                )
+            )
+            print_exc()
+
+        else:
+            # Command routed without errors.
+            if response is not None:
+                # Command executed successfully. Desist and respond.
+                self.unlink()
+                self.router.config.get("stats")["comCount"] += 1
+                await self.output(self.src, response, self.reply)
+                return True
+            else:
+                # Command was not executed. Cease.
+                return False
+
+        finally:
+            return False
+
+    async def wait(self):
+        self.active = True
+        self.dict_[self.src.id] = self
+        await sleep(60)
+        self.unlink()
+
+    def unlink(self):
+        """Prevent self from being executed."""
+        self.active = False
+        if self.src.id in self.dict_:
+            del self.dict_[self.src.id]
 
 
 class Commands:
@@ -34,9 +152,10 @@ class Commands:
             for attr in dir(self)
             if "__" not in attr and attr.startswith("cmd_")
         ]
+        full.sort(key=lambda f: f.__name__)
         return full
 
-    def authenticate(self, src):
+    def authenticate(self, src: Src):
         """
         Take a Discord message and return True if:
           1. The author of the message is allowed to access this package.
@@ -64,20 +183,6 @@ class Commands:
         else:
             return True, None
 
-    def any(self, sample: dict, *allowed: str):
-        """Try to find any specifically non-None (rather than simple logically
-            True) value in a dict.
-        """
-        if not allowed:
-            # If no values are supplied, search all.
-            allowed = list(sample)
-
-        for key in allowed:
-            if sample.get(key, None) is not None:
-                return sample[key]
-
-        return None
-
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
     def check_user_has_role(self, user, role):
@@ -86,14 +191,14 @@ class Commands:
         if type(user) != discord.Member:
             user = self.member_on_main(user.id)
         if user:
-            server = self.client.get_server(self.config.get("mainServer"))
-            target = discord.utils.get(server.roles, name=role)
+            guild = self.client.get_guild(self.config.get("mainServer"))
+            target = discord.utils.get(guild.roles, name=role)
             # TODO: Make this block a bit more...compact.
             if target is None:
-                # Role is not found on Main Server? Check this one.
+                # Role is not found on Main Guild? Check this one.
                 target = discord.utils.get(user.server.roles, name=role)
                 if target is None:
-                    # Role is not found on this server? Fail.
+                    # Role is not found on this guild? Fail.
                     self.log.err("Role '" + role + "' does not exist.")
                     return False, "bad role"
                 elif target in user.roles:
@@ -103,8 +208,8 @@ class Commands:
                     # Role is found, but does not include member? Fail.
                     return False, "denied"
             else:
-                # Role is found on Main Server. Find the member there and check.
-                user_there = server.get_member(user.id)
+                # Role is found on Main Guild. Find the member there and check.
+                user_there = guild.get_member(user.id)
                 if user_there:
                     # User is there? Check roles.
                     if target in user_there.roles:
@@ -117,21 +222,19 @@ class Commands:
         else:
             return False, "private"
 
-    def get_member(self, src, uuid):
+    def get_member(self, src: Src, uuid):
+        """Get a Discord Member object from an ID. First argument MUST be either
+            a Guild or a Message.
         """
-        Get a Discord Member object from an ID.
-        """
-        if isinstance(src, discord.Server):
+        if isinstance(src, discord.Guild):
             return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                src.server.members, id=uuid.lstrip("<@!").rstrip(">")
+                src.guild.members, id=int(uuid.lstrip("<@!").rstrip(">"))
             )
 
     def member_on_main(self, uuid):
-        return self.get_member(
-            self.client.get_server(self.client.get_main_server()), uuid
-        )
+        return self.get_member(self.client.main_guild, uuid)
 
     @staticmethod
     def validate_channel(chanlist: list, msg: str) -> bool:
@@ -142,7 +245,9 @@ class Commands:
                 return False
         return True
 
-    async def notify_subscribers(self, source_channel, target_message, key):
+    async def notify_subscribers(
+        self, source_channel: discord.TextChannel, target_message, key
+    ):
         await self.client.send_message(None, source_channel, "Notifying subscribers...")
         sub = self.db.subs.find_one({"code": key})
         if sub is None:
@@ -175,7 +280,7 @@ class Commands:
                     count += 1
             if len(status) > 1900:
                 await self.client.send_message(None, source_channel, status + "```")
-                await asyncio.sleep(0.5)
+                await sleep(0.5)
                 status = "```\n"
         if len(status) > 0:
             await self.client.send_message(None, source_channel, status + "```")

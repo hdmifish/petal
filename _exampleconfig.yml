@@ -134,7 +134,7 @@ trackChannel: '0'
   #you can format this with user {user.name/id/discriminator} and {channel.name/id}
 
 # this will ignore join/leave/edit/delete/ban/kick messages in specific channels
-# this is useful for keeping Moderator eyes off of Admin chat edits without sacrificing functionality of the bot in those servers/channels
+# this is useful for keeping Moderator eyes off of Admin chat edits without sacrificing functionality of the bot in those guilds/channels
 ignoreServers:
 - '0'
 
@@ -158,7 +158,7 @@ nsfwChannels:
 # you can ignore this line
 # karaokeChannel: '0000000'
 
-# X-Post support (This is for cross posting event announcements to other servers)
+# X-Post support (This is for cross posting event announcements to other guilds)
 xPostRole: canPost
 # This is a list of server ids that can be crossposted to
 xPostList:

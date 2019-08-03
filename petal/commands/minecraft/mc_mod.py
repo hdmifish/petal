@@ -6,6 +6,9 @@ import discord
 from petal.commands.minecraft import auth
 
 
+wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the Server Address is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect."
+
+
 class CommandsMCMod(auth.CommandsMCAuth):
     op = 3
 
@@ -26,7 +29,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         submission = args[0]
         # Send the submission through the function
         reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
-            submission, src.author.id
+            submission, str(src.author.id)
         )
 
         if reply == 0:
@@ -39,7 +42,6 @@ class CommandsMCMod(auth.CommandsMCAuth):
                     self.config.get("mainServer")
                 ).get_member(recipientid)
                 try:
-                    wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the IP is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect"
                     msg = await self.client.send_message(channel=recipientobj, message=wlpm)
                 except discord.DiscordException as e:
                     self.log.err("Error on WLAdd PM: " + str(e))

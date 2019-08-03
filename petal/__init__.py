@@ -5,46 +5,43 @@ written by isometricramen
 """
 
 import asyncio
-from collections import deque
 from datetime import datetime
-from hashlib import sha256
 import random
 import re
 import time
+from typing import AsyncGenerator, Coroutine, Generator, List
 
 import discord
 
 from petal import grasslands
 from petal.commands import CommandRouter as Commands
+from petal.commands.core import CommandPending
 from petal.config import Config
 from petal.dbhandler import DBHandler
+from petal.etc import mash
+from petal.exceptions import TunnelHobbled, TunnelSetupError
+from petal.tunnel import Tunnel
+from petal.types import PetalClientABC, Src
 
 
-# from random import randint
 log = grasslands.Peacock()
 
 version = "<UNSET>"
 with open("version_info.sh", "r") as f:
-    for line in f:
-        if line.startswith("VERSION="):
-            version = line.split("=", 1)[1].split("#")[0].strip()
+    for _line in f:
+        if _line.startswith("VERSION="):
+            version = _line.split("=", 1)[1].split("#")[0].strip(" \n\"'")
 
 grasslands.version = version
 
 
-def mash(*data, digits=4, base=10):
-    # This is a duplicate of a function in mod.py.
-    # TODO: Put somewhere both can access; Do not repeat.
-    sha = sha256()
-    sha.update(bytes("".join(str(d) for d in data), "utf-8"))
-    hashval = int(sha.hexdigest(), 16)
-    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
-    hashval %= ceiling  # 0000 <= N <= 8999
-    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
-    return hashval
+def first_role_named(name: str, guild: discord.Guild):
+    for role in guild.roles:
+        if role.name == name:
+            return role
 
 
-class Petal(discord.Client):
+class Petal(PetalClientABC):
     logLock = False
 
     def __init__(self, devmode=False):
@@ -63,9 +60,10 @@ class Petal(discord.Client):
         self.startup = datetime.utcnow()
         self.commands = Commands(self)
         self.commands.version = version
-        self.potential_typoed_commands = deque([], 3)
+        self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
         self.tempBanFlag = False
+        self.tunnels = []
 
         self.dev_mode = devmode
         log.info("Configuration object initalized")
@@ -103,24 +101,38 @@ class Petal(discord.Client):
     def remove_prefix(content):
         return content[len(content.split()[0]) :]
 
-    def get_main_server(self):
-        if len(self.servers) == 0:
-            log.err("This client is not a member of any servers")
+    @property
+    def main_guild(self) -> discord.Guild:
+        if len(self.guilds) == 0:
+            log.err("This client is not a member of any guilds")
             exit(404)
-        return self.config.get("mainServer")
+        return self.get_guild(self.config.get("mainServer"))
 
     async def status_loop(self):
         interv = 32
-        g_ses = discord.Game(name="Session: " + self.session_id[2:])
-        g_ver = discord.Game(name="Version: " + version)
+        # times = {"start": self.startup.timestamp() * 1000}
+        g_ses = discord.Activity(
+            name="Session: {}".format(self.session_id[2:]),
+            # timestamps=times,
+            type=discord.ActivityType.playing,
+        )
+        g_ver = discord.Activity(
+            name="Version: {}".format(version),
+            # timestamps=times,
+            type=discord.ActivityType.playing,
+        )
         while True:
-            await self.change_presence(game=g_ses)
-            await asyncio.sleep(interv)
             await self.change_presence(
-                game=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+                activity=discord.Game(name=self.config.prefix + "info")
             )
             await asyncio.sleep(interv)
-            await self.change_presence(game=g_ver)
+            await self.change_presence(activity=g_ses)
+            await asyncio.sleep(interv)
+            await self.change_presence(
+                activity=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+            )
+            await asyncio.sleep(interv)
+            await self.change_presence(activity=g_ver)
             await asyncio.sleep(interv)
 
     async def save_loop(self):
@@ -145,7 +157,7 @@ class Petal(discord.Client):
     async def ban_loop(self):
         # if self.dev_mode:
         #     return
-        mainserver = self.get_server(self.config.get("mainServer"))
+        mainguild: discord.Guild = self.get_guild(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
         log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
         await asyncio.sleep(interval)
@@ -153,41 +165,76 @@ class Petal(discord.Client):
             epoch = int(time.time())
             log.f("BANS", "Now Timestamp: " + str(epoch))
 
-            banlist = await self.get_bans(mainserver)
-
-            for m in banlist:
+            for entry in await mainguild.bans():
+                user = entry["user"]
                 # log.f("UNBANS", m.name + "({})".format(m.id))
-                ban_expiry = self.db.get_attribute(m, "banExpires", verbose=False)
-                if ban_expiry is None:
-                    continue
-                if not self.db.get_attribute(m, "tempBanned"):
-                    print(
-                        "Member {}({}) was not tempbanned. Skipping".format(
-                            m.name, m.id
-                        )
-                    )
+                ban_expiry = self.db.get_attribute(user, "banExpires", verbose=False)
+                if ban_expiry is None or not self.db.get_attribute(user, "tempBanned"):
                     continue
                 elif int(ban_expiry) <= int(epoch):
                     log.f(str(ban_expiry) + " compared to " + str(epoch))
                     print(flush=True)
-                    await self.unban(mainserver, m)
-                    self.db.update_member(m, {"banned": False})
-                    log.f("BANS", "Unbanned " + m.name + " ({}) ".format(m.id))
-
+                    try:
+                        await mainguild.unban(user, reason="Tempban Expired")
+                    except discord.Forbidden:
+                        log.f("BANS", "Lacking permission to unban {}.".format(user.id))
+                    except discord.HTTPException as e:
+                        log.f("BANS", "FAILED to unban {}: {}".format(user.id, e))
+                    else:
+                        self.db.update_member(user, {"banned": False})
+                        log.f("BANS", "Unbanned {} ({}) ".format(user.name, user.id))
                 else:
                     log.f(
                         "BANS",
-                        m.name
+                        user.name
                         + " ({}) has {} seconds left".format(
-                            m.id, str((int(ban_expiry) - int(epoch)))
+                            user.id, str((int(ban_expiry) - int(epoch)))
                         ),
                     )
                 await asyncio.sleep(0.5)
 
             await asyncio.sleep(interval)
 
+    async def close_tunnels_to(self, channel):
+        """Given a Channel, remove it from any/all Tunnels connecting to it."""
+        for t in self.tunnels:
+            await t.drop(channel)
+
+    async def dig_tunnel(self, origin, *channels: List[int], anon=False):
+        """Create a new Tunnel.
+            The first Positional Argument is the Origin Channel, the Channel to
+            which to report back in case of problems. All subsequent Positional
+            Arguments are Integer IDs.
+        """
+        new = Tunnel(self, origin, *channels, anon)
+        try:
+            tunnel_coro = new.activate()
+        except TunnelSetupError:
+            return False
+        else:
+            self.tunnels.append(new)
+            await tunnel_coro
+
+    def get_tunnel(self, channel):
+        """Given a Channel, return the first Tunnel connected to it, if any."""
+        for t in self.tunnels:
+            if channel in t.connected:
+                return t
+
+    async def kill_tunnel(self, t: Tunnel):
+        """Given a Tunnel, kill it. Duh."""
+        if t:
+            await t.kill()
+
+    def remove_tunnel(self, t: Tunnel):
+        """Given a dead Tunnel, remove it from the Client Tunnels."""
+        if t.active:
+            raise TunnelHobbled("Cannot Remove a Tunnel which is still active.")
+        while t in self.tunnels:
+            self.tunnels.remove(t)
+
     async def on_member_ban(self, member):
-        print("Giving database a chance ot sync...")
+        print("Giving database a chance to sync...")
         await asyncio.sleep(1)
 
         if not self.db.member_exists(member):
@@ -222,53 +269,168 @@ class Petal(discord.Client):
             pass
         else:
             log.warn(
-                "No dbconf configuration in config.yml," + "motd features are disabled"
+                "No dbconf configuration in config.yml, motd features are disabled"
             )
         return
 
-    async def execute_command(self, message):
-        response = await self.commands.run(message)
-        if response is not None:
-            self.config.get("stats")["comCount"] += 1
+    async def print_response(self, message, response, to_edit=None):
+        """Use a discrete method for this, so that it can be used recursively if
+            needed.
 
-            if type(response) == discord.Embed:
+        Return Types of Command Methods:
+        def, return         ->  Any             - send(value)
+        def, yield          ->  Generator       - for x in value: send(x)
+        async def, return   ->  Coroutine       - recurse(await value)
+        async def, yield    ->  AsyncGenerator  - async for x in value: send(x)
+        """
+        # print("Outputting Response:", repr(response))
+        while isinstance(response, Coroutine):
+            # Ensure that the Response is actually final.
+            response = await response
+            # print("Awaited Response:", repr(response))
+
+        if response is None:
+            # Ignore Void Responses.
+            return
+
+        elif isinstance(response, (AsyncGenerator, Generator, list, tuple)):
+            # Response is a Generator, indicating the method used Yielding, or a
+            #   List or Tuple, which should be treated the same. Yield command
+            #   returns support flushing and clearing the List of Buffered
+            #   Lines, with True and False, respectively.
+            # print("Iterating Type:", type(response))
+            if to_edit:
+                # Due to the ability to chain multiple messages by yielding, we
+                #   cannot cleanly take advantage of editing. Delete it.
+                await to_edit.delete()
+
+            buffer: list = []
+
+            async def operate(line):
+                # print("  Reading Line:", repr(line))
+                if line is True:
+                    # Upon reception of True, "flush" the current "buffer" by
+                    #   posting a Message.
+                    # print("    Printing Buffer:", repr(buffer))
+                    if buffer:
+                        await self.print_response(message, "\n".join(map(str, buffer)))
+                        buffer.clear()
+
+                elif line is False:
+                    # Upon reception of False, discard the buffer.
+                    # print("    Discarding Buffer:", repr(buffer))
+                    buffer.clear()
+
+                elif isinstance(line, (dict, discord.Embed)):
+                    # Upon reception of a Dict or an Embed, send it in a Message
+                    #   immediately.
+                    await self.print_response(message, line)
+
+                elif isinstance(line, (list, tuple)):
+                    # Upon reception of a List or Tuple, treat it the same as
+                    #   reception of its elements in sequence.
+                    await operate(line)
+
+                else:
+                    # Anything else is added to the buffer.
+                    # print("    Appending to Buffer.")
+                    buffer.append(line)
+
+            if isinstance(response, AsyncGenerator):
+                async for y in response:
+                    await operate(y)
+
+            elif isinstance(response, (Generator, list, tuple)):
+                for y in response:
+                    await operate(y)
+
+            # print("Iterator Exhausted; Flushing Buffer.")
+            if buffer:
+                # print("Printing Final Buffer:", repr(buffer))
+                await operate(True)
+                # await self.print_response(message, "\n".join(map(str, buffer)))
+
+            del buffer
+
+        elif isinstance(response, dict):
+            # If the response is a Dict, it is a series of keyword arguments
+            #   intended to be passed directly to `Channel.send()`.
+            # print("Building from Dict.")
+            if to_edit:
+                vals = {"content": None, "embed": None}
+                vals.update(response)
+                await to_edit.edit(**vals)
+            else:
+                await message.channel.send(**response)
+
+        elif isinstance(response, discord.Embed):
+            # If the response is an Embed, simply show it as normal.
+            # print("Sending Embed.")
+            if to_edit:
+                await to_edit.edit(content=None, embed=response)
+            else:
                 await self.send_message(message.author, message.channel, embed=response)
+
+        elif isinstance(response, str):
+            # Same with String.
+            # print("Sending String.")
+            if to_edit:
+                await to_edit.edit(content=response, embed=None)
             else:
                 await self.send_message(message.author, message.channel, str(response))
 
-            return True
         else:
-            return False
+            # And everything else.
+            # print("Sending Other.")
+            if to_edit:
+                await to_edit.edit(content=repr(response), embed=None)
+            else:
+                await self.send_message(message.author, message.channel, str(response))
+
+    async def execute_command(self, message):
+        command = self.potential_typo.get(message.id) or CommandPending(
+            self.potential_typo, self.print_response, self.commands, message
+        )
+        await asyncio.sleep(0.1)
+        return await command.run()
 
     async def send_message(
-        self,
-        author=None,
-        channel=None,
-        message=None,
-        timeout=0,
-        *,
-        embed=None,
-        **kwargs
+        self, author=None, channel=None, message=None, *, embed=None, **_
     ):
         """
         Overload on the send_message function
         """
-        if not message or not str(message):
+        if (not message or not str(message)) and not embed:
             # Without a message to send, dont even try; it would just error
             return None
+        message = str(message)
+
+        if (
+            author is not None
+            and self.db.get_member(author) is not None
+            and self.db.get_attribute(author, "ac")
+        ):
+            try:
+                ac = list(self.db.ac.find())
+                ac = ac[random.randint(0, len(ac) - 1)]["ending"]
+                i = 0
+                while message[-(i + 1)] in " ,.…¿?¡!":
+                    i += 1
+
+                msg, end = (message[:-i], message[-i:]) if i > 0 else (message, "")
+            except:
+                pass
+            else:
+                message = msg + ", " + ac + end
+
         if self.dev_mode:
             message = "[DEV]  " + str(message) + "  [DEV]"
-        if author is not None:
-            if self.db.get_member(author) is not None:
-                if self.db.get_attribute(author, "ac", verbose=False) is not None:
-                    if self.db.get_attribute(author, "ac"):
-                        # message += " , " + self.commands.get_ac()
-                        l = list(self.db.ac.find())
-                        message += " , " + l[random.randint(0, len(l) - 1)]["ending"]
         try:
-            return await super().send_message(channel, message, embed=embed)
+            return await channel.send(content=message, embed=embed)
         except discord.errors.InvalidArgument:
-            log.err("A message: " + message + " was unable to be sent in " + channel)
+            log.err(
+                "A message: " + message + " was unable to be sent in " + channel.name
+            )
             return None
         except discord.errors.Forbidden:
             log.err(
@@ -282,15 +444,15 @@ class Petal(discord.Client):
     async def embed(self, channel, embedded, content=None):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await super().send_message(channel, content=content, embed=embedded)
+        return await channel.send(content=content, embed=embedded)
 
     async def on_member_join(self, member):
         """
         To be called When a new member joins the server
         """
-
         response = ""
-        if self.config.get("welcomeMessage") != "null":
+        welcome = self.config.get("welcomeMessage", None)
+        if welcome and welcome != "null":
             try:
                 await self.send_message(
                     channel=member, message=self.config.get("welcomeMessage")
@@ -306,7 +468,7 @@ class Petal(discord.Client):
         if self.db.add_member(member):
             user_embed = discord.Embed(
                 title="User Joined",
-                description="A new user joined: " + member.server.name,
+                description="A new user joined: " + member.guild.name,
                 colour=0x00FF00,
             )
         else:
@@ -315,7 +477,7 @@ class Petal(discord.Client):
                     title="User ReJoined",
                     description=self.db.get_attribute(member, "aliases")[-1]
                     + " rejoined "
-                    + member.server.name
+                    + member.guild.name
                     + " as "
                     + member.name,
                     colour=0x00FF00,
@@ -324,8 +486,10 @@ class Petal(discord.Client):
                 return
 
         self.db.update_member(
-            member, {"aliases": [member.name], "servers": [member.server.id]}
+            member, {"aliases": [member.name], "guilds": [member.guild.id]}
         )
+
+        age = datetime.utcnow() - member.created_at
 
         user_embed.set_thumbnail(url=member.avatar_url)
         user_embed.add_field(name="Name", value=member.name)
@@ -337,9 +501,10 @@ class Petal(discord.Client):
         else:
             game = member.game.name
         user_embed.add_field(name="Currently Playing", value=game)
-        user_embed.add_field(name="Joined: ", value=str(member.joined_at)[:-7])
+        user_embed.add_field(name="Joined", value=str(member.joined_at)[:-7])
         user_embed.add_field(
-            name="Account Created: ", value=str(member.created_at)[:-7]
+            name="Account Created:",
+            value="{} ({} ago)".format(str(member.created_at)[:-7], str(age)[:-10]),
         )
 
         await self.embed(self.get_channel(self.config.logChannel), user_embed)
@@ -347,8 +512,6 @@ class Petal(discord.Client):
             await self.send_message(
                 None, self.get_channel(self.config.logChannel), response
             )
-
-        age = datetime.utcnow() - member.created_at
         if age.days <= 6:
             # Account is less than a week old, mention its age
             timeago = [int(age.total_seconds() / 60), "minutes"]
@@ -374,7 +537,7 @@ class Petal(discord.Client):
 
         userEmbed = discord.Embed(
             title="User Leave",
-            description="A user has left: " + member.server.name,
+            description="A user has left: " + member.guild.name,
             colour=0xFF0000,
         )
 
@@ -391,16 +554,15 @@ class Petal(discord.Client):
         await self.embed(self.get_channel(self.config.logChannel), userEmbed)
         return
 
-    async def on_message_delete(self, message):
+    async def on_message_delete(self, message: discord.Message):
         try:
-            if Petal.logLock:
-                return
-            if message.channel.id in self.config.get("ignoreChannels"):
-                return
-
-            if message.channel.is_private:
-                return
-            if message.channel.server.id == "126236346686636032":
+            if (
+                Petal.logLock
+                or message.author == self.user
+                or message.channel.guild.id == "126236346686636032"
+                or message.channel.id in self.config.get("ignoreChannels")
+                or not isinstance(message.channel, discord.TextChannel)
+            ):
                 return
 
             userEmbed = discord.Embed(
@@ -414,32 +576,35 @@ class Petal(discord.Client):
             userEmbed.set_author(
                 name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5" + ".png"
             )
-            userEmbed.add_field(name="Server", value=message.server.name)
+            userEmbed.add_field(name="Server", value=message.guild.name)
             userEmbed.add_field(name="Channel", value=message.channel.name)
             userEmbed.add_field(
                 name="Message content", value=message.content, inline=False
             )
             userEmbed.add_field(
-                name="Message creation", value=str(message.timestamp)[:-7]
+                name="Message creation", value=str(message.created_at)[:-7]
             )
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            userEmbed.set_footer(
+                text=f"{message.author.name}#{message.author.discriminator} / {message.author.id}"
+            )
 
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
             await asyncio.sleep(2)
         except discord.errors.HTTPException:
-            pass
+            return
         else:
             return
 
-    async def on_message_edit(self, before, after):
-        if Petal.logLock:
-            return
-        if before.content == "":
-            return
-        if before.channel.is_private:
+    async def on_message_edit(self, before: Src, after: Src):
+        if (
+            Petal.logLock
+            or before.content == ""
+            or not isinstance(before.channel, discord.TextChannel)
+        ):
             return
 
-        if before.server.id in self.config.get(
+        if before.guild.id in self.config.get(
             "ignoreServers"
         ) or before.channel.id in self.config.get("ignoreChannels"):
             return
@@ -453,9 +618,8 @@ class Petal(discord.Client):
 
         # If the message was marked as a possible typo by the command router,
         #   try running it again.
-        executed = (
-            before.id in self.potential_typoed_commands
-            and await self.execute_command(after)
+        executed = before.id in self.potential_typo and await self.execute_command(
+            after
         )
 
         userEmbed = (
@@ -469,11 +633,14 @@ class Petal(discord.Client):
                 + " edited their message",
                 colour=0xAE00FE,
             )
-            .add_field(name="Server", value=before.server.name)
+            .add_field(name="Server", value=before.guild.name)
             .add_field(name="Channel", value=before.channel.name)
             .add_field(name="Previous message: ", value=before.content, inline=False)
             .add_field(name="Edited message: ", value=after.content)
             .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
+            .set_footer(
+                text=f"{before.author.name}#{before.author.discriminator} / {before.author.id}"
+            )
         )
 
         try:
@@ -506,7 +673,7 @@ class Petal(discord.Client):
 
         if gained is not None:
             userEmbed = discord.Embed(
-                title="({}) User Role ".format(role.server.name) + gained,
+                title="({}) User Role ".format(role.guild.name) + gained,
                 description="{}#{} {} role".format(
                     after.name, after.discriminator, gained
                 ),
@@ -533,77 +700,77 @@ class Petal(discord.Client):
             await self.embed(self.get_channel(self.config.modChannel), userEmbed)
         return
 
-    async def on_voice_state_update(self, before, after):
+    # async def on_voice_state_update(self, before, after):
+    #
+    #     # FIXME: This needs to have a limiter. Use at own risk of spam.
+    #     if self.config.tc is None:
+    #         return
+    #     else:
+    #         return
+    #     tc = self.config.tc
+    #     trackedChan = self.get_channel(tc["monitoredChannel"])
+    #     postChan = self.get_channel(tc["destinationChannel"])
+    #     if trackedChan is None:
+    #         log.err("Invalid tracking channel. Function disabled")
+    #         self.config.tc = None
+    #         return
+    #     if postChan is None:
+    #         log.err("Invalid posting channel. Function disabled")
+    #         self.config.tc = None
+    #         return
+    #     if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
+    #         try:
+    #             await self.send_message(None, after, tc["messageToUser"])
+    #         except discord.errors.HTTPException:
+    #             log.warn("Unable to PM {}".format(before.name))
+    #         else:
+    #             msg = await self.wait_for_message(
+    #                 author=after, check=self.is_pm, timeout=200
+    #             )
+    #             if msg is None:
+    #                 return
+    #             else:
+    #                 if msg.content.lower() in [
+    #                     "yes",
+    #                     "confirm",
+    #                     "please",
+    #                     "yeah",
+    #                     "yep",
+    #                     "mhm",
+    #                 ]:
+    #                     await self.send_message(
+    #                         None,
+    #                         postChan,
+    #                         tc["messageFormat"].format(
+    #                             user=after, channel=after.voice_channel
+    #                         ),
+    #                     )
+    #                 else:
+    #                     await self.send_message(
+    #                         None,
+    #                         channel,
+    #                         "Alright, just to let"
+    #                         + "you know. If you "
+    #                         + "have a spotty "
+    #                         + "connection, you may"
+    #                         + " get PM'd more than "
+    #                         + "once upon joining"
+    #                         + " this channel",
+    #                     )
+    #                 return
 
-        # FIXME: This needs to have a limiter. Use at own risk of spam.
-        if self.config.tc is None:
-            return
-        else:
-            return
-        tc = self.config.tc
-        trackedChan = self.get_channel(tc["monitoredChannel"])
-        postChan = self.get_channel(tc["destinationChannel"])
-        if trackedChan is None:
-            log.err("Invalid tracking channel. Function disabled")
-            self.config.tc = None
-            return
-        if postChan is None:
-            log.err("Invalid posting channel. Function disabled")
-            self.config.tc = None
-            return
-        if before.voice_channel != trackedChan and after.voice_channel == trackedChan:
-            try:
-                await self.send_message(None, after, tc["messageToUser"])
-            except discord.errors.HTTPException:
-                log.warn("Unable to PM {}".format(before.name))
-            else:
-                msg = await self.wait_for_message(
-                    author=after, check=self.is_pm, timeout=200
-                )
-                if msg is None:
-                    return
-                else:
-                    if msg.content.lower() in [
-                        "yes",
-                        "confirm",
-                        "please",
-                        "yeah",
-                        "yep",
-                        "mhm",
-                    ]:
-                        await self.send_message(
-                            None,
-                            postChan,
-                            tc["messageFormat"].format(
-                                user=after, channel=after.voice_channel
-                            ),
-                        )
-                    else:
-                        await self.send_message(
-                            None,
-                            channel,
-                            "Alright, just to let"
-                            + "you know. If you "
-                            + "have a spotty "
-                            + "connection, you may"
-                            + " get PM'd more than "
-                            + "once upon joining"
-                            + " this channel",
-                        )
-                    return
-
-    async def on_message(self, message):
+    async def on_message(self, message: Src):
         await self.wait_until_ready()
         content = message.content.strip()
-        if not message.channel.is_private:
+        if isinstance(message.channel, discord.TextChannel):
             self.db.update_member(
                 message.author,
                 {
                     "aliases": message.author.name,
-                    "servers": message.server.id,
+                    "guilds": message.guild.id,
                     "last_message_channel": message.channel.id,
-                    "last_active": message.timestamp,
-                    "last_message": message.timestamp,
+                    "last_active": message.created_at,
+                    "last_message": message.created_at,
                 },
                 type=1,
             )
@@ -618,12 +785,11 @@ class Petal(discord.Client):
                 },
             )
 
-        if message.author == self.user:
-            return
-        if message.content == self.config.prefix:
-            return
-
-        if message.author.id in self.config.blacklist:
+        if (
+            message.author == self.user
+            or message.content == self.config.prefix
+            or message.author.id in self.config.blacklist
+        ):
             return
 
         for word in message.content.split():
@@ -632,7 +798,7 @@ class Petal(discord.Client):
             if word in self.config.wordFilter:
                 embed = discord.Embed(
                     title="Word Filter Hit",
-                    description="At least one filtered " + "word was detected",
+                    description="At least one filtered word was detected",
                     colour=0x9F00FF,
                 )
 
@@ -641,7 +807,7 @@ class Petal(discord.Client):
                     value=message.author.name + "#" + message.author.discriminator,
                 )
                 embed.add_field(name="Channel", value=message.channel.name)
-                embed.add_field(name="Server", value=message.server.name)
+                embed.add_field(name="Server", value=message.guild.name)
                 embed.add_field(name="Content", value=message.content)
                 embed.add_field(name="Detected word", value=word, inline=False)
                 embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
@@ -649,12 +815,13 @@ class Petal(discord.Client):
                 await self.embed(self.get_channel(self.config.modChannel), embed)
                 break
 
+        role_member = first_role_named(
+            self.config.get("roleGrant")["role"], self.main_guild
+        )
         if (
-            message.channel.id == self.config.get("roleGrant")["chan"]
-            and discord.utils.get(
-                self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-            )
-            not in message.author.roles
+            role_member
+            and message.channel.id == self.config.get("roleGrant")["chan"]
+            and role_member not in message.author.roles
         ):
             try:
                 if self.config.get("roleGrant")["ignorecase"]:
@@ -668,19 +835,15 @@ class Petal(discord.Client):
                     await self.send_message(
                         None, message.channel, self.config.get("roleGrant")["response"]
                     )
-                    await self.add_roles(
-                        message.author,
-                        discord.utils.get(
-                            self.mainsvr.roles, id=self.config.get("roleGrant")["role"]
-                        ),
+                    await message.author.add_roles(
+                        role_member, reason="Message matched the Agreement regex."
                     )
                     log.member(
                         message.author.name
                         + " (id: "
-                        + message.author.id
+                        + str(message.author.id)
                         + ") was given access"
                     )
-                    # Add logging later
                     return
 
             except Exception as e:
@@ -691,9 +854,13 @@ class Petal(discord.Client):
                     + " your role. Pm a member of staff "
                     + str(e),
                 )
+                raise e
 
-        if not self.config.pm and message.channel.is_private:
+        if not self.config.pm and isinstance(
+            message.channel, discord.abc.PrivateChannel
+        ):
             if not message.author == self.user:
+                # noinspection PyTypeChecker
                 await self.send_message(
                     None,
                     message.channel,

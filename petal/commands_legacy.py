@@ -309,7 +309,7 @@ class Commands:
     #        """
     #        hello
     #        """
-    #       for s in self.client.servers:
+    #       for s in self.client.guilds:
     #           if s.id == "215170877002612737":
     #               await self.client.leave_server(s)
     #               return "left " + s.name

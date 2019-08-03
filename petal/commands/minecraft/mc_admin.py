@@ -10,11 +10,10 @@ class CommandsMCAdmin(auth.CommandsMCAuth):
     async def cmd_wlmod(self, args, src, **_):
         """Flag a person to be given a level of operator status.
 
-        Level 1 can: Bypass spawn protection.
-        Level 2 can: Use `/clear`, `/difficulty`, `/effect`, `/gamemode`, `/gamerule`, `/give`, `/summon`, `/setblock`, and `/tp`, and can edit command blocks.
-        Level 3 can: Use `/ban`, `/deop`, `/whitelist`, `/kick`, and `/op`.
-        Level 4 can: Use `/stop`.
-        (<https://gaming.stackexchange.com/questions/138602/what-does-op-permission-level-do>)
+        Level 1: Can bypass spawn protection.
+        Level 2: Can use all singleplayer cheats commands (except /publish, as it is not on servers; along with /debug and /reload) and use command blocks. Command blocks, along with Realms owners/operators, have the same permissions as this level.
+        Level 3: Can use most multiplayer-exclusive commands, including /debug, /reload, and commands that manage players (/ban, /op, etc).
+        Level 4: Can use all commands including /stop, /save-all, /save-on, /save-off, /forceload add, and /forceload remove.
 
         Syntax: `{p}wlmod <profile_identifier> (0|1|2|3|4)`
         """
@@ -37,7 +36,7 @@ class CommandsMCAdmin(auth.CommandsMCAuth):
             return "Ambiguous command: {} possible targets found.".format(
                 str(len(victim))
             )
-        elif src.author.id == victim[0]["discord"]:
+        elif str(src.author.id) == victim[0]["discord"]:
             return "You cannot change your own Operator status."
 
         # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)

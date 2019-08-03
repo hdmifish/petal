@@ -1,4 +1,5 @@
 colorama
+dateparser
 discord
 facebook-sdk
 praw

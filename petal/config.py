@@ -1,7 +1,5 @@
 from ruamel import yaml
 from .grasslands import Peacock
-from random import randint
-from datetime import datetime
 
 log = Peacock()
 
@@ -82,14 +80,16 @@ class Config(object):
     #    self.lockLog = not self.lockLog
 
     def get(self, field, default=None):
-        if field is None:
-            return "<poof>"
-        else:
-            try:
-                return self.doc[field]
-            except KeyError:
-                log.err(field + " is not found in config")
+        here = self.doc
+
+        for step in field.split("/"):
+            if step in here:
+                here = here[step]
+            else:
+                log.err("'{}' is not found in config.".format(field))
                 return default
+
+        return here
 
     def save(self, vb=False):
         if vb:

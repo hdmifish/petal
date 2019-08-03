@@ -4,7 +4,6 @@ import subprocess
 import traceback
 import os, ctypes
 import sys
-import pip
 
 print("DETECTED ARGS: " + str(sys.argv))
 

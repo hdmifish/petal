@@ -17,12 +17,12 @@ def m2id(mem):
     """
     if isinstance(mem, discord.Member) or isinstance(mem, discord.User):
         mid = mem.id
-    elif isinstance(mem, discord.Channel) or isinstance(mem, discord.Server):
+    elif isinstance(mem, discord.TextChannel) or isinstance(mem, discord.Guild):
         print(mem.name)
         mid = None
     else:
         mid = mem
-    return mid
+    return str(mid)
 
 
 def ts(dt):
@@ -132,7 +132,7 @@ class DBHandler(object):
             }
 
             try:
-                data["servers"] = [member.server.id]
+                data["guilds"] = [member.server.id]
             except AttributeError:
                 log.f("dbhandler", "user type object, cannot add server attribute")
 
@@ -349,3 +349,13 @@ class DBHandler(object):
             )
 
         return self.motd.find_one({"num": num})
+
+    def read_cmd_image(self, invoker: str) -> (bytes, None):
+        # TODO: `invoker` is a string key in the DB with Base64 image data. Find and return it.
+        # Should return a bytes class object if the data is in the DB, or `None` if not.
+        pass
+
+    def write_cmd_image(self, invoker: str, img: bytes):
+        # TODO: `img` is a bstring of Base64 data. Write it into the DB under the key `invoker`.
+        # Should return `True` if the image was written, or `False` if it was not.
+        pass
