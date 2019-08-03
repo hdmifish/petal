@@ -329,7 +329,8 @@ class Petal(PetalClientABC):
                 elif isinstance(line, (list, tuple)):
                     # Upon reception of a List or Tuple, treat it the same as
                     #   reception of its elements in sequence.
-                    await push(line)
+                    for elem in line:
+                        await push(elem)
 
                 else:
                     # Anything else is added to the buffer.
@@ -928,4 +929,5 @@ class Petal(PetalClientABC):
         # For now, do all the above checks and then run/route it.
         # This may result in repeating some checks, but these checks should
         #     eventually be moved into the commands module itself.
-        await self.execute_command(message)
+        if message.content.startswith(self.config.prefix):
+            await self.execute_command(message)
