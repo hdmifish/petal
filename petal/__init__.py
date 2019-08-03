@@ -273,7 +273,7 @@ class Petal(PetalClientABC):
             )
         return
 
-    async def print_response(self, message, response, to_edit=None):
+    async def print_response(self, src: Src, response, to_edit: discord.Message = None):
         """Use a discrete method for this, so that it can be used recursively if
             needed.
 
@@ -306,14 +306,14 @@ class Petal(PetalClientABC):
 
             buffer: list = []
 
-            async def operate(line):
+            async def push(line):
                 # print("  Reading Line:", repr(line))
                 if line is True:
                     # Upon reception of True, "flush" the current "buffer" by
                     #   posting a Message.
                     # print("    Printing Buffer:", repr(buffer))
                     if buffer:
-                        await self.print_response(message, "\n".join(map(str, buffer)))
+                        await self.print_response(src, "\n".join(map(str, buffer)))
                         buffer.clear()
 
                 elif line is False:
@@ -324,12 +324,12 @@ class Petal(PetalClientABC):
                 elif isinstance(line, (dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
-                    await self.print_response(message, line)
+                    await self.print_response(src, line)
 
                 elif isinstance(line, (list, tuple)):
                     # Upon reception of a List or Tuple, treat it the same as
                     #   reception of its elements in sequence.
-                    await operate(line)
+                    await push(line)
 
                 else:
                     # Anything else is added to the buffer.
@@ -338,16 +338,16 @@ class Petal(PetalClientABC):
 
             if isinstance(response, AsyncGenerator):
                 async for y in response:
-                    await operate(y)
+                    await push(y)
 
             elif isinstance(response, (Generator, list, tuple)):
                 for y in response:
-                    await operate(y)
+                    await push(y)
 
             # print("Iterator Exhausted; Flushing Buffer.")
             if buffer:
                 # print("Printing Final Buffer:", repr(buffer))
-                await operate(True)
+                await push(True)
                 # await self.print_response(message, "\n".join(map(str, buffer)))
 
             del buffer
@@ -361,7 +361,7 @@ class Petal(PetalClientABC):
                 vals.update(response)
                 await to_edit.edit(**vals)
             else:
-                await message.channel.send(**response)
+                await src.channel.send(**response)
 
         elif isinstance(response, discord.Embed):
             # If the response is an Embed, simply show it as normal.
@@ -369,7 +369,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=None, embed=response)
             else:
-                await self.send_message(message.author, message.channel, embed=response)
+                await src.channel.send(embed=response)
 
         elif isinstance(response, str):
             # Same with String.
@@ -377,7 +377,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=response, embed=None)
             else:
-                await self.send_message(message.author, message.channel, str(response))
+                await self.send_message(src.author, src.channel, str(response))
 
         else:
             # And everything else.
@@ -385,7 +385,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=repr(response), embed=None)
             else:
-                await self.send_message(message.author, message.channel, str(response))
+                await self.send_message(src.author, src.channel, str(response))
 
     async def execute_command(self, message):
         command = self.potential_typo.get(message.id) or CommandPending(
