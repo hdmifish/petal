@@ -117,7 +117,7 @@ class DBHandler(object):
                 "aliases": [],
                 "discriminator": member.discriminator,
                 "isBot": member.bot,
-                "avatar_url": member.avatar_url,
+                "avatar_url": str(member.avatar_url),
                 "location": "Brisbane, Australia",
                 "osu": "",
                 "banned": False,
