@@ -27,6 +27,7 @@ class CommandPending:
         self.output: Printer = output
         self.router = router
         self.src: Src = src
+        self.channel: discord.abc.Messageable = self.src.channel
 
         self.active = False
         self.reply: Optional[discord.Message] = None
@@ -41,75 +42,85 @@ class CommandPending:
             return False
 
         d = "No details specified."
+        executed = False
 
         try:
             # Run the Command through the Router.
             response = await self.router.run(self.src)
 
+            # If we are still in the Try, the Command routed without errors.
+            if response is not None:
+                # Command returned something. It could be a Coroutine, a
+                #   possibly-Async Generator, or a Primitive, like a String or
+                #   Sequence.
+                await self.output(self.src, response, self.reply)
+
+                # NOTE: This is still within the Try Block because, if the
+                #   Response is a Coroutine or Generator, it is NOT DONE RUNNING
+                #   and may still error out. Generators, especially Async, have
+                #   their Yielded values output as they come in, which may take
+                #   a while, and may involve raising an Exception. Therefore we
+                #   must still be ready to catch it.
         except CommandArgsError as e:
             # Arguments not valid. Cease, but do not necessarily desist.
+            out = f"Problem with Arguments: {str(e) or d}"
             if self.reply:
-                await self.reply.edit(content=e)
+                await self.reply.edit(content=out)
             else:
-                self.reply = await self.src.channel.send(e)
+                self.reply = await self.channel.send(out)
 
         except CommandAuthError as e:
             # Access denied. Cease and desist.
             self.unlink()
-            await self.src.channel.send("Sorry, not permitted; {}".format(str(e) or d))
+            await self.channel.send(f"Sorry, not permitted; {str(e) or d}")
 
         except CommandExit as e:
             # Command cancelled itself. Cease and desist.
             self.unlink()
-            await self.src.channel.send("Command exited; {}".format(str(e) or d))
+            executed = True  # This Exit was intentional. Count it as Executed.
+            await self.channel.send(f"Command exited; {str(e) or d}")
 
         except CommandInputError as e:
             # Input not valid. Cease, but do not necessarily desist.
-            out = "Bad input: {}".format(str(e) or d)
+            out = f"Bad input: {str(e) or d}"
             if self.reply:
                 await self.reply.edit(content=out)
             else:
-                self.reply = await self.src.channel.send(out)
+                self.reply = await self.channel.send(out)
 
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
             self.unlink()
-            await self.src.channel.send("Command failed; {}".format(str(e) or d))
+            await self.channel.send(f"Command failed; {str(e) or d}")
 
         except NotImplementedError as e:
             # Command ran into something that is not done. Cease and desist.
             self.unlink()
-            await self.src.channel.send(
-                "Sorry, this Command is not completely done; {}".format(str(e) or d)
+            await self.channel.send(
+                f"Sorry, this Command is not completely done; {str(e) or d}"
             )
 
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
             self.unlink()
-            await self.src.channel.send(
-                "Sorry, something went wrong, but I do not know what"
-                + (
-                    ": `{} / {}`".format(type(e).__name__, e)
+            await self.channel.send(
+                "Sorry, something went wrong, but I do not know what{}".format(
+                    f": `{type(e).__name__} / {e}`"
                     if str(e)
-                    else " ({}).".format(type(e).__name__)
+                    else f" ({type(e).__name__})."
                 )
             )
             print_exc()
 
         else:
-            # Command routed without errors.
-            if response is not None:
-                # Command executed successfully. Desist and respond.
-                self.unlink()
-                self.router.config.get("stats")["comCount"] += 1
-                await self.output(self.src, response, self.reply)
-                return True
-            else:
-                # Command was not executed. Cease.
-                return False
+            self.unlink()
+            executed = True
 
         finally:
-            return False
+            if executed:
+                self.router.config.get("stats")["comCount"] += 1
+
+            return executed
 
     async def wait(self):
         self.active = True
