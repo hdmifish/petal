@@ -426,18 +426,17 @@ class CommandsPublic(core.Commands):
             return "Wiktionary, the Free Dictionary\nhttps://en.wiktionary.org/"
         word = args[0]
         self.log.f("dict", "Query string: " + word)
-        await self.client.send_typing(src.channel)
 
-        which = _etymology or _e or 0
+        async with src.channel.typing():
+            which = _etymology or _e or 0
 
-        ref = Define(word, _language or _l, which)
-        url = "https://en.wiktionary.org/wiki/" + word
-        if ref.valid:
-            try:
+            ref = Define(word, _language or _l, which)
+            url = "https://en.wiktionary.org/wiki/" + word
+            if ref.valid:
                 em = discord.Embed(color=0xF8F9FA)
                 em.set_author(
-                    name="'{}' on Wiktionary ({} etymologies available)".format(
-                        word, ref.alts
+                    name="'{}' on Wiktionary ({} etymolog{} available)".format(
+                        word, ref.alts, "y" if ref.alts == 1 else "ies"
                     ),
                     url=url,
                     icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
@@ -456,11 +455,9 @@ class CommandsPublic(core.Commands):
                         inline=False,
                     )
 
-                await self.client.embed(src.channel, em)
-            except Exception as e:
-                return "Error: {}".format(e)
-        else:
-            return "Definition not found."
+                return em
+            else:
+                raise CommandOperationError("No definition found.")
 
     async def cmd_xkcd(
         self, args: Args, src: Src, _explain: int = None, _e: int = None, **_
