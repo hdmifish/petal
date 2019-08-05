@@ -9,7 +9,7 @@ from datetime import datetime
 import random
 import re
 import time
-from typing import AsyncGenerator, Coroutine, Generator, List
+from typing import AsyncGenerator, Coroutine, Generator, List, Optional
 
 import discord
 
@@ -273,7 +273,7 @@ class Petal(PetalClientABC):
             )
         return
 
-    async def print_response(self, message, response, to_edit=None):
+    async def print_response(self, src: Src, response, to_edit: discord.Message = None):
         """Use a discrete method for this, so that it can be used recursively if
             needed.
 
@@ -306,14 +306,14 @@ class Petal(PetalClientABC):
 
             buffer: list = []
 
-            async def operate(line):
+            async def push(line):
                 # print("  Reading Line:", repr(line))
                 if line is True:
                     # Upon reception of True, "flush" the current "buffer" by
                     #   posting a Message.
                     # print("    Printing Buffer:", repr(buffer))
                     if buffer:
-                        await self.print_response(message, "\n".join(map(str, buffer)))
+                        await self.print_response(src, "\n".join(map(str, buffer)))
                         buffer.clear()
 
                 elif line is False:
@@ -324,12 +324,13 @@ class Petal(PetalClientABC):
                 elif isinstance(line, (dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
-                    await self.print_response(message, line)
+                    await self.print_response(src, line)
 
                 elif isinstance(line, (list, tuple)):
                     # Upon reception of a List or Tuple, treat it the same as
                     #   reception of its elements in sequence.
-                    await operate(line)
+                    for elem in line:
+                        await push(elem)
 
                 else:
                     # Anything else is added to the buffer.
@@ -338,16 +339,16 @@ class Petal(PetalClientABC):
 
             if isinstance(response, AsyncGenerator):
                 async for y in response:
-                    await operate(y)
+                    await push(y)
 
             elif isinstance(response, (Generator, list, tuple)):
                 for y in response:
-                    await operate(y)
+                    await push(y)
 
             # print("Iterator Exhausted; Flushing Buffer.")
             if buffer:
                 # print("Printing Final Buffer:", repr(buffer))
-                await operate(True)
+                await push(True)
                 # await self.print_response(message, "\n".join(map(str, buffer)))
 
             del buffer
@@ -361,7 +362,7 @@ class Petal(PetalClientABC):
                 vals.update(response)
                 await to_edit.edit(**vals)
             else:
-                await message.channel.send(**response)
+                await src.channel.send(**response)
 
         elif isinstance(response, discord.Embed):
             # If the response is an Embed, simply show it as normal.
@@ -369,7 +370,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=None, embed=response)
             else:
-                await self.send_message(message.author, message.channel, embed=response)
+                await src.channel.send(embed=response)
 
         elif isinstance(response, str):
             # Same with String.
@@ -377,7 +378,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=response, embed=None)
             else:
-                await self.send_message(message.author, message.channel, str(response))
+                await self.send_message(src.author, src.channel, str(response))
 
         else:
             # And everything else.
@@ -385,7 +386,7 @@ class Petal(PetalClientABC):
             if to_edit:
                 await to_edit.edit(content=repr(response), embed=None)
             else:
-                await self.send_message(message.author, message.channel, str(response))
+                await self.send_message(src.author, src.channel, str(response))
 
     async def execute_command(self, message):
         command = self.potential_typo.get(message.id) or CommandPending(
@@ -441,10 +442,60 @@ class Petal(PetalClientABC):
             )
             return None
 
-    async def embed(self, channel, embedded, content=None):
+    async def log_membership(
+        self, content: str = None, *, embed: discord.Embed = None
+    ) -> Optional[discord.Message]:
+        channel: discord.abc.Messageable = self.get_channel(
+            self.config.get("logChannel", 0)
+        )
+        if not channel:
+            log.err("Cannot post message to 'logChannel'.")
+            return None
+        else:
+            if content is not None and embed is not None:
+                return await channel.send(content, embed=embed)
+            elif content is not None:
+                return await channel.send(content)
+            elif embed is not None:
+                return await channel.send(embed=embed)
+            else:
+                return None
+
+    async def log_moderation(
+        self, content: str = None, *, embed: discord.Embed = None
+    ) -> Optional[discord.Message]:
+        channel: discord.abc.Messageable = self.get_channel(
+            self.config.get("modChannel", 0)
+        )
+        if not channel:
+            log.err("Cannot post message to 'modChannel'.")
+            return None
+        else:
+            if content is not None and embed is not None:
+                return await channel.send(content, embed=embed)
+            elif content is not None:
+                return await channel.send(content)
+            elif embed is not None:
+                return await channel.send(embed=embed)
+            else:
+                return None
+
+    async def embed(
+        self,
+        channel: discord.abc.Messageable,
+        embedded: discord.Embed,
+        content: str = None,
+    ):
         if self.dev_mode:
             embedded.add_field(name="DEV", value="DEV")
-        return await channel.send(content=content, embed=embedded)
+
+        if not channel:
+            raise RuntimeError("Channel not provided.")
+
+        if content is not None:
+            return await channel.send(content=content, embed=embedded)
+        else:
+            return await channel.send(embed=embedded)
 
     async def on_member_join(self, member):
         """
@@ -457,8 +508,8 @@ class Petal(PetalClientABC):
                 await self.send_message(
                     channel=member, message=self.config.get("welcomeMessage")
                 )
-            except KeyError:
-                response = " and was not PM'd :( "
+            except Exception as e:
+                response = f" and was not PM'd: {e}"
             else:
                 response = " and was PM'd :) "
 
@@ -496,22 +547,20 @@ class Petal(PetalClientABC):
 
         user_embed.add_field(name="ID", value=member.id)
         user_embed.add_field(name="Discriminator", value=member.discriminator)
-        if member.game is None:
-            game = "(nothing)"
+        if member.activity is None:
+            activity = "(nothing)"
         else:
-            game = member.game.name
-        user_embed.add_field(name="Currently Playing", value=game)
+            activity = member.activity.name
+        user_embed.add_field(name="Current Activity", value=activity)
         user_embed.add_field(name="Joined", value=str(member.joined_at)[:-7])
         user_embed.add_field(
             name="Account Created:",
             value="{} ({} ago)".format(str(member.created_at)[:-7], str(age)[:-10]),
         )
 
-        await self.embed(self.get_channel(self.config.logChannel), user_embed)
+        await self.log_membership(embed=user_embed)
         if response != "":
-            await self.send_message(
-                None, self.get_channel(self.config.logChannel), response
-            )
+            await self.log_membership(response)
         if age.days <= 6:
             # Account is less than a week old, mention its age
             timeago = [int(age.total_seconds() / 60), "minutes"]
@@ -522,10 +571,8 @@ class Petal(PetalClientABC):
                 # Only a single minute? Use the singular
                 timeago[1] = "minute"
 
-            await self.send_message(
-                None,
-                self.get_channel(self.config.logChannel),
-                "This member's account was created only {} {} ago!".format(*timeago),
+            await self.log_membership(
+                "This member's account was created only {} {} ago!".format(*timeago)
             )
 
         return
@@ -551,7 +598,7 @@ class Petal(PetalClientABC):
         userEmbed.add_field(name="Discriminator", value=member.discriminator)
         userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
-        await self.embed(self.get_channel(self.config.logChannel), userEmbed)
+        await self.log_membership(embed=userEmbed)
         return
 
     async def on_message_delete(self, message: discord.Message):
@@ -560,7 +607,7 @@ class Petal(PetalClientABC):
                 Petal.logLock
                 or message.author == self.user
                 or message.channel.guild.id == "126236346686636032"
-                or message.channel.id in self.config.get("ignoreChannels")
+                or message.channel.id in self.config.get("ignoreChannels", [])
                 or not isinstance(message.channel, discord.TextChannel)
             ):
                 return
@@ -589,7 +636,7 @@ class Petal(PetalClientABC):
                 text=f"{message.author.name}#{message.author.discriminator} / {message.author.id}"
             )
 
-            await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+            await self.log_moderation(embed=userEmbed)
             await asyncio.sleep(2)
         except discord.errors.HTTPException:
             return
@@ -644,7 +691,7 @@ class Petal(PetalClientABC):
         )
 
         try:
-            await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+            await self.log_moderation(embed=userEmbed)
         except discord.errors.HTTPException:
             log.warn(
                 "HTTP 400 error from the edit statement. "
@@ -684,7 +731,7 @@ class Petal(PetalClientABC):
             )
             userEmbed.add_field(name="Role", value=role.name)
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+            await self.log_moderation(embed=userEmbed)
 
         if before.name != after.name:
             userEmbed = discord.Embed(
@@ -697,7 +744,7 @@ class Petal(PetalClientABC):
 
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
-            await self.embed(self.get_channel(self.config.modChannel), userEmbed)
+            await self.log_moderation(embed=userEmbed)
         return
 
     # async def on_voice_state_update(self, before, after):
@@ -812,7 +859,7 @@ class Petal(PetalClientABC):
                 embed.add_field(name="Detected word", value=word, inline=False)
                 embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
                 embed.set_thumbnail(url=message.author.avatar_url)
-                await self.embed(self.get_channel(self.config.modChannel), embed)
+                await self.log_moderation(embed=embed)
                 break
 
         role_member = first_role_named(
@@ -882,4 +929,5 @@ class Petal(PetalClientABC):
         # For now, do all the above checks and then run/route it.
         # This may result in repeating some checks, but these checks should
         #     eventually be moved into the commands module itself.
-        await self.execute_command(message)
+        if message.content.startswith(self.config.prefix):
+            await self.execute_command(message)

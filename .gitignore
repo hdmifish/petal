@@ -4,4 +4,4 @@ playerdb.json
 whitelist.json
 *.pyc
 .idea/
-venv/
+venv*/
