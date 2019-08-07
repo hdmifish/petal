@@ -23,7 +23,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     em = (
         Embed(
             title=member.display_name,
-            description=f"Member of {bold(member.guild.name)}",
+            description=f"Member of {bold(member.guild.name)}\n{member.mention}",
             colour=member.colour if colour is None else colour,
             timestamp=now,
         )
