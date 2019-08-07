@@ -161,6 +161,18 @@ class PetalClientABC(discord.Client):
         ...
 
     @abstractmethod
+    async def log_membership(
+        self, content: str = None, *, embed: discord.Embed = None
+    ) -> Optional[discord.Message]:
+        ...
+
+    @abstractmethod
+    async def log_moderation(
+        self, content: str = None, *, embed: discord.Embed = None
+    ) -> Optional[discord.Message]:
+        ...
+
+    @abstractmethod
     async def embed(
         self,
         channel: discord.abc.Messageable,
