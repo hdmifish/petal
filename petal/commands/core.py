@@ -13,7 +13,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
-from petal.types import Src, Printer
+from petal.types import Src, PetalClientABC, Printer
 
 
 class CommandPending:
@@ -142,7 +142,7 @@ class Commands:
     whitelist = ""  # Name of the list of permitted IDs in the config file
 
     def __init__(self, client, router, *a, **kw):
-        self.client = client
+        self.client: PetalClientABC = client
         self.config = client.config
         self.db = client.db
 
