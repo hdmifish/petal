@@ -499,106 +499,46 @@ class Petal(PetalClientABC):
             return await channel.send(embed=embedded)
 
     async def on_member_join(self, member):
-        """
-        To be called When a new member joins the server
-        """
-        response = ""
-        welcome = self.config.get("welcomeMessage", None)
-        if welcome and welcome != "null":
-            try:
-                await self.send_message(
-                    channel=member, message=self.config.get("welcomeMessage")
-                )
-            except Exception as e:
-                response = f" and was not PM'd: {e}"
-            else:
-                response = " and was PM'd :) "
-
+        """To be called When a new member joins the server"""
         card = membership_card(member, colour=0x_00_FF_00)
 
-        # if self.db.add_member(member):
-        #     # user_embed = discord.Embed(
-        #     #     title="User Joined",
-        #     #     description="A new user joined: " + member.guild.name,
-        #     #     colour=0x00FF00,
-        #     # )
-        #     pass
         if self.db.member_exists(member):
+            # This User has been here before.
             card.set_author(name="Returning Member")
         else:
+            # We have no previous record of this User.
             self.db.add_member(member)
             card.set_author(name="New Member")
-        # user_embed = discord.Embed(
-        #     title="User ReJoined",
-        #     description=self.db.get_attribute(member, "aliases")[-1]
-        #     + " rejoined "
-        #     + member.guild.name
-        #     + " as "
-        #     + member.name,
-        #     colour=0x00FF00,
-        # )
 
         self.db.update_member(
             member, {"aliases": [member.name], "guilds": [member.guild.id]}
         )
 
-        age = datetime.utcnow() - member.created_at
-
-        # user_embed.set_thumbnail(url=member.avatar_url)
-        # user_embed.add_field(name="Name", value=member.name)
-        #
-        # user_embed.add_field(name="ID", value=member.id)
-        # user_embed.add_field(name="Discriminator", value=member.discriminator)
-        # if member.activity is None:
-        #     activity = "(nothing)"
-        # else:
-        #     activity = member.activity.name
-        # user_embed.add_field(name="Current Activity", value=activity)
-        # user_embed.add_field(name="Joined", value=str(member.joined_at)[:-7])
-        # user_embed.add_field(
-        #     name="Account Creation",
-        #     value=f"{str(member.created_at)[:-7]}\n(__{str(age)[:-10]}__ ago)",
-        # )
+        welcome = self.config.get("welcomeMessage", None)
+        if welcome and welcome != "null":
+            try:
+                await member.send(welcome)
+            except Exception as e:
+                card.add_field(
+                    name="Welcome",
+                    value=f"User could not be sent a Welcome Message:"
+                    f" {type(e).__name__}: {e}",
+                )
+            else:
+                card.add_field(
+                    name="Welcome", value="User was sent a Welcome Message in DM."
+                )
+        else:
+            card.add_field(name="Welcome", value="No Welcome Message is configured.")
 
         await self.log_membership(embed=card)
-        if response != "":
-            await self.log_membership(response)
-        if age.days <= 6:
-            # Account is less than a week old, mention its age
-            # timeago = [int(age.total_seconds() / 60), "minutes"]
-            # if timeago[0] >= 120:
-            #     # 2 hours or more? Say it in hours
-            #     timeago = [int(timeago[0] / 60), "hours"]
-            # elif timeago[0] == 1:
-            #     # Only a single minute? Use the singular
-            #     timeago[1] = "minute"
-
-            await self.log_membership(
-                "This is a new account!"
-                # "This member's account was created only {} {} ago!".format(*timeago)
-            )
 
     async def on_member_remove(self, member):
         """To be called when a member leaves"""
-
         card = membership_card(member, colour=0x_FF_00_00)
-        card.set_author(name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png")
-
-        # userEmbed = discord.Embed(
-        #     title="User Leave",
-        #     description="A user has left: " + member.guild.name,
-        #     colour=0xFF0000,
-        # )
-        #
-        # userEmbed.set_author(
-        #     name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
-        # )
-        #
-        # userEmbed.set_thumbnail(url=member.avatar_url)
-        # userEmbed.add_field(name="Name", value=member.name)
-        # userEmbed.add_field(name="ID", value=member.id)
-        # userEmbed.add_field(name="Discriminator", value=member.discriminator)
-        # userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+        card.set_author(
+            name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
+        )
 
         await self.log_membership(embed=card)
 
