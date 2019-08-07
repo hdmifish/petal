@@ -626,6 +626,7 @@ class CommandsMod(core.Commands):
             "Confirm Purge",
             f"Really delete the last {delete_num} Messages in this Channel?\n"
             f"(This Menu and your Invocation will also be deleted.)",
+            src.author,
         )
         confirmed = await confirm_menu.get_bool()
 

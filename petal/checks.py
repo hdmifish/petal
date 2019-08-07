@@ -60,6 +60,10 @@ class Messages:
 
     @classmethod
     def by_user(cls, user: discord.User):
+        # if not isinstance(user, discord.User):
+        if not user:
+            raise ValueError(f"No user provided to Check. Received: {repr(user)}.")
+
         def check(_message: discord.Message):
             return _message and _message.author.id == user.id
 
@@ -67,6 +71,10 @@ class Messages:
 
     @classmethod
     def in_channel(cls, channel: discord.TextChannel):
+        # if not isinstance(channel, discord.abc.Messageable):
+        if not channel:
+            raise ValueError(f"No channel provided to Check. Received: {repr(channel)}.")
+
         def check(_message: discord.Message):
             return _message and _message.channel.id == channel.id
 
@@ -103,6 +111,10 @@ class Reactions:
 
     @classmethod
     def by_user(cls, user: discord.User):
+        # if not isinstance(user, discord.User):
+        if not user:
+            raise ValueError(f"No user provided to Check. Received: {repr(user)}.")
+
         def check(_reaction, _user):
             return _user and _user.id == user.id
 
@@ -110,6 +122,10 @@ class Reactions:
 
     @classmethod
     def on_message(cls, message: discord.Message):
+        # if not isinstance(message, discord.Message):
+        if not message:
+            raise ValueError(f"No message provided to Check. Received: {repr(message)}.")
+
         def check(_reaction, _user):
             return _reaction and _reaction.message.id == message.id
 
