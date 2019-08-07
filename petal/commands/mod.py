@@ -14,6 +14,7 @@ from petal.etc import lambdall, mash
 from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
 from petal.menu import Menu
 from petal.types import Src
+from petal.util.embeds import membership_card
 
 
 class CommandsMod(core.Commands):
@@ -843,6 +844,27 @@ class CommandsMod(core.Commands):
         },
         "mods",
     )
+
+    async def cmd_userinfo(self, args, src: Src, **_):
+        """Toggle the mute tag on a user if your guild supports that role.
+
+        Syntax: `{p}mute <user tag/id>`
+        """
+        if not args:
+            raise CommandArgsError("Must provide User ID.")
+
+        if not lambdall(args, lambda x: x.isdigit()):
+            raise CommandArgsError("All IDs must be positive Integers.")
+
+        for userid in args:
+            target: discord.Member = src.guild.get_member(
+                int(userid)
+            ) or self.client.main_guild.get_member(int(userid))
+
+            if target is None:
+                raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+            else:
+                yield membership_card(target)
 
 
 # Keep the actual classname unique from this common identifier
