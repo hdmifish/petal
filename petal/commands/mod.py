@@ -12,6 +12,8 @@ from petal import checks
 from petal.commands import core, shared
 from petal.etc import lambdall, mash
 from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
+from petal.menu import Menu
+from petal.types import Src
 
 
 class CommandsMod(core.Commands):
@@ -604,71 +606,52 @@ class CommandsMod(core.Commands):
 
                 await self.client.log_moderation(embed=logEmbed)
 
-    async def cmd_purge(self, args, src: discord.Message, **_):
+    async def cmd_purge(self, args, src: Src, **_):
         """Purge up to 200 messages in the current channel.
 
         Syntax: `{p}purge <number of messages to delete>`
         """
         if len(args) < 1:
-            return "Please provide a number between 1 and 200"
+            raise CommandArgsError("Please provide a number between 1 and 200")
         try:
-            numDelete = int(args[0].strip())
+            delete_num = int(args[0].strip())
         except ValueError:
-            return "Please make sure your input is a number"
-        else:
-            if numDelete > 200 or numDelete < 0:
-                return "That is an invalid number of messages to delete"
-        await self.client.send_message(
-            src.author,
+            raise CommandInputError("Please make sure your input is a number")
+        if not 0 < delete_num <= 200:
+            raise CommandInputError("Can only delete between 0 and 200 Messages.")
+
+        confirm_menu: Menu = Menu(
+            self.client,
             src.channel,
-            "You are about to delete {} messages ".format(str(numDelete + 3))
-            + "(including these confirmations) in "
-            + "this channel. Type: confirm if this "
-            + "is correct.",
+            "Confirm Purge",
+            f"Really delete the last {delete_num} Messages in this Channel?\n"
+            f"(This Menu and your Invocation will also be deleted.)",
         )
-        try:
-            msg = await self.client.wait_for(
-                "message",
-                check=checks.all_checks(
-                    checks.Messages.by_user(src.author),
-                    checks.Messages.in_channel(src.channel),
-                ),
-                timeout=10,
-            )
-        except asyncio.TimeoutError:
-            msg = None
+        confirmed = await confirm_menu.get_bool()
 
-        if not msg or msg.content.lower() != "confirm":
-            return "Purge event cancelled"
+        if confirmed is True:
+            try:
+                await src.channel.purge(limit=delete_num + 2, check=None)
+            except discord.errors.Forbidden:
+                raise CommandOperationError(
+                    "I don't have permissions to purge messages."
+                )
+            else:
+                logEmbed = discord.Embed(
+                    title="Purge Event",
+                    description=f"{delete_num} messages were purged from "
+                    f"`#{src.channel.name}` in {src.guild.name} by "
+                    f"`{src.author.name}#{src.author.discriminator}`.",
+                    color=0x0ACDFF,
+                )
+                await self.client.log_moderation(embed=logEmbed)
 
-        try:
-            # petal.logLock = True
-            await self.client.purge_from(
-                channel=src.channel, limit=numDelete + 3, check=None
-            )
-        except discord.errors.Forbidden:
-            return "I don't have enough perms to purge messages"
+        elif confirmed is False:
+            await confirm_menu.add_section("Purge Cancelled.")
+            await confirm_menu.post()
         else:
-            await asyncio.sleep(2)
-
-            logEmbed = discord.Embed(
-                title="Purge Event",
-                description="{} messages were purged "
-                + "from {} in {} by {}#{}".format(
-                    str(numDelete),
-                    src.channel.name,
-                    src.guild.name,
-                    src.author.name,
-                    src.author.discriminator,
-                ),
-                color=0x0ACDFF,
-            )
-            await self.client.embed(
-                self.client.get_channel(self.config.modChannel), logEmbed
-            )
-            await asyncio.sleep(4)
-            # petal.logLock = False
-            return
+            await confirm_menu.add_section("Confirmation Timed Out.")
+            await confirm_menu.post()
 
     async def cmd_quote(
         self,
