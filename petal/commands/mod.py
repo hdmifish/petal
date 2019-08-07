@@ -11,6 +11,7 @@ import discord
 from petal import checks
 from petal.commands import core, shared
 from petal.etc import lambdall, mash
+from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
 
 
 class CommandsMod(core.Commands):
@@ -489,17 +490,16 @@ class CommandsMod(core.Commands):
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
-            return
+            raise CommandArgsError("Must provide User ID.")
 
         if not lambdall(args, lambda x: x.isdigit()):
-            return "All IDs must be positive Integers."
+            raise CommandArgsError("All IDs must be positive Integers.")
 
-        guild = self.client.main_guild
-        userToMute = guild.get_member(int(args[0]))
-        if userToMute is None:
-            return "Could not get user with that ID."
-        elif userToMute.id == self.client.user.id:
-            return (
+        target: discord.Member = self.client.main_guild.get_member(int(args[0]))
+        if target is None:
+            raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+        elif target.id == self.client.user.id:
+            raise CommandInputError(
                 f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
@@ -518,37 +518,42 @@ class CommandsMod(core.Commands):
                 timeout=30,
             )
         except asyncio.TimeoutError:
-            return "Timed out while waiting for reason."
+            raise CommandOperationError("Timed out while waiting for reason.")
 
-        muteRole = discord.utils.get(src.guild.roles, name="mute")
-        if muteRole is None:
-            return (
+        role_mute: discord.Role = discord.utils.get(src.guild.roles, name="mute")
+        if role_mute is None:
+            raise CommandOperationError(
                 "This guild does not have a `mute` role. To enable the mute "
                 "function, set up the roles and name one `mute`."
             )
         else:
             try:
+                if role_mute in target.roles:
+                    await target.remove_roles(role_mute, reason)
+                    # await self.client.guild_voice_state(target, mute=False)
 
-                if muteRole in userToMute.roles:
-                    await self.client.remove_roles(userToMute, muteRole)
-                    await self.client.guild_voice_state(userToMute, mute=False)
                     warnEmbed = discord.Embed(
                         title="User Unmute",
-                        description="You have been unmuted by " + src.author.name,
+                        description=f"You have been unmuted by {src.author.name}.",
                         colour=0x00FF11,
                     )
-
+                    warnEmbed.set_author(
+                        name=self.client.user.name,
+                        icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
+                    )
                     # warnEmbed.add_field(name="Reason", value=reason.content)
                     warnEmbed.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
+
                 else:
-                    await self.client.add_roles(userToMute, muteRole)
-                    await self.client.guild_voice_state(userToMute, mute=True)
+                    await target.add_roles(role_mute, reason)
+                    # await self.client.guild_voice_state(target, mute=True)
+
                     warnEmbed = discord.Embed(
                         title="User Mute",
-                        description="You have been muted by" + src.author.name,
+                        description=f"You have been muted by {src.author.name}.",
                         colour=0xFF0000,
                     )
                     warnEmbed.set_author(
@@ -560,13 +565,29 @@ class CommandsMod(core.Commands):
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
-                await self.client.embed(userToMute, warnEmbed)
 
             except discord.errors.Forbidden:
-                return "It seems I don't have perms to mute this user"
+                raise CommandOperationError(
+                    "It seems I don't have permission to mute this user."
+                )
             else:
+                yield f"{target.name}  (ID: {target.id}) was successfully {muteswitch}d"
+
+                try:
+                    await target.send(embed=warnEmbed)
+                except discord.errors.Forbidden:
+                    yield (
+                        f"  (FAILED to send a DM notification to user `{target.id}`.)",
+                        True,
+                    )
+                else:
+                    yield (
+                        f"  (A notification was sent in DM to user `{target.id}`.)",
+                        True,
+                    )
+
                 logEmbed = discord.Embed(
-                    title="User {}".format(muteswitch),
+                    title=f"User {muteswitch}",
                     description=reason.content,
                     colour=0x1200FF,
                 )
@@ -575,21 +596,13 @@ class CommandsMod(core.Commands):
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
                 logEmbed.add_field(
-                    name="Recipient", value=userToMute.name + "\n" + userToMute.id
+                    name="Recipient", value=target.name + "\n" + target.id
                 )
-                logEmbed.add_field(name="Server", value=userToMute.guild.name)
+                logEmbed.add_field(name="Server", value=target.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=userToMute.avatar_url)
+                logEmbed.set_thumbnail(url=target.avatar_url)
 
-                await self.client.embed(
-                    self.client.get_channel(self.config.modChannel), logEmbed
-                )
-                return (
-                    userToMute.name
-                    + " (ID: "
-                    + userToMute.id
-                    + ") was successfully {}d".format(muteswitch)
-                )
+                await self.client.log_moderation(embed=logEmbed)
 
     async def cmd_purge(self, args, src: discord.Message, **_):
         """Purge up to 200 messages in the current channel.
