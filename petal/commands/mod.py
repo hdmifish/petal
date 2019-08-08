@@ -11,6 +11,10 @@ import discord
 from petal import checks
 from petal.commands import core, shared
 from petal.etc import lambdall, mash
+from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
+from petal.menu import Menu
+from petal.types import Src
+from petal.util.embeds import membership_card
 
 
 class CommandsMod(core.Commands):
@@ -489,17 +493,16 @@ class CommandsMod(core.Commands):
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
-            return
+            raise CommandArgsError("Must provide User ID.")
 
         if not lambdall(args, lambda x: x.isdigit()):
-            return "All IDs must be positive Integers."
+            raise CommandArgsError("All IDs must be positive Integers.")
 
-        guild = self.client.main_guild
-        userToMute = guild.get_member(int(args[0]))
-        if userToMute is None:
-            return "Could not get user with that ID."
-        elif userToMute.id == self.client.user.id:
-            return (
+        target: discord.Member = self.client.main_guild.get_member(int(args[0]))
+        if target is None:
+            raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+        elif target.id == self.client.user.id:
+            raise CommandInputError(
                 f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
@@ -518,37 +521,42 @@ class CommandsMod(core.Commands):
                 timeout=30,
             )
         except asyncio.TimeoutError:
-            return "Timed out while waiting for reason."
+            raise CommandOperationError("Timed out while waiting for reason.")
 
-        muteRole = discord.utils.get(src.guild.roles, name="mute")
-        if muteRole is None:
-            return (
+        role_mute: discord.Role = discord.utils.get(src.guild.roles, name="mute")
+        if role_mute is None:
+            raise CommandOperationError(
                 "This guild does not have a `mute` role. To enable the mute "
                 "function, set up the roles and name one `mute`."
             )
         else:
             try:
+                if role_mute in target.roles:
+                    await target.remove_roles(role_mute, reason)
+                    # await self.client.guild_voice_state(target, mute=False)
 
-                if muteRole in userToMute.roles:
-                    await self.client.remove_roles(userToMute, muteRole)
-                    await self.client.guild_voice_state(userToMute, mute=False)
                     warnEmbed = discord.Embed(
                         title="User Unmute",
-                        description="You have been unmuted by " + src.author.name,
+                        description=f"You have been unmuted by {src.author.name}.",
                         colour=0x00FF11,
                     )
-
+                    warnEmbed.set_author(
+                        name=self.client.user.name,
+                        icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
+                    )
                     # warnEmbed.add_field(name="Reason", value=reason.content)
                     warnEmbed.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
+
                 else:
-                    await self.client.add_roles(userToMute, muteRole)
-                    await self.client.guild_voice_state(userToMute, mute=True)
+                    await target.add_roles(role_mute, reason)
+                    # await self.client.guild_voice_state(target, mute=True)
+
                     warnEmbed = discord.Embed(
                         title="User Mute",
-                        description="You have been muted by" + src.author.name,
+                        description=f"You have been muted by {src.author.name}.",
                         colour=0xFF0000,
                     )
                     warnEmbed.set_author(
@@ -560,13 +568,29 @@ class CommandsMod(core.Commands):
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
-                await self.client.embed(userToMute, warnEmbed)
 
             except discord.errors.Forbidden:
-                return "It seems I don't have perms to mute this user"
+                raise CommandOperationError(
+                    "It seems I don't have permission to mute this user."
+                )
             else:
+                yield f"{target.name}  (ID: {target.id}) was successfully {muteswitch}d"
+
+                try:
+                    await target.send(embed=warnEmbed)
+                except discord.errors.Forbidden:
+                    yield (
+                        f"  (FAILED to send a DM notification to user `{target.id}`.)",
+                        True,
+                    )
+                else:
+                    yield (
+                        f"  (A notification was sent in DM to user `{target.id}`.)",
+                        True,
+                    )
+
                 logEmbed = discord.Embed(
-                    title="User {}".format(muteswitch),
+                    title=f"User {muteswitch}",
                     description=reason.content,
                     colour=0x1200FF,
                 )
@@ -575,87 +599,61 @@ class CommandsMod(core.Commands):
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
                 logEmbed.add_field(
-                    name="Recipient", value=userToMute.name + "\n" + userToMute.id
+                    name="Recipient", value=target.name + "\n" + target.id
                 )
-                logEmbed.add_field(name="Server", value=userToMute.guild.name)
+                logEmbed.add_field(name="Server", value=target.guild.name)
                 logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=userToMute.avatar_url)
+                logEmbed.set_thumbnail(url=target.avatar_url)
 
-                await self.client.embed(
-                    self.client.get_channel(self.config.modChannel), logEmbed
-                )
-                return (
-                    userToMute.name
-                    + " (ID: "
-                    + userToMute.id
-                    + ") was successfully {}d".format(muteswitch)
-                )
+                await self.client.log_moderation(embed=logEmbed)
 
-    async def cmd_purge(self, args, src: discord.Message, **_):
+    async def cmd_purge(self, args, src: Src, **_):
         """Purge up to 200 messages in the current channel.
 
         Syntax: `{p}purge <number of messages to delete>`
         """
         if len(args) < 1:
-            return "Please provide a number between 1 and 200"
+            raise CommandArgsError("Please provide a number between 1 and 200")
         try:
-            numDelete = int(args[0].strip())
+            delete_num = int(args[0].strip())
         except ValueError:
-            return "Please make sure your input is a number"
-        else:
-            if numDelete > 200 or numDelete < 0:
-                return "That is an invalid number of messages to delete"
-        await self.client.send_message(
-            src.author,
+            raise CommandInputError("Please make sure your input is a number")
+        if not 0 < delete_num <= 200:
+            raise CommandInputError("Can only delete between 0 and 200 Messages.")
+
+        confirm_menu: Menu = Menu(
+            self.client,
             src.channel,
-            "You are about to delete {} messages ".format(str(numDelete + 3))
-            + "(including these confirmations) in "
-            + "this channel. Type: confirm if this "
-            + "is correct.",
+            "Confirm Purge",
+            f"Really delete the last {delete_num} Messages in this Channel?\n"
+            f"(This Menu and your Invocation will also be deleted.)",
+            src.author,
         )
-        try:
-            msg = await self.client.wait_for(
-                "message",
-                check=checks.all_checks(
-                    checks.Messages.by_user(src.author),
-                    checks.Messages.in_channel(src.channel),
-                ),
-                timeout=10,
-            )
-        except asyncio.TimeoutError:
-            msg = None
+        confirmed = await confirm_menu.get_bool()
 
-        if not msg or msg.content.lower() != "confirm":
-            return "Purge event cancelled"
+        if confirmed is True:
+            try:
+                await src.channel.purge(limit=delete_num + 2, check=None)
+            except discord.errors.Forbidden:
+                raise CommandOperationError(
+                    "I don't have permissions to purge messages."
+                )
+            else:
+                logEmbed = discord.Embed(
+                    title="Purge Event",
+                    description=f"{delete_num} messages were purged from "
+                    f"`#{src.channel.name}` in {src.guild.name} by "
+                    f"`{src.author.name}#{src.author.discriminator}`.",
+                    color=0x0ACDFF,
+                )
+                await self.client.log_moderation(embed=logEmbed)
 
-        try:
-            # petal.logLock = True
-            await self.client.purge_from(
-                channel=src.channel, limit=numDelete + 3, check=None
-            )
-        except discord.errors.Forbidden:
-            return "I don't have enough perms to purge messages"
+        elif confirmed is False:
+            await confirm_menu.add_section("Purge Cancelled.")
+            await confirm_menu.post()
         else:
-            await asyncio.sleep(2)
-
-            logEmbed = discord.Embed(
-                title="Purge Event",
-                description="{} messages were purged "
-                + "from {} in {} by {}#{}".format(
-                    str(numDelete),
-                    src.channel.name,
-                    src.guild.name,
-                    src.author.name,
-                    src.author.discriminator,
-                ),
-                color=0x0ACDFF,
-            )
-            await self.client.embed(
-                self.client.get_channel(self.config.modChannel), logEmbed
-            )
-            await asyncio.sleep(4)
-            # petal.logLock = False
-            return
+            await confirm_menu.add_section("Confirmation Timed Out.")
+            await confirm_menu.post()
 
     async def cmd_quote(
         self,
@@ -846,6 +844,27 @@ class CommandsMod(core.Commands):
         },
         "mods",
     )
+
+    async def cmd_userinfo(self, args, src: Src, **_):
+        """Toggle the mute tag on a user if your guild supports that role.
+
+        Syntax: `{p}mute <user tag/id>`
+        """
+        if not args:
+            raise CommandArgsError("Must provide User ID.")
+
+        if not lambdall(args, lambda x: x.isdigit()):
+            raise CommandArgsError("All IDs must be positive Integers.")
+
+        for userid in args:
+            target: discord.Member = src.guild.get_member(
+                int(userid)
+            ) or self.client.main_guild.get_member(int(userid))
+
+            if target is None:
+                raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+            else:
+                yield membership_card(target)
 
 
 # Keep the actual classname unique from this common identifier
