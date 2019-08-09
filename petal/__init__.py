@@ -16,7 +16,7 @@ import discord
 from petal import grasslands
 from petal.commands import CommandRouter as Commands
 from petal.commands.core import CommandPending
-from petal.config import Config
+from petal.config import cfg
 from petal.dbhandler import DBHandler
 from petal.etc import mash
 from petal.exceptions import TunnelHobbled, TunnelSetupError
@@ -56,7 +56,7 @@ class Petal(PetalClientABC):
 
         self.startup = datetime.utcnow()
 
-        self.config = Config()
+        self.config = cfg
         self.db = DBHandler(self.config)
         self.startup = datetime.utcnow()
         self.commands = Commands(self)
