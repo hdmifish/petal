@@ -8,11 +8,13 @@ Implements a hierarchy of Petal Exceptions. At the top is the PetalError. Below
 
 class PetalError(Exception):
     """Superclass for all Exceptions related to Petal."""
+
     pass
 
 
 class CommandError(PetalError):
     """Superclass for Exceptions regarding Commands."""
+
     pass
 
 
@@ -22,6 +24,7 @@ class CommandArgsError(CommandError):
         editing their message. Therefore it should NOT be raised if any concrete
         changes have been made by the Command already.
     """
+
     pass
 
 
@@ -30,6 +33,7 @@ class CommandAuthError(CommandError):
         Raising this Exception will NOT allow the user to rerun the command by
         editing. It should be safe to raise no matter how far in the Command is.
     """
+
     pass
 
 
@@ -38,6 +42,7 @@ class CommandExit(CommandError):
         Raising this Exception will NOT allow the user to rerun the command by
         editing. It should be safe to raise no matter how far in the Command is.
     """
+
     pass
 
 
@@ -47,6 +52,7 @@ class CommandInputError(CommandError):
         editing their message. Therefore it should NOT be raised if any concrete
         changes have been made by the Command already.
     """
+
     pass
 
 
@@ -55,26 +61,46 @@ class CommandOperationError(CommandError):
         Raising this Exception will NOT allow the user to rerun the command by
         editing. It should be safe to raise no matter how far in the Command is.
     """
+
     pass
+
+
+class ConfigError(PetalError):
+    """Raised when a missing Config value prevents operation."""
+
+    text: str = "Missing Configuration Value: {}"
+    text_with_path: str = "Missing Configuration Value: {} at '{}'"
+
+    def __init__(self, missing_value: str = "[Unspecified]", path: str = None, *args):
+        super().__init__(
+            (self.text if path is None else self.text_with_path).format(
+                missing_value, path
+            ),
+            *args,
+        )
 
 
 class MinecraftError(PetalError):
     """Superclass for Exceptions regarding the Minecraft subsystem."""
+
     pass
 
 
 class EntryExistsError(PetalError):
     """Raised when trying to add a Whitelist Entry with a duplicate UUID."""
+
     pass
 
 
 class WhitelistError(PetalError):
     """Raised when the Minecraft Whitelist cannot be accessed."""
+
     pass
 
 
 class TunnelError(PetalError):
     """Superclass for Exceptions regarding Tunnels."""
+
     pass
 
 
@@ -82,6 +108,7 @@ class TunnelHobbled(TunnelError):
     """Raised when a Tunnel is unable to comply with an order. Should always
         be passed details about what the Tunnel cannot do.
     """
+
     # 13. (1) By commanding the army to advance or to retreat, being ignorant
     #   of the fact that it cannot obey. This is called hobbling the army.
     #         ~ Sun Tzu, the Art of War :: III. Attack by Stratagem ~
@@ -90,4 +117,5 @@ class TunnelHobbled(TunnelError):
 
 class TunnelSetupError(TunnelError):
     """Raised when a Tunnel fails to be established."""
+
     pass
