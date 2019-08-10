@@ -15,6 +15,7 @@ from petal.exceptions import CommandArgsError, CommandInputError, CommandOperati
 from petal.menu import Menu
 from petal.types import Src
 from petal.util.embeds import membership_card
+from petal.util.format import bold, underline
 
 
 class CommandsMod(core.Commands):
@@ -32,37 +33,32 @@ class CommandsMod(core.Commands):
             member = self.get_member(src, args[0])
 
         if not self.db.useDB:
-            return (
-                "Database is not configured correctly (or at all). "
-                "Contact your bot developer and tell them if you think "
-                "this is an error"
+            raise CommandOperationError(
+                "Database is not configured correctly (or at all)."
+                " Contact your bot developer and tell them if you think"
+                " this is an error."
             )
 
         if member is None:
-            return (
-                "Could not find that member in the guild.\n\nJust a note, "
-                "I may have record of them, but it's Iso's policy to not "
-                "display userinfo without consent. If you are staff and "
-                "have a justified reason for this request, please "
-                "ask whoever hosts this bot to manually look up the "
-                "records in their database."
+            raise CommandOperationError(
+                "Could not find that member in the guild.\n\nJust a note,"
+                " I may have record of them, but it's Iso's policy to not"
+                " display userinfo without consent. If you are staff and"
+                " have a justified reason for this request, please"
+                " ask whoever hosts this bot to manually look up the"
+                " records in their database."
             )
 
         self.db.add_member(member)
 
         alias = self.db.get_attribute(member, "aliases")
         if not alias:
-            return "This member has no known aliases."
+            yield "This member has no known aliases."
         else:
-            await self.client.send_message(
-                src.author, src.channel, "__Aliases for " + member.id + "__"
-            )
-            msg = ""
+            yield underline(f"Aliases of User `{member.id}`:")
 
             for a in alias:
-                msg += "**" + a + "**\n"
-
-            return msg
+                yield bold(a)
 
     async def cmd_kick(
         self,
