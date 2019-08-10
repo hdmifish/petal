@@ -77,17 +77,17 @@ class CommandsMod(core.Commands):
         `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
         """
         if not args:
-            return
+            raise CommandArgsError("No User specified.")
 
         if not lambdall(args, lambda x: x.isdigit()):
-            return "All IDs must be positive Integers."
+            raise CommandInputError("All IDs must be positive Integers.")
 
         guild = self.client.main_guild
         userToBan = guild.get_member(int(args[0]))
         if userToBan is None:
-            return "Could not get user with that ID."
+            raise CommandInputError("Could not get user with that ID.")
         elif userToBan.id == self.client.user.id:
-            return (
+            raise CommandOperationError(
                 f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
@@ -105,7 +105,7 @@ class CommandsMod(core.Commands):
                     timeout=30,
                 )
             except asyncio.TimeoutError:
-                return "Timed out while waiting for reason."
+                raise CommandOperationError("Timed out while waiting for reason.")
             _reason = reason.content
 
         if not _noconfirm:
@@ -126,15 +126,15 @@ class CommandsMod(core.Commands):
                     timeout=10,
                 )
             except asyncio.TimeoutError:
-                return "Timed out. User was not kicked"
+                raise CommandOperationError("Timed out. User was not kicked.")
             if confmsg.content.lower() != "yes":
                 return userToBan.name + " was not kicked."
 
         try:
-            # petal.logLock = True
             await userToBan.kick(reason=_reason)
         except discord.errors.Forbidden:
-            return "It seems I don't have perms to kick this user"
+            raise CommandOperationError("It seems I don't have perms to kick this user.")
+
         else:
             logEmbed = (
                 discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
