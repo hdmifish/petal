@@ -18,6 +18,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
+from petal.util import cdn, format
 
 
 # Reference: strftime.org
@@ -89,7 +90,7 @@ class CommandsUtil(core.Commands):
         _short: bool = False,
         _s: bool = False,
         _extreme: bool = False,
-        **_
+        **_,
     ):
         """Print information regarding command usage.
 
@@ -137,7 +138,7 @@ class CommandsUtil(core.Commands):
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            raise CommandOperationError("Cannot show help: " + denied)
+            raise CommandAuthError(denied)
         elif cmd.__doc__:
             if cmd.__name__ in self.help_cache:
                 return self.help_cache[cmd.__name__]
@@ -275,7 +276,7 @@ class CommandsUtil(core.Commands):
 
         mod, cmd, denied = self.router.find_command(args[0], src)
         if denied:
-            return "Cannot show info: " + denied
+            raise CommandAuthError(denied)
         elif cmd:
             if cmd.__doc__:
                 # Grab the docstring and insert the correct prefix wherever needed
@@ -318,7 +319,7 @@ class CommandsUtil(core.Commands):
                 )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
-            await self.client.embed(src.channel, em)
+            return em
         else:
             return "Command not found."
 
@@ -334,7 +335,7 @@ class CommandsUtil(core.Commands):
         _C: bool = False,
         _sort: bool = False,
         _s: bool = False,
-        **_
+        **_,
     ):
         """List, or search, available commands.
 
@@ -390,11 +391,10 @@ class CommandsUtil(core.Commands):
             cmd_list = [
                 cmd
                 for cmd in cmd_list
-                if any(
-                    [
-                        cmd.lower() in term.lower() or term.lower() in cmd.lower()
-                        for term in args
-                    ]
+                if not args
+                or any(
+                    cmd.lower() in term.lower() or term.lower() in cmd.lower()
+                    for term in args
                 )
             ]
             if not cmd_list:
@@ -410,11 +410,7 @@ class CommandsUtil(core.Commands):
                     mod, func, denied = self.router.find_command(kword=cmd, src=src)
                 except CommandAuthError:
                     continue
-            cl2.append(
-                "{} - {}".format(
-                    self.config.prefix + cmd, mod.__module__.split(".")[-1]
-                )
-            )
+            cl2.append(f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}")
 
         if not cl2:
             raise CommandOperationError(
@@ -429,7 +425,7 @@ class CommandsUtil(core.Commands):
         else:
             line_1 = "List of commands you can access"
 
-        return (line_1 + line_2 + ":```" + "\n".join(cl2))[:1997] + "```"
+        return (f"{line_1}{line_2}:```\n" + "\n".join(cl2))[:1997] + "```"
 
     async def cmd_avatar(self, args, src, **_):
         """Given a User ID, post their Avatar."""
@@ -438,34 +434,42 @@ class CommandsUtil(core.Commands):
         else:
             uid = args[0]
             if not uid.isdigit():
-                return "User IDs are Integers."
+                raise CommandInputError("User IDs are Integers.")
             uid = int(uid)
             user = self.client.get_user(uid)
+
         if not user:
-            return "Cannot find user."
+            raise CommandOperationError("Cannot find user.")
 
         em = discord.Embed(
             colour=0x0ACDFF,
-            description="`{}#{}` / `{}` / {}".format(
-                user.name, user.discriminator, user.id, user.mention
-            ),
-            title="Avatar for {}".format(user.name),
-        ).set_image(url=user.avatar_url)
+            description="`{}` / {}".format(format.userline(user), user.mention),
+            title="Avatar of Member: {}".format(user.display_name),
+        ).set_image(url=cdn.get_avatar(user))
 
-        await src.channel.send(embed=em)
+        return em
 
     async def cmd_ping(self, src, **_):
-        """Show the round trip time from this bot to Discord (not you) and back."""
-        msg = await self.client.send_message(src.author, src.channel, "*hugs*")
-        delta = int((dt.now() - msg.timestamp).microseconds / 1000)
+        """Show the round trip time from this bot to Discord and back.
+
+        Additionally, this command will Tag the User who invokes it. This can be
+            used for testing notifications.
+        """
+        msg: discord.Message = await src.channel.send(
+            format.italic(f"hugs {src.author.mention}")
+        )
+        delta = int((dt.now() - msg.created_at).microseconds / 1000)
         self.config.stats["pingScore"] += delta
         self.config.stats["pingCount"] += 1
 
         self.config.save(vb=0)
-        truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
+        truedelta = int(
+            self.config.stats["pingScore"] / (self.config.stats["pingCount"]) or 1
+        )
 
-        return "Current Ping: {}ms\nPing till now: {}ms of {} pings".format(
-            str(delta), str(truedelta), str(self.config.stats["pingCount"])
+        yield (
+            f"Current Ping: {delta}ms",
+            f"Average Ping: {truedelta}ms of {self.config.stats['pingCount']} pings",
         )
 
     async def cmd_time(self, args, **_):
@@ -549,7 +553,7 @@ class CommandsUtil(core.Commands):
         if tz_to != tz_from:
             yield when.astimezone(tz_to).strftime(tstring)
 
-    async def cmd_stats(self, src, **_):
+    async def cmd_stats(self, **_):
         """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
@@ -578,7 +582,7 @@ class CommandsUtil(core.Commands):
                     c += 1
             em.add_field(name="Total Validated Members", value=str(c), inline=False)
 
-        await self.client.embed(src.channel, em)
+        return em
 
     async def cmd_animalcrossing(self, src, **_):
         """Toggle AnimalCrossing mode for your user.
@@ -589,17 +593,17 @@ class CommandsUtil(core.Commands):
         Syntax: `{p}animalcrossing`
         """
         if not self.db.useDB:
-            return "Sorry, database is not enabled..."
+            raise CommandOperationError("Sorry, database is not enabled.")
 
         if self.db.get_attribute(src.author, "ac") is None:
             self.db.update_member(src.author, {"ac": True}, 2)
-            return "Enabled Animal Crossing Endings..."
+            return "Enabled Animal Crossing Endings."
         elif self.db.get_attribute(src.author, "ac"):
             self.db.update_member(src.author, {"ac": False}, 2)
-            return "Disabled Animal Crossing Endings..."
+            return "Disabled Animal Crossing Endings."
         else:
             self.db.update_member(src.author, {"ac": True}, 2)
-            return "Re-Enabled Animal Crossing Endings..."
+            return "Re-Enabled Animal Crossing Endings."
 
     async def cmd_argtest(
         self,
@@ -615,7 +619,7 @@ class CommandsUtil(core.Commands):
         _number: float = None,
         _n: float = None,
         _dashed_long_opt: str = None,
-        **opts
+        **opts,
     ):
         """Display details on how the command was parsed.
 
