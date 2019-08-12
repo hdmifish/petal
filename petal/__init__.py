@@ -5,7 +5,7 @@ written by isometricramen
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import re
 import time
@@ -22,9 +22,14 @@ from petal.etc import mash
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
+from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
+from petal.util.format import userline
+from petal.util.grammar import pluralize
+from petal.util.numbers import word_number
 
 
+short_time: timedelta = timedelta(seconds=10)
 log = grasslands.Peacock()
 
 version = "<UNSET>"
@@ -544,44 +549,88 @@ class Petal(PetalClientABC):
 
     async def on_message_delete(self, message: discord.Message):
         try:
-            if (
-                Petal.logLock
-                or message.author == self.user
-                or message.channel.guild.id == "126236346686636032"
-                or message.channel.id in self.config.get("ignoreChannels", [])
-                or not isinstance(message.channel, discord.TextChannel)
-            ):
+            if message.channel.id in self.config.get(
+                "ignoreChannels", []
+            ) or not isinstance(message.channel, discord.TextChannel):
                 return
 
-            userEmbed = discord.Embed(
-                title="Message Delete",
-                description=message.author.name
-                + "#"
-                + message.author.discriminator
-                + "'s message was deleted",
+            now = datetime.utcnow()
+            guild: discord.Guild = message.guild
+
+            executor = None
+            reason = None
+            async for record in guild.audit_logs(
+                limit=10,
+                after=now - short_time,
+                oldest_first=False,
+                action=discord.AuditLogAction.message_delete,
+            ):
+                if (
+                    record.target == message.author
+                    and record.extra.channel.id == message.channel.id
+                ):
+                    executor = record.user
+                    reason = record.reason
+                    break
+
+            em = discord.Embed(
+                title="Message Deleted",
+                description=f"A Message by {message.author.mention} was deleted.",
                 colour=0xFC00A2,
             )
-            userEmbed.set_author(
-                name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5" + ".png"
+            em.set_author(
+                name=message.author.display_name, icon_url=get_avatar(message.author)
             )
-            userEmbed.add_field(name="Server", value=message.guild.name)
-            userEmbed.add_field(name="Channel", value=message.channel.name)
-            userEmbed.add_field(
-                name="Message content", value=message.content, inline=False
-            )
-            userEmbed.add_field(
-                name="Message creation", value=str(message.created_at)[:-7]
-            )
-            userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            userEmbed.set_footer(
-                text=f"{message.author.name}#{message.author.discriminator} / {message.author.id}"
+            em.set_footer(text=f"{userline(message.author)}")
+            # em.set_thumbnail(url=get_avatar(message.author))
+
+            if message.content:
+                em.add_field(name="Content", value=message.content, inline=False)
+            if message.embeds:
+                n = len(message.embeds)
+                em.add_field(
+                    name="Embeds",
+                    value=f"Message had {word_number(n)} ({n})"
+                    f" {pluralize(n, 'Embed')}.",
+                    inline=False,
+                )
+            if message.attachments:
+                n = len(message.attachments)
+                em.add_field(
+                    name="Attachments",
+                    value=f"Message had {word_number(n)} ({n})"
+                    f" {pluralize(n, 'Attachment')}.",
+                    inline=False,
+                )
+
+            em.add_field(name="Guild", value=guild.name)
+            em.add_field(
+                name="Channel",
+                value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
 
-            await self.log_moderation(embed=userEmbed)
-            await asyncio.sleep(2)
+            if executor is None:
+                em.add_field(
+                    name="Deleter",
+                    value="Message was probably deleted by __the Author__.",
+                    inline=False,
+                )
+            else:
+                em.add_field(
+                    name="Deleter",
+                    value=f"Message was probably deleted by:"
+                    f"\n`{userline(executor)}`"
+                    f"\n{executor.mention}",
+                    inline=False,
+                )
+            if reason is not None:
+                em.add_field(name="Reason for Deletion", value=reason, inline=False)
+
+            em.add_field(name="Time of Creation", value=str(message.created_at)[:-7])
+            em.add_field(name="Time of Deletion", value=str(now)[:-7])
+
+            await self.log_moderation(embed=em)
         except discord.errors.HTTPException:
-            return
-        else:
             return
 
     async def on_message_edit(self, before: Src, after: Src):
