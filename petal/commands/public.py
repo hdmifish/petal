@@ -545,6 +545,8 @@ class CommandsPublic(core.Commands):
         A roll specification should be in the format `[n]d[s]`, where *n* is the number of dice to roll, *d* is a literal `d`, and *s* is the number of sides per die. For example, to roll one die with twenty sides, invoke `{p}roll 1d20`. To roll three dice with four sides, invoke `{p}roll 3d4`.
         Omitting the number of dice, e.g. `{p}roll d20`, will default to rolling one.
 
+        Additionally, one may include an addition or subtraction in the expression, which will be applied to the total. For example, `{p}roll 3d4+2` will roll `3d4`, and then add two to the result.
+
         Syntax: `{p}roll [options] (<number>d<sides>)...`
 
         Options:
@@ -554,7 +556,7 @@ class CommandsPublic(core.Commands):
         _total = _total or _t  # Print ONLY final cumulative total
         _sums = _sums or _s  # Print ONLY sums of groups
 
-        dice_ = [dice.get_die(term) for term in args]
+        dice_ = [dice.get_dice(term) for term in args]
 
         # Look for an excuse not to do anything.
         count = [die.quantity for die in dice_ if die]
