@@ -11,10 +11,16 @@ import discord
 from petal import checks
 from petal.commands import core, shared
 from petal.etc import lambdall, mash
-from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
-from petal.menu import Menu
+from petal.exceptions import (
+    CommandArgsError,
+    CommandExit,
+    CommandInputError,
+    CommandOperationError,
+)
+from petal.menu import confirm_action, Menu
 from petal.types import Src
 from petal.util.embeds import membership_card
+from petal.util.format import bold, mono, underline, userline
 
 
 class CommandsMod(core.Commands):
@@ -32,37 +38,32 @@ class CommandsMod(core.Commands):
             member = self.get_member(src, args[0])
 
         if not self.db.useDB:
-            return (
-                "Database is not configured correctly (or at all). "
-                "Contact your bot developer and tell them if you think "
-                "this is an error"
+            raise CommandOperationError(
+                "Database is not configured correctly (or at all)."
+                " Contact your bot developer and tell them if you think"
+                " this is an error."
             )
 
         if member is None:
-            return (
-                "Could not find that member in the guild.\n\nJust a note, "
-                "I may have record of them, but it's Iso's policy to not "
-                "display userinfo without consent. If you are staff and "
-                "have a justified reason for this request, please "
-                "ask whoever hosts this bot to manually look up the "
-                "records in their database."
+            raise CommandOperationError(
+                "Could not find that member in the guild.\n\nJust a note,"
+                " I may have record of them, but it's Iso's policy to not"
+                " display userinfo without consent. If you are staff and"
+                " have a justified reason for this request, please"
+                " ask whoever hosts this bot to manually look up the"
+                " records in their database."
             )
 
         self.db.add_member(member)
 
         alias = self.db.get_attribute(member, "aliases")
         if not alias:
-            return "This member has no known aliases."
+            yield "This member has no known aliases."
         else:
-            await self.client.send_message(
-                src.author, src.channel, "__Aliases for " + member.id + "__"
-            )
-            msg = ""
+            yield underline(f"Aliases of User `{member.id}`:")
 
             for a in alias:
-                msg += "**" + a + "**\n"
-
-            return msg
+                yield bold(a)
 
     async def cmd_kick(
         self,
@@ -81,17 +82,17 @@ class CommandsMod(core.Commands):
         `--noconfirm` :: Perform the action immediately, without asking to make sure. ***This can get you in trouble if you mess up with it.***
         """
         if not args:
-            return
+            raise CommandArgsError("No User specified.")
 
         if not lambdall(args, lambda x: x.isdigit()):
-            return "All IDs must be positive Integers."
+            raise CommandInputError("All IDs must be positive Integers.")
 
-        guild = self.client.main_guild
-        userToBan = guild.get_member(int(args[0]))
-        if userToBan is None:
-            return "Could not get user with that ID."
-        elif userToBan.id == self.client.user.id:
-            return (
+        guild: discord.Guild = self.client.main_guild
+        target: discord.Member = guild.get_member(int(args[0]))
+        if target is None:
+            raise CommandInputError("Could not get user with that ID.")
+        elif target.id == self.client.user.id:
+            raise CommandOperationError(
                 f"I'm sorry, {src.author.mention}. I'm afraid I can't let you do that."
             )
 
@@ -109,63 +110,46 @@ class CommandsMod(core.Commands):
                     timeout=30,
                 )
             except asyncio.TimeoutError:
-                return "Timed out while waiting for reason."
+                raise CommandOperationError("Timed out while waiting for reason.")
             _reason = reason.content
 
+        targline: str = mono(userline(target))
+
         if not _noconfirm:
-            await self.client.send_message(
-                src.author,
-                src.channel,
-                "You are about to kick: "
-                + userToBan.name
-                + ". If this is correct, type `yes`.",
+            confirm = await confirm_action(
+                self.client,
+                src,
+                "Member Kick",
+                f"Confirm kicking {targline} from {target.guild.name}?",
             )
-            try:
-                confmsg = await self.client.wait_for(
-                    "message",
-                    check=checks.all_checks(
-                        checks.Messages.by_user(src.author),
-                        checks.Messages.in_channel(src.channel),
-                    ),
-                    timeout=10,
-                )
-            except asyncio.TimeoutError:
-                return "Timed out. User was not kicked"
-            if confmsg.content.lower() != "yes":
-                return userToBan.name + " was not kicked."
+            if confirm is not True:
+                if confirm is False:
+                    raise CommandExit("Kick was cancelled.")
+                else:
+                    raise CommandExit("Confirmation timed out.")
 
         try:
-            # petal.logLock = True
-            await userToBan.kick(reason=_reason)
+            await target.kick(reason=_reason)
         except discord.errors.Forbidden:
-            return "It seems I don't have perms to kick this user"
+            raise CommandOperationError(
+                "It seems I don't have perms to kick this user."
+            )
+
         else:
             logEmbed = (
                 discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
                 .set_author(
-                    name=self.client.user.name,
-                    icon_url="https://puu.sh/tAAjx/2d29a3a79c.png",
+                    name=src.author.display_name, icon_url=src.author.avatar_url
                 )
-                .add_field(
-                    name="Issuer", value=src.author.name + "\n" + str(src.author.id)
-                )
-                .add_field(
-                    name="Recipient", value=userToBan.name + "\n" + str(userToBan.id)
-                )
-                .add_field(name="Server", value=userToBan.guild.name)
+                .add_field(name="Issuer", value=mono(userline(src.author)))
+                .add_field(name="Recipient", value=targline)
+                .add_field(name="Guild", value=target.guild.name)
                 .add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                .set_thumbnail(url=userToBan.avatar_url)
+                .set_thumbnail(url=target.avatar_url)
             )
 
-            await self.client.embed(
-                self.client.get_channel(self.config.modChannel), logEmbed
-            )
-            return (
-                userToBan.name
-                + " (ID: "
-                + str(userToBan.id)
-                + ") was successfully kicked"
-            )
+            await self.client.log_moderation(embed=logEmbed)
+            return f"Successfully Kicked: {targline}"
 
     async def cmd_ban(
         self,

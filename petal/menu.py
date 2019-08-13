@@ -1,4 +1,5 @@
-from asyncio import ensure_future as create_task, sleep
+from asyncio import ensure_future as create_task #, sleep
+from typing import Optional
 
 from discord import Embed, TextChannel, Message, User
 
@@ -170,7 +171,9 @@ class Menu:
         await self.clear()
         return results
 
-    async def get_bool(self, time=30, prompt="Select Yes or No", title="Boolean Choice"):
+    async def get_bool(
+        self, time=30, prompt="Select Yes or No", title="Boolean Choice"
+    ) -> Optional[bool]:
         """Ask the user to click a simple YES or NO."""
         selection = [cancel, confirm]
 
@@ -206,59 +209,75 @@ class Menu:
 
     ### PUBLIC interfaces; ANYONE may respond.
 
-    async def get_poll(self, opts: list, time=3600) -> dict:
-        """Run a MULTIPLE CHOICE open poll that anyone can answer."""
-        onum = len(opts)
-        if not 1 <= onum <= len(letters):
-            return {}
-        selection = letters[:onum]
+    # async def get_poll(self, opts: list, time=3600) -> dict:
+    #     """Run a MULTIPLE CHOICE open poll that anyone can answer."""
+    #     onum = len(opts)
+    #     if not 1 <= onum <= len(letters):
+    #         return {}
+    #     selection = letters[:onum]
+    #
+    #     buttons = await self.add_buttons(
+    #         "**Poll:** Multiple Choice:\n"
+    #         + "\n".join((f"{letters[i]}: `{opts[i]}`" for i in range(onum))),
+    #         selection,
+    #     )
+    #
+    #     await buttons
+    #     await sleep(time)
+    #
+    #     try:
+    #         vm = await self.channel.fetch_message(self.msg.id)
+    #     except:
+    #         return {}
+    #
+    #     outcome = count_votes(selection, vm.reactions)
+    #     await self.clear()
+    #
+    #     self.em.description += "\n\n**__RESULTS:__**"
+    #     for k, v in outcome.items():
+    #         self.em.description += "\n**`{}`**: __`{}`__".format(
+    #             opts[letters.index(k)], v
+    #         )
+    #     await self.post()
+    #
+    #     return outcome
 
-        buttons = await self.add_buttons(
-            "**Poll:** Multiple Choice:\n"
-            + "\n".join(["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]),
-            selection,
-        )
+    # async def get_vote(self, time=3600) -> dict:
+    #     """Run a YES OR NO open vote that anyone can answer."""
+    #     selection = [cancel, confirm]
+    #
+    #     buttons = await self.add_buttons("**Vote:** Yes or No", selection)
+    #
+    #     await buttons
+    #     await sleep(time)
+    #
+    #     try:
+    #         vm = await self.channel.fetch_message(self.msg.id)
+    #     except:
+    #         return {}
+    #
+    #     outcome = count_votes(selection, vm.reactions)
+    #     await self.clear()
+    #
+    #     self.em.description += "\n\n**__RESULTS:__**"
+    #     for k, v in outcome.items():
+    #         self.em.description += "\n**`{}`**: __`{}`__".format(k, v)
+    #     await self.post()
+    #
+    #     return outcome
 
-        await buttons
-        await sleep(time)
 
-        try:
-            vm = await self.channel.fetch_message(self.msg.id)
-        except:
-            return {}
+async def confirm_action(
+    client,
+    src: Message,
+    title: str,
+    desc: str,
+    prompt: str = "Select Yes or No",
+    section_title: str = "Boolean Choice",
+    timeout: int = 30
+) -> Optional[bool]:
+    author: User = src.author
+    channel: TextChannel = src.channel
 
-        outcome = count_votes(selection, vm.reactions)
-        await self.clear()
-
-        self.em.description += "\n\n**__RESULTS:__**"
-        for k, v in outcome.items():
-            self.em.description += "\n**`{}`**: __`{}`__".format(
-                opts[letters.index(k)], v
-            )
-        await self.post()
-
-        return outcome
-
-    async def get_vote(self, time=3600) -> dict:
-        """Run a YES OR NO open vote that anyone can answer."""
-        selection = [cancel, confirm]
-
-        buttons = await self.add_buttons("**Vote:** Yes or No", selection)
-
-        await buttons
-        await sleep(time)
-
-        try:
-            vm = await self.channel.fetch_message(self.msg.id)
-        except:
-            return {}
-
-        outcome = count_votes(selection, vm.reactions)
-        await self.clear()
-
-        self.em.description += "\n\n**__RESULTS:__**"
-        for k, v in outcome.items():
-            self.em.description += "\n**`{}`**: __`{}`__".format(k, v)
-        await self.post()
-
-        return outcome
+    m = Menu(client, channel, title, desc, author)
+    return await m.get_bool(timeout, prompt, section_title)

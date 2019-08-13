@@ -28,6 +28,7 @@ class CommandPending:
         self.router = router
         self.src: Src = src
         self.channel: discord.abc.Messageable = self.src.channel
+        self.invoker = self.src.author
 
         self.active = False
         self.reply: Optional[discord.Message] = None
@@ -111,6 +112,7 @@ class CommandPending:
                 )
             )
             print_exc()
+            raise e
 
         else:
             self.unlink()
@@ -120,7 +122,7 @@ class CommandPending:
             if executed:
                 self.router.config.get("stats")["comCount"] += 1
 
-            return executed
+        return executed
 
     async def wait(self):
         self.active = True
@@ -207,7 +209,7 @@ class Commands:
             # TODO: Make this block a bit more...compact.
             if target is None:
                 # Role is not found on Main Guild? Check this one.
-                target = discord.utils.get(user.server.roles, name=role)
+                target = discord.utils.get(user.guild.roles, name=role)
                 if target is None:
                     # Role is not found on this guild? Fail.
                     self.log.err("Role '" + role + "' does not exist.")
@@ -280,7 +282,7 @@ class Commands:
                         "Hello! Hope your day/evening/night/morning is going well\n\nI was just popping in here to let you know that an event for `{}` has been announced.".format(
                             sub["name"]
                         )
-                        + "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same server in which you subscribed originally.".format(
+                        + "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same guild in which you subscribed originally.".format(
                             self.config.prefix, sub["code"]
                         ),
                     )

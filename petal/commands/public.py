@@ -412,7 +412,7 @@ class CommandsPublic(core.Commands):
         _l: str = None,
         _etymology: int = None,
         _e: int = None,
-        **_
+        **_,
     ):
         """Find the definition of a word from Wiktionary.
 
@@ -536,7 +536,7 @@ class CommandsPublic(core.Commands):
         _t: bool = False,
         _sums: bool = False,
         _s: bool = False,
-        **_
+        **_,
     ):
         """Roll the dice and try your luck.
 
@@ -544,6 +544,8 @@ class CommandsPublic(core.Commands):
 
         A roll specification should be in the format `[n]d[s]`, where *n* is the number of dice to roll, *d* is a literal `d`, and *s* is the number of sides per die. For example, to roll one die with twenty sides, invoke `{p}roll 1d20`. To roll three dice with four sides, invoke `{p}roll 3d4`.
         Omitting the number of dice, e.g. `{p}roll d20`, will default to rolling one.
+
+        Additionally, one may include an addition or subtraction in the expression, which will be applied to the total. For example, `{p}roll 3d4+2` will roll `3d4`, and then add two to the result.
 
         Syntax: `{p}roll [options] (<number>d<sides>)...`
 
@@ -554,44 +556,54 @@ class CommandsPublic(core.Commands):
         _total = _total or _t  # Print ONLY final cumulative total
         _sums = _sums or _s  # Print ONLY sums of groups
 
-        dice_ = [dice.get_die(term) for term in args]
+        dice_ = [dice.get_dice(term) for term in args]
 
         # Look for an excuse not to do anything.
-        count = [die.quantity for die in dice_]
-        if sum(count) > 100000:
+        count = [die.quantity for die in dice_ if die]
+        if sum(count) > 100_000:
             # Number of dice might start to slow down the bot.
-            return "I may be a bot, but even I only have so many dice. Try rolling fewer at a time."
+            raise CommandInputError(
+                "I may be a bot, but even I only have so many dice. Try rolling"
+                " fewer at a time."
+            )
         if sum(count) > 20 and not (_total or _sums):
             # Number of dice would be spammy.
-            return "Nobody can hold that many dice at once. Try rolling fewer dice, or invoking with `--total` or `--sums`."
+            raise CommandInputError(
+                "Nobody can hold that many dice at once. Try rolling fewer"
+                " dice, or invoking with `--total` or `--sums`."
+            )
         if len(count) > 6 and not _total:
             # Number of groups would be spammy.
-            return "That is a lot of groups to display at once. You should invoke this command with `--total` to do that."
+            raise CommandInputError(
+                "That is a lot of groups to display at once. You should invoke"
+                " this command with `--total` to do that."
+            )
 
         rolls = [die.roll() for die in dice_ if die]
         if not rolls:
-            return
-        out = ["**__DICE OUTPUT:__**"]
+            raise CommandInputError("Sorry, no valid Roll Expressions provided.")
+        em = discord.Embed(title="Dice Output", colour=0x0ACDFF)
 
-        cumulative = 0
+        cumulative: int = 0
         for roll in rolls:
             cumulative += roll.total
             if not _total:
+                section: str = ""
+
                 if not _sums:
                     for single in roll.results:
-                        out.append("{}: `{}`".format(roll.src.one, single))
+                        section += f"{roll.src.one}: `{single}`\n"
                     if roll.add_sum:
-                        out.append("Added to total: `{}`".format(roll.add_sum))
-                out.append("**{} TOTAL:** `{}`\n".format(roll.src, roll.total))
+                        section += f"Added to total: `{roll.add_sum}`\n"
+
+                # section += f"**{roll.src} TOTAL:** `{roll.total}`\n"
+                em.add_field(name=f"{roll.src} - Total: {roll.total}", value=section)
 
         if _total or len(rolls) > 1:
-            out.append("**__CUMULATIVE TOTAL: `{}`__**".format(cumulative))
+            # em.add_field(name="Cumulative Total", value=str(cumulative), inline=False)
+            em.description = f"Cumulative Total: **__`{cumulative}`__**"
 
-        report = "\n".join(out)
-        if len(report) > 2000:
-            return "Report was too long to send in one message. Try rolling fewer."
-        else:
-            return report
+        return em
 
     async def cmd_sub(self, args: Args, **_):
         """Return a random image from a given subreddit. Defaults to /r/cats.

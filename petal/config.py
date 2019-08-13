@@ -128,3 +128,6 @@ class Config(object):
             )
         else:
             return self
+
+
+cfg: Config = Config()

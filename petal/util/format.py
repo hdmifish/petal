@@ -1,5 +1,10 @@
 """Small utility module for wrapping text in Discord Markdown Formatting."""
 
+from re import compile
+from typing import Union
+
+import discord
+
 
 bold = "**{}**".format
 italic = "*{}*".format
@@ -15,3 +20,14 @@ underline = "__{}__".format
 
 def mono_block(text: str, syntax: str = None) -> str:
     return f"```{syntax or ''}\n{text}```"
+
+
+def userline(user: Union[discord.Member, discord.User]) -> str:
+    return f"{user.name}#{user.discriminator} / {user.id}"
+
+
+_spec = compile(r"(?=[\\*>~_|`])")
+
+
+def escape(text: str) -> str:
+    return _spec.sub(r"\\", text)

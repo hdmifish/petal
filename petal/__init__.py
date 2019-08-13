@@ -5,10 +5,11 @@ written by isometricramen
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import re
 import time
+from traceback import format_exc
 from typing import AsyncGenerator, Coroutine, Generator, List, Optional
 
 import discord
@@ -16,15 +17,20 @@ import discord
 from petal import grasslands
 from petal.commands import CommandRouter as Commands
 from petal.commands.core import CommandPending
-from petal.config import Config
+from petal.config import cfg
 from petal.dbhandler import DBHandler
 from petal.etc import mash
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
+from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
+from petal.util.format import escape, mono_block, userline
+from petal.util.grammar import pluralize
+from petal.util.numbers import word_number
 
 
+short_time: timedelta = timedelta(seconds=10)
 log = grasslands.Peacock()
 
 version = "<UNSET>"
@@ -50,13 +56,13 @@ class Petal(PetalClientABC):
         try:
             super().__init__()
         except Exception as e:
-            log.err("Could not initialize client object: " + str(e))
+            log.err(f"Could not initialize client object: {str(e)}")
         else:
             log.info("Client object initialized")
 
         self.startup = datetime.utcnow()
 
-        self.config = Config()
+        self.config = cfg
         self.db = DBHandler(self.config)
         self.startup = datetime.utcnow()
         self.commands = Commands(self)
@@ -74,7 +80,7 @@ class Petal(PetalClientABC):
         try:
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
-            log.err("Could not connect using the token provided: " + str(e))
+            log.err(f"Could not connect using the token provided: {str(e)}")
             exit(1)
 
         except discord.errors.LoginFailure as e:
@@ -113,12 +119,12 @@ class Petal(PetalClientABC):
         interv = 32
         # times = {"start": self.startup.timestamp() * 1000}
         g_ses = discord.Activity(
-            name="Session: {}".format(self.session_id[2:]),
+            name=f"Session: {self.session_id[2:]}",
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
         g_ver = discord.Activity(
-            name="Version: {}".format(version),
+            name=f"Version: {version}",
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
@@ -130,7 +136,7 @@ class Petal(PetalClientABC):
             await self.change_presence(activity=g_ses)
             await asyncio.sleep(interv)
             await self.change_presence(
-                activity=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+                activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
             )
             await asyncio.sleep(interv)
             await self.change_presence(activity=g_ver)
@@ -160,7 +166,7 @@ class Petal(PetalClientABC):
         #     return
         mainguild: discord.Guild = self.get_guild(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
-        log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
+        log.f("BANS", f"Checking for temp unbans (Interval: {interval})")
         await asyncio.sleep(interval)
         while True:
             epoch = int(time.time())
@@ -173,24 +179,22 @@ class Petal(PetalClientABC):
                 if ban_expiry is None or not self.db.get_attribute(user, "tempBanned"):
                     continue
                 elif int(ban_expiry) <= int(epoch):
-                    log.f(str(ban_expiry) + " compared to " + str(epoch))
+                    log.f(f"{ban_expiry} compared to {epoch}")
                     print(flush=True)
                     try:
                         await mainguild.unban(user, reason="Tempban Expired")
                     except discord.Forbidden:
-                        log.f("BANS", "Lacking permission to unban {}.".format(user.id))
+                        log.f("BANS", f"Lacking permission to unban {user.id}.")
                     except discord.HTTPException as e:
-                        log.f("BANS", "FAILED to unban {}: {}".format(user.id, e))
+                        log.f("BANS", f"FAILED to unban {user.id}: {e}")
                     else:
                         self.db.update_member(user, {"banned": False})
-                        log.f("BANS", "Unbanned {} ({}) ".format(user.name, user.id))
+                        log.f("BANS", f"Unbanned {user.name} ({user.id}) ")
                 else:
                     log.f(
                         "BANS",
                         user.name
-                        + " ({}) has {} seconds left".format(
-                            user.id, str((int(ban_expiry) - int(epoch)))
-                        ),
+                        + f" ({user.id}) has {int(ban_expiry) - int(epoch)} seconds left",
                     )
                 await asyncio.sleep(0.5)
 
@@ -242,21 +246,23 @@ class Petal(PetalClientABC):
             return
         banstate = self.db.get_attribute(member, "tempBanned")
         if banstate:
-            print("Member{}({}) tempbanned, ignoring".format(member.name, member.id))
+            print(f"Member{member.name}({member.id}) tempbanned, ignoring")
             return
 
         self.db.update_member(member, {"tempBanned": False})
-        print("Member {} ({}) was banned manually".format(member.name, member.id))
+        print(f"Member {member.name} ({member.id}) was banned manually")
 
     async def on_ready(self):
         """
         Called once a connection has been established
         """
-        log.ready("Running discord.py version: " + discord.__version__)
+        log.ready(f"Running discord.py version: {discord.__version__}")
         log.ready("Connected to Discord!")
-        log.info("Logged in as {0.name}#{0.discriminator} ({0.id})".format(self.user))
-        log.info("Prefix: " + self.config.prefix)
-        log.info("SelfBot: " + ["true", "false"][self.config.useToken])
+        log.info(
+            f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})"
+        )
+        log.info(f"Prefix: {self.config.prefix}")
+        log.info(f"SelfBot: {['true', 'false'][self.config.useToken]}")
 
         self.loop.create_task(self.status_loop())
         log.ready("Gamestatus coroutine running...")
@@ -394,7 +400,39 @@ class Petal(PetalClientABC):
             self.potential_typo, self.print_response, self.commands, message
         )
         await asyncio.sleep(0.1)
-        return await command.run()
+        try:
+            return await command.run()
+
+        except Exception as e:
+            if isinstance(command.channel, discord.TextChannel):
+                await self.log_moderation(
+                    embed=discord.Embed(
+                        title="Unhandled Exception in Command",
+                        description=escape(command.src.content),
+                    )
+                    .add_field(
+                        name="Author",
+                        value=f"{command.invoker.mention}"
+                        f"\n`{command.invoker.name}#{command.invoker.discriminator}`"
+                        f"\n`{command.invoker.id}`",
+                    )
+                    .add_field(
+                        name="Location",
+                        value=f"{command.channel.mention}"
+                        f"\n`#{command.channel.name}`"
+                        f"\n`{command.channel.guild.name}`",
+                    )
+                    .add_field(
+                        name=type(e).__name__,
+                        value=str(e) or "<No Details>",
+                        inline=False,
+                    )
+                    .add_field(
+                        name="Exception Traceback",
+                        value=mono_block(format_exc()),
+                        inline=False,
+                    )
+                )
 
     async def send_message(
         self, author=None, channel=None, message=None, *, embed=None, **_
@@ -544,44 +582,91 @@ class Petal(PetalClientABC):
 
     async def on_message_delete(self, message: discord.Message):
         try:
-            if (
-                Petal.logLock
-                or message.author == self.user
-                or message.channel.guild.id == "126236346686636032"
-                or message.channel.id in self.config.get("ignoreChannels", [])
-                or not isinstance(message.channel, discord.TextChannel)
-            ):
+            if message.channel.id in self.config.get(
+                "ignoreChannels", []
+            ) or not isinstance(message.channel, discord.TextChannel):
                 return
 
-            userEmbed = discord.Embed(
-                title="Message Delete",
-                description=message.author.name
-                + "#"
-                + message.author.discriminator
-                + "'s message was deleted",
+            now = datetime.utcnow()
+            guild: discord.Guild = message.guild
+
+            executor = None
+            reason = None
+            async for record in guild.audit_logs(
+                limit=10,
+                after=now - short_time,
+                oldest_first=False,
+                action=discord.AuditLogAction.message_delete,
+            ):
+                if (
+                    record.target == message.author
+                    and record.extra.channel.id == message.channel.id
+                ):
+                    executor = record.user
+                    reason = record.reason
+                    break
+
+            em = discord.Embed(
+                title="Message Deleted",
+                description=f"A Message by {message.author.mention} was deleted."
+                f"\nMessage URL: {message.jump_url}",
                 colour=0xFC00A2,
             )
-            userEmbed.set_author(
-                name=self.user.name, icon_url="https://puu.sh/tB7bp/f0bcba5fc5" + ".png"
+            em.set_author(
+                name=message.author.display_name, icon_url=get_avatar(message.author)
             )
-            userEmbed.add_field(name="Server", value=message.guild.name)
-            userEmbed.add_field(name="Channel", value=message.channel.name)
-            userEmbed.add_field(
-                name="Message content", value=message.content, inline=False
-            )
-            userEmbed.add_field(
-                name="Message creation", value=str(message.created_at)[:-7]
-            )
-            userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            userEmbed.set_footer(
-                text=f"{message.author.name}#{message.author.discriminator} / {message.author.id}"
+            em.set_footer(text=f"{userline(message.author)}")
+            # em.set_thumbnail(url=get_avatar(message.author))
+
+            if message.content:
+                em.add_field(
+                    name="Content", value=escape(message.content), inline=False
+                )
+            if message.embeds:
+                n = len(message.embeds)
+                em.add_field(
+                    name="Embeds",
+                    value=f"Message had {word_number(n)} ({n})"
+                    f" {pluralize(n, 'Embed')}.",
+                    inline=False,
+                )
+            if message.attachments:
+                n = len(message.attachments)
+                em.add_field(
+                    name="Attachments",
+                    value=f"Message had {word_number(n)} ({n})"
+                    f" {pluralize(n, 'Attachment')}.",
+                    inline=False,
+                )
+
+            em.add_field(name="Guild", value=guild.name)
+            em.add_field(
+                name="Channel",
+                value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
 
-            await self.log_moderation(embed=userEmbed)
-            await asyncio.sleep(2)
+            if executor is None:
+                em.add_field(
+                    name="Deleter",
+                    value="Message was probably deleted by __the Author__.",
+                    inline=False,
+                )
+            else:
+                em.add_field(
+                    name="Deleter",
+                    value=f"Message was probably deleted by:"
+                    f"\n`{escape(userline(executor))}`"
+                    f"\n{executor.mention}",
+                    inline=False,
+                )
+            if reason is not None:
+                em.add_field(name="Reason for Deletion", value=reason, inline=False)
+
+            em.add_field(name="Time of Creation", value=str(message.created_at)[:-7])
+            em.add_field(name="Time of Deletion", value=str(now)[:-7])
+
+            await self.log_moderation(embed=em)
         except discord.errors.HTTPException:
-            return
-        else:
             return
 
     async def on_message_edit(self, before: Src, after: Src):
@@ -623,12 +708,12 @@ class Petal(PetalClientABC):
             )
             .add_field(name="Server", value=before.guild.name)
             .add_field(name="Channel", value=before.channel.name)
-            .add_field(name="Previous message: ", value=before.content, inline=False)
-            .add_field(name="Edited message: ", value=after.content)
-            .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
-            .set_footer(
-                text=f"{before.author.name}#{before.author.discriminator} / {before.author.id}"
+            .add_field(
+                name="Previous message: ", value=escape(before.content), inline=False
             )
+            .add_field(name="Edited message: ", value=escape(after.content))
+            .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
+            .set_footer(text=userline(before.author))
         )
 
         try:
@@ -661,10 +746,8 @@ class Petal(PetalClientABC):
 
         if gained is not None:
             userEmbed = discord.Embed(
-                title="({}) User Role ".format(role.guild.name) + gained,
-                description="{}#{} {} role".format(
-                    after.name, after.discriminator, gained
-                ),
+                title=f"({role.guild.name}) User Role {gained}",
+                description=f"{after.name}#{after.discriminator} {gained} role",
                 colour=0x0093C3,
             )
             userEmbed.set_author(
@@ -677,7 +760,7 @@ class Petal(PetalClientABC):
         if before.name != after.name:
             userEmbed = discord.Embed(
                 title="User Name Change",
-                description=before.name + " changed their name to " + after.name,
+                description=f"{escape(before.name)} changed their name to {escape(after.name)}",
                 colour=0x34F3AD,
             )
 
@@ -686,7 +769,6 @@ class Petal(PetalClientABC):
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
             await self.log_moderation(embed=userEmbed)
-        return
 
     # async def on_voice_state_update(self, before, after):
     #
