@@ -55,7 +55,7 @@ class Petal(PetalClientABC):
         try:
             super().__init__()
         except Exception as e:
-            log.err("Could not initialize client object: " + str(e))
+            log.err(f"Could not initialize client object: {str(e)}")
         else:
             log.info("Client object initialized")
 
@@ -79,7 +79,7 @@ class Petal(PetalClientABC):
         try:
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
-            log.err("Could not connect using the token provided: " + str(e))
+            log.err(f"Could not connect using the token provided: {str(e)}")
             exit(1)
 
         except discord.errors.LoginFailure as e:
@@ -118,12 +118,12 @@ class Petal(PetalClientABC):
         interv = 32
         # times = {"start": self.startup.timestamp() * 1000}
         g_ses = discord.Activity(
-            name="Session: {}".format(self.session_id[2:]),
+            name=f"Session: {self.session_id[2:]}",
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
         g_ver = discord.Activity(
-            name="Version: {}".format(version),
+            name=f"Version: {version}",
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
@@ -135,7 +135,7 @@ class Petal(PetalClientABC):
             await self.change_presence(activity=g_ses)
             await asyncio.sleep(interv)
             await self.change_presence(
-                activity=discord.Game(name="Uptime: " + str(self.uptime)[:-10])
+                activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
             )
             await asyncio.sleep(interv)
             await self.change_presence(activity=g_ver)
@@ -165,7 +165,7 @@ class Petal(PetalClientABC):
         #     return
         mainguild: discord.Guild = self.get_guild(self.config.get("mainServer"))
         interval = self.config.get("unbanInterval")
-        log.f("BANS", "Checking for temp unbans (Interval: " + str(interval) + ")")
+        log.f("BANS", f"Checking for temp unbans (Interval: {interval})")
         await asyncio.sleep(interval)
         while True:
             epoch = int(time.time())
@@ -178,24 +178,22 @@ class Petal(PetalClientABC):
                 if ban_expiry is None or not self.db.get_attribute(user, "tempBanned"):
                     continue
                 elif int(ban_expiry) <= int(epoch):
-                    log.f(str(ban_expiry) + " compared to " + str(epoch))
+                    log.f(f"{ban_expiry} compared to {epoch}")
                     print(flush=True)
                     try:
                         await mainguild.unban(user, reason="Tempban Expired")
                     except discord.Forbidden:
-                        log.f("BANS", "Lacking permission to unban {}.".format(user.id))
+                        log.f("BANS", f"Lacking permission to unban {user.id}.")
                     except discord.HTTPException as e:
-                        log.f("BANS", "FAILED to unban {}: {}".format(user.id, e))
+                        log.f("BANS", f"FAILED to unban {user.id}: {e}")
                     else:
                         self.db.update_member(user, {"banned": False})
-                        log.f("BANS", "Unbanned {} ({}) ".format(user.name, user.id))
+                        log.f("BANS", f"Unbanned {user.name} ({user.id}) ")
                 else:
                     log.f(
                         "BANS",
                         user.name
-                        + " ({}) has {} seconds left".format(
-                            user.id, str((int(ban_expiry) - int(epoch)))
-                        ),
+                        + f" ({user.id}) has {int(ban_expiry) - int(epoch)} seconds left",
                     )
                 await asyncio.sleep(0.5)
 
@@ -247,21 +245,21 @@ class Petal(PetalClientABC):
             return
         banstate = self.db.get_attribute(member, "tempBanned")
         if banstate:
-            print("Member{}({}) tempbanned, ignoring".format(member.name, member.id))
+            print(f"Member{member.name}({member.id}) tempbanned, ignoring")
             return
 
         self.db.update_member(member, {"tempBanned": False})
-        print("Member {} ({}) was banned manually".format(member.name, member.id))
+        print(f"Member {member.name} ({member.id}) was banned manually")
 
     async def on_ready(self):
         """
         Called once a connection has been established
         """
-        log.ready("Running discord.py version: " + discord.__version__)
+        log.ready(f"Running discord.py version: {discord.__version__}")
         log.ready("Connected to Discord!")
-        log.info("Logged in as {0.name}#{0.discriminator} ({0.id})".format(self.user))
-        log.info("Prefix: " + self.config.prefix)
-        log.info("SelfBot: " + ["true", "false"][self.config.useToken])
+        log.info(f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})")
+        log.info(f"Prefix: {self.config.prefix}")
+        log.info(f"SelfBot: {['true', 'false'][self.config.useToken]}")
 
         self.loop.create_task(self.status_loop())
         log.ready("Gamestatus coroutine running...")
