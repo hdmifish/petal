@@ -575,7 +575,8 @@ class Petal(PetalClientABC):
 
             em = discord.Embed(
                 title="Message Deleted",
-                description=f"A Message by {message.author.mention} was deleted.",
+                description=f"A Message by {message.author.mention} was deleted."
+                f"\nMessage URL: {message.jump_url}",
                 colour=0xFC00A2,
             )
             em.set_author(
