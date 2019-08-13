@@ -24,7 +24,7 @@ from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
-from petal.util.format import userline
+from petal.util.format import escape, userline
 from petal.util.grammar import pluralize
 from petal.util.numbers import word_number
 
@@ -586,7 +586,7 @@ class Petal(PetalClientABC):
             # em.set_thumbnail(url=get_avatar(message.author))
 
             if message.content:
-                em.add_field(name="Content", value=message.content, inline=False)
+                em.add_field(name="Content", value=escape(message.content), inline=False)
             if message.embeds:
                 n = len(message.embeds)
                 em.add_field(
@@ -620,7 +620,7 @@ class Petal(PetalClientABC):
                 em.add_field(
                     name="Deleter",
                     value=f"Message was probably deleted by:"
-                    f"\n`{userline(executor)}`"
+                    f"\n`{escape(userline(executor))}`"
                     f"\n{executor.mention}",
                     inline=False,
                 )
@@ -673,11 +673,11 @@ class Petal(PetalClientABC):
             )
             .add_field(name="Server", value=before.guild.name)
             .add_field(name="Channel", value=before.channel.name)
-            .add_field(name="Previous message: ", value=before.content, inline=False)
-            .add_field(name="Edited message: ", value=after.content)
+            .add_field(name="Previous message: ", value=escape(before.content), inline=False)
+            .add_field(name="Edited message: ", value=escape(after.content))
             .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
             .set_footer(
-                text=f"{before.author.name}#{before.author.discriminator} / {before.author.id}"
+                text=userline(before.author)
             )
         )
 
@@ -711,10 +711,8 @@ class Petal(PetalClientABC):
 
         if gained is not None:
             userEmbed = discord.Embed(
-                title="({}) User Role ".format(role.guild.name) + gained,
-                description="{}#{} {} role".format(
-                    after.name, after.discriminator, gained
-                ),
+                title=f"({role.guild.name}) User Role {gained}",
+                description=f"{after.name}#{after.discriminator} {gained} role",
                 colour=0x0093C3,
             )
             userEmbed.set_author(
@@ -727,7 +725,7 @@ class Petal(PetalClientABC):
         if before.name != after.name:
             userEmbed = discord.Embed(
                 title="User Name Change",
-                description=before.name + " changed their name to " + after.name,
+                description=f"{escape(before.name)} changed their name to {escape(after.name)}",
                 colour=0x34F3AD,
             )
 
@@ -736,7 +734,6 @@ class Petal(PetalClientABC):
             userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
             await self.log_moderation(embed=userEmbed)
-        return
 
     # async def on_voice_state_update(self, before, after):
     #
