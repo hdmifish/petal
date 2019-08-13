@@ -28,6 +28,7 @@ class CommandPending:
         self.router = router
         self.src: Src = src
         self.channel: discord.abc.Messageable = self.src.channel
+        self.invoker = self.src.author
 
         self.active = False
         self.reply: Optional[discord.Message] = None
@@ -111,6 +112,7 @@ class CommandPending:
                 )
             )
             print_exc()
+            raise e
 
         else:
             self.unlink()
@@ -120,7 +122,7 @@ class CommandPending:
             if executed:
                 self.router.config.get("stats")["comCount"] += 1
 
-            return executed
+        return executed
 
     async def wait(self):
         self.active = True

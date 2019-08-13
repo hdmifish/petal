@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import random
 import re
 import time
+from traceback import format_exc
 from typing import AsyncGenerator, Coroutine, Generator, List, Optional
 
 import discord
@@ -24,7 +25,7 @@ from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
-from petal.util.format import escape, userline
+from petal.util.format import escape, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.numbers import word_number
 
@@ -257,7 +258,9 @@ class Petal(PetalClientABC):
         """
         log.ready(f"Running discord.py version: {discord.__version__}")
         log.ready("Connected to Discord!")
-        log.info(f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})")
+        log.info(
+            f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})"
+        )
         log.info(f"Prefix: {self.config.prefix}")
         log.info(f"SelfBot: {['true', 'false'][self.config.useToken]}")
 
@@ -397,7 +400,39 @@ class Petal(PetalClientABC):
             self.potential_typo, self.print_response, self.commands, message
         )
         await asyncio.sleep(0.1)
-        return await command.run()
+        try:
+            return await command.run()
+
+        except Exception as e:
+            if isinstance(command.channel, discord.TextChannel):
+                await self.log_moderation(
+                    embed=discord.Embed(
+                        title="Unhandled Exception in Command",
+                        description=escape(command.src.content),
+                    )
+                    .add_field(
+                        name="Author",
+                        value=f"{command.invoker.mention}"
+                        f"\n`{command.invoker.name}#{command.invoker.discriminator}`"
+                        f"\n`{command.invoker.id}`",
+                    )
+                    .add_field(
+                        name="Location",
+                        value=f"{command.channel.mention}"
+                        f"\n`#{command.channel.name}`"
+                        f"\n`{command.channel.guild.name}`",
+                    )
+                    .add_field(
+                        name=type(e).__name__,
+                        value=str(e) or "<No Details>",
+                        inline=False,
+                    )
+                    .add_field(
+                        name="Exception Traceback",
+                        value=mono_block(format_exc()),
+                        inline=False,
+                    )
+                )
 
     async def send_message(
         self, author=None, channel=None, message=None, *, embed=None, **_
@@ -584,7 +619,9 @@ class Petal(PetalClientABC):
             # em.set_thumbnail(url=get_avatar(message.author))
 
             if message.content:
-                em.add_field(name="Content", value=escape(message.content), inline=False)
+                em.add_field(
+                    name="Content", value=escape(message.content), inline=False
+                )
             if message.embeds:
                 n = len(message.embeds)
                 em.add_field(
@@ -671,12 +708,12 @@ class Petal(PetalClientABC):
             )
             .add_field(name="Server", value=before.guild.name)
             .add_field(name="Channel", value=before.channel.name)
-            .add_field(name="Previous message: ", value=escape(before.content), inline=False)
+            .add_field(
+                name="Previous message: ", value=escape(before.content), inline=False
+            )
             .add_field(name="Edited message: ", value=escape(after.content))
             .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
-            .set_footer(
-                text=userline(before.author)
-            )
+            .set_footer(text=userline(before.author))
         )
 
         try:
