@@ -5,6 +5,7 @@ from typing import Union
 
 from discord import Embed, Member, User
 
+from .cdn import get_avatar
 from .format import bold
 
 
@@ -27,7 +28,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
             colour=member.colour if colour is None else colour,
             timestamp=now,
         )
-        .set_thumbnail(url=member.avatar_url)
+        .set_thumbnail(url=get_avatar(member))
         .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
     )
     em.add_field(name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)")
