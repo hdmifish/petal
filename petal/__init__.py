@@ -91,7 +91,6 @@ class Petal(PetalClientABC):
                 + str(e)
             )
             exit(401)
-        return
 
     @property
     def uptime(self):
@@ -592,19 +591,24 @@ class Petal(PetalClientABC):
 
             executor = None
             reason = None
-            async for record in guild.audit_logs(
-                limit=10,
-                after=now - short_time,
-                oldest_first=False,
-                action=discord.AuditLogAction.message_delete,
-            ):
-                if (
-                    record.target == message.author
-                    and record.extra.channel.id == message.channel.id
+            try:
+                async for record in guild.audit_logs(
+                    limit=10,
+                    after=now - short_time,
+                    oldest_first=False,
+                    action=discord.AuditLogAction.message_delete,
                 ):
-                    executor = record.user
-                    reason = record.reason
-                    break
+                    if (
+                        record.target == message.author
+                        and record.extra.channel.id == message.channel.id
+                    ):
+                        executor = record.user
+                        reason = record.reason
+                        break
+            except (discord.Forbidden, discord.HTTPException):
+                can_audit = False
+            else:
+                can_audit = True
 
             em = discord.Embed(
                 title="Message Deleted",
@@ -645,20 +649,28 @@ class Petal(PetalClientABC):
                 value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
 
-            if executor is None:
-                em.add_field(
-                    name="Deleter",
-                    value="Message was probably deleted by __the Author__.",
-                    inline=False,
-                )
+            if can_audit:
+                if executor is None:
+                    em.add_field(
+                        name="Deleter",
+                        value="Message was probably deleted by __the Author__.",
+                        inline=False,
+                    )
+                else:
+                    em.add_field(
+                        name="Deleter",
+                        value=f"Message was probably deleted by:"
+                        f"\n`{escape(userline(executor))}`"
+                        f"\n{executor.mention}",
+                        inline=False,
+                    )
             else:
                 em.add_field(
                     name="Deleter",
-                    value=f"Message was probably deleted by:"
-                    f"\n`{escape(userline(executor))}`"
-                    f"\n{executor.mention}",
+                    value="Insufficient Permissions to find Deleter.",
                     inline=False,
                 )
+
             if reason is not None:
                 em.add_field(name="Reason for Deletion", value=reason, inline=False)
 
