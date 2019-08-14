@@ -568,6 +568,9 @@ class Petal(PetalClientABC):
         else:
             card.add_field(name="Welcome", value="No Welcome Message is configured.")
 
+        # Wait a short time before posting. This should hopefully make the
+        #   mention tag more reliable.
+        await asyncio.sleep(3)
         await self.log_membership(embed=card)
 
     async def on_member_remove(self, member):
@@ -577,6 +580,9 @@ class Petal(PetalClientABC):
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )
 
+        # Wait for at least as long as the Join delay, so that the Part Message
+        #   will never be posted before the Join Message.
+        await asyncio.sleep(4)
         await self.log_membership(embed=card)
 
     async def on_message_delete(self, message: discord.Message):
