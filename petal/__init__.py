@@ -91,7 +91,6 @@ class Petal(PetalClientABC):
                 + str(e)
             )
             exit(401)
-        return
 
     @property
     def uptime(self):
@@ -569,6 +568,9 @@ class Petal(PetalClientABC):
         else:
             card.add_field(name="Welcome", value="No Welcome Message is configured.")
 
+        # Wait a short time before posting. This should hopefully make the
+        #   mention tag more reliable.
+        await asyncio.sleep(3)
         await self.log_membership(embed=card)
 
     async def on_member_remove(self, member):
@@ -578,6 +580,9 @@ class Petal(PetalClientABC):
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )
 
+        # Wait for at least as long as the Join delay, so that the Part Message
+        #   will never be posted before the Join Message.
+        await asyncio.sleep(4)
         await self.log_membership(embed=card)
 
     async def on_message_delete(self, message: discord.Message):
@@ -592,19 +597,24 @@ class Petal(PetalClientABC):
 
             executor = None
             reason = None
-            async for record in guild.audit_logs(
-                limit=10,
-                after=now - short_time,
-                oldest_first=False,
-                action=discord.AuditLogAction.message_delete,
-            ):
-                if (
-                    record.target == message.author
-                    and record.extra.channel.id == message.channel.id
+            try:
+                async for record in guild.audit_logs(
+                    limit=10,
+                    after=now - short_time,
+                    oldest_first=False,
+                    action=discord.AuditLogAction.message_delete,
                 ):
-                    executor = record.user
-                    reason = record.reason
-                    break
+                    if (
+                        record.target == message.author
+                        and record.extra.channel.id == message.channel.id
+                    ):
+                        executor = record.user
+                        reason = record.reason
+                        break
+            except (discord.Forbidden, discord.HTTPException):
+                can_audit = False
+            else:
+                can_audit = True
 
             em = discord.Embed(
                 title="Message Deleted",
@@ -645,20 +655,28 @@ class Petal(PetalClientABC):
                 value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
 
-            if executor is None:
-                em.add_field(
-                    name="Deleter",
-                    value="Message was probably deleted by __the Author__.",
-                    inline=False,
-                )
+            if can_audit:
+                if executor is None:
+                    em.add_field(
+                        name="Deleter",
+                        value="Message was probably deleted by __the Author__.",
+                        inline=False,
+                    )
+                else:
+                    em.add_field(
+                        name="Deleter",
+                        value=f"Message was probably deleted by:"
+                        f"\n`{escape(userline(executor))}`"
+                        f"\n{executor.mention}",
+                        inline=False,
+                    )
             else:
                 em.add_field(
                     name="Deleter",
-                    value=f"Message was probably deleted by:"
-                    f"\n`{escape(userline(executor))}`"
-                    f"\n{executor.mention}",
+                    value="Insufficient Permissions to find Deleter.",
                     inline=False,
                 )
+
             if reason is not None:
                 em.add_field(name="Reason for Deletion", value=reason, inline=False)
 
