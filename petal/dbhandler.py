@@ -154,7 +154,7 @@ class DBHandler(object):
         :return: dict member
         """
         if not self.useDB:
-            return False
+            return None
         r = self.members.find_one({"uid": m2id(member)})
         if r is not None:
             return r

@@ -1,35 +1,42 @@
-from asyncio import ensure_future as create_task #, sleep
-from typing import Optional
+from asyncio import create_task, Task  # , sleep
+from collections import Counter
+from typing import List, Optional, Sequence, Tuple, TypeVar
 
-from discord import Embed, TextChannel, Message, User
+from discord import abc, Embed, TextChannel, Message, Reaction, User
 
 from petal.checks import all_checks, Reactions
 
 
 # Assemble all the emoji we need via hexadecimal values.
 # I have trust issues when it comes to eclectic characters in my source code, so
-#   this makes me feel slightly safer, while also saving space.
-letters = [chr(n) for n in range(0x1F1E6, 0x1F200)]
-cancel = chr(0x274E)
-confirm = chr(0x2705)
+#   this makes me feel slightly safer.
+letters: Tuple[str, ...] = tuple(chr(n) for n in range(0x1F1E6, 0x1F200))
+cancel: str = chr(0x274E)
+confirm: str = chr(0x2705)
 
-astro = [chr(n) for n in range(0x2648, 0x2654)]  # Zodiac icons because why not
-info = chr(0x2139)  # [i]
-okay = chr(0x1F197)  # [OK]
+astro: Tuple[str, ...] = tuple(
+    chr(n) for n in range(0x2648, 0x2654)
+)  # Zodiac icons because why not
+info: str = chr(0x2139)  # [i]
+okay: str = chr(0x1F197)  # [OK]
 
-clock = [chr(n) for n in range(0x1F550, 0x1F55C)]
-clock[0:0] = [clock.pop(-1)]  # Clock symbols: [12, 1, 2, ..., 11]
+clock: Tuple[str, ...] = (chr(0x1F55C), *(chr(n) for n in range(0x1F550, 0x1F55B)))
 
 
-def count_votes(allowed: list, votes: list):
-    allowed = [str(a) for a in allowed]
-    result = {}
+# List of all long-term Menu Operations, as Tasks. Before Shutdown, these can be
+#   cancelled en masse to have the Messages get cleaned up.
+live: List[Task] = []
+
+T_ = TypeVar("T_")
+
+
+def count_votes(allowed: list, votes: Sequence[Reaction]) -> Counter:
+    allowed: List[str] = [str(a) for a in allowed]
+    result: Counter = Counter()
     for vote in votes:
-        key = str(vote.emoji)
+        key: str = str(vote.emoji)
         if key in allowed:
-            result[key] = vote.count
-            if vote.me:
-                result[key] -= 1
+            result[key] = (vote.count - 1) if vote.me else vote.count
     return result
 
 
@@ -41,13 +48,13 @@ class Menu:
         title: str,
         desc: str,
         user: User = None,
-        colour=0x0ACDFF,
+        colour: int = 0x_0A_CD_FF,
     ):
         self.client = client
-        self.channel = channel
-        self.em = Embed(title=title, description=desc, colour=colour)
-        self.msg = None
-        self.master = user
+        self.channel: abc.Messageable = channel
+        self.em: Embed = Embed(title=title, description=desc, colour=colour)
+        self.msg: Optional[Message] = None
+        self.master: User = user
 
     def add_section(self, result: str, title: str = "Results", overwrite: int = None):
         if overwrite is not None:
@@ -65,17 +72,17 @@ class Menu:
         await self.clear()
 
     async def post(self):
-        if self.msg:
+        if self.msg and self.em not in self.msg.embeds:
             await self.msg.edit(embed=self.em)
         else:
             self.msg: Message = await self.channel.send(embed=self.em)
 
-    async def _add_buttons(self, selection: list):
+    async def _add_buttons(self, selection: Sequence):
         await self.msg.clear_reactions()
         for opt in selection:
             await self.msg.add_reaction(opt)
 
-    async def add_buttons(self, selection: list):
+    async def add_buttons(self, selection: Sequence) -> Task:
         if not self.msg:
             await self.post()
         return create_task(self._add_buttons(selection))
@@ -87,20 +94,17 @@ class Menu:
     ### PRIVATE interfaces; Only one person may respond.
 
     async def get_one(
-        self, opts: list, time=30, prompt="Select One:", title="Choice"
-    ) -> str:
+        self, opts: Sequence[T_], time: int = 30, title: str = "Select One"
+    ) -> Optional[T_]:
         """Ask the user to select ONE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
-            return ""
+            return None
         selection = [cancel, *letters[:onum]]
         self.add_section(
-            "\n".join(
-                [prompt] + ["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]
-            ),
-            title,
+            "\n".join(f"{letters[i]}: `{opts[i]}`" for i in range(onum)), title
         )
-        buttons = await self.add_buttons(selection)
+        buttons: Task = await self.add_buttons(selection)
         await self.post()
 
         choice = (
@@ -114,7 +118,7 @@ class Menu:
         )[0]
 
         if not choice or choice.emoji == cancel:
-            result = ""
+            result = None
         else:
             result = opts[letters.index(choice.emoji)]
 
@@ -124,64 +128,67 @@ class Menu:
 
     async def get_multi(
         self,
-        opts: list,
-        time=30,
-        prompt="Select One or More and Confirm:",
-        title="Multiple Choice",
-    ) -> list:
+        opts: Sequence[T_],
+        time: int = 30,
+        prompt: str="Select One or More and Confirm:",
+        title: str="Multiple Choice",
+    ) -> Tuple[T_, ...]:
         """Ask the user to select ONE OR MORE of a set of predefined options."""
         onum = len(opts)
         if not 1 <= onum <= len(letters):
-            return []
+            return ()
         selection = [cancel, *letters[:onum], confirm]
         self.add_section(
-            "\n".join(
-                [prompt] + ["{}: `{}`".format(letters[i], opts[i]) for i in range(onum)]
-            ),
+            "\n".join([prompt] + [f"{letters[i]}: `{opts[i]}`" for i in range(onum)]),
             title,
         )
-        buttons = await self.add_buttons(selection)
+        buttons: Task = await self.add_buttons(selection)
         await self.post()
 
-        def check(react_, user):
-            return all_checks(
-                Reactions.by_user(self.master), Reactions.on_message(self.msg)
-            )(react_, user) and str(react_.emoji) in [str(cancel), str(confirm)]
+        ok = (str(cancel), str(confirm))
+        pre = all_checks(Reactions.by_user(self.master), Reactions.on_message(self.msg))
+
+        def check(react_: Reaction, user: User) -> bool:
+            return pre(react_, user) and str(react_.emoji) in ok
 
         choice = (await Reactions.waitfor(self.client, check, timeout=time))[0]
 
         if not choice or choice.emoji == cancel:
             await self.clear()
-            return []
+            return ()
 
         try:
-            vm = await self.channel.fetch_message(self.msg.id)
+            vm: Message = await self.channel.fetch_message(self.msg.id)
         except:
             await self.clear()
-            return []
+            return ()
 
-        results = []
-        for react in vm.reactions:
-            if react.emoji in [r for r in selection[1:-1]] and self.master.id in [
-                u.id for u in await react.users().flatten()
-            ]:
-                results.append(opts[letters.index(react.emoji)])
+        results: Tuple[T_, ...] = tuple(
+            [
+                opts[letters.index(react.emoji)]
+                for react in vm.reactions
+                if (
+                    react.emoji in selection[1:-1]
+                    and self.master in await react.users().flatten()
+                )
+            ]
+        )
 
         await buttons
         await self.clear()
         return results
 
     async def get_bool(
-        self, time=30, prompt="Select Yes or No", title="Boolean Choice"
+        self, time: int=30, prompt: str="Select Yes or No", title: str="Boolean Choice"
     ) -> Optional[bool]:
         """Ask the user to click a simple YES or NO."""
-        selection = [cancel, confirm]
+        selection = (cancel, confirm)
 
         # self.em.description = prompt or "Select Yes or No"
         # await self.post()
         # adding = create_task(self.add_buttons(selection))
         self.add_section(prompt, title)
-        adding = await self.add_buttons(selection)
+        adding: Task = await self.add_buttons(selection)
         await self.post()
 
         choice = (
@@ -193,7 +200,6 @@ class Menu:
                 timeout=time,
             )
         )[0]
-        print(choice)
 
         await adding
         await self.clear()
@@ -274,7 +280,7 @@ async def confirm_action(
     desc: str,
     prompt: str = "Select Yes or No",
     section_title: str = "Boolean Choice",
-    timeout: int = 30
+    timeout: int = 30,
 ) -> Optional[bool]:
     author: User = src.author
     channel: TextChannel = src.channel
