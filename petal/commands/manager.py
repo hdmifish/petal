@@ -114,7 +114,7 @@ class CommandsMgr(core.Commands):
             + str(src.author.id)
             + " used the force!",
         )
-        await self.client.delete_message(src)
+        await src.delete()
         if response is not None:
             return response
 
