@@ -21,6 +21,7 @@ from uuid import UUID
 
 import requests
 
+from .embeds import minecraft_card, minecraft_suspension
 from ..exceptions import WhitelistError
 from ..grasslands import Peacock
 
@@ -38,7 +39,7 @@ PLAYERDEFAULT: type_entry_db = OrderedDict(
         ("name", "PLAYERNAME"),
         ("uuid", "00000000-0000-0000-0000-000000000000"),
         ("altname", []),
-        ("discord", "000000000000000000"),
+        ("discord", 000000000000000000),
         ("approved", []),
         ("submitted", "1970-01-01_00:00"),
         ("suspended", 000),
@@ -46,27 +47,6 @@ PLAYERDEFAULT: type_entry_db = OrderedDict(
         ("notes", []),
     ]
 )
-
-SUSPENSION = {
-    True: "Nonspecific suspension",
-    False: "Not suspended",
-    000: "Not suspended",
-    # Trivial suspensions
-    101: "Joke suspension",
-    102: "Self-sequested suspension",
-    103: "Old account",
-    104: "User not in Discord",
-    # Minor suspensions
-    201: "Minor trolling",
-    203: "Compromised account",
-    # Moderate suspensions
-    301: "Major trolling",
-    302: "Stealing",
-    # Major suspensions
-    401: "Use of slurs",
-    402: "Griefing",
-    403: "Discord banned",
-}
 
 
 def break_uid(uuid: str) -> str:
@@ -141,6 +121,7 @@ class Interface:
             self.ctx = None
 
     def cget(self, prop: str, default: Any = None) -> Any:
+        """Retrieve a value from the Configuration. Merely a shorthand."""
         v = self.config.get(prop, default)
         return v
 
