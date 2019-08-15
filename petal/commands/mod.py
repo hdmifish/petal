@@ -20,7 +20,7 @@ from petal.exceptions import (
 from petal.menu import confirm_action, Menu
 from petal.types import Src
 from petal.util.embeds import membership_card
-from petal.util.format import bold, mono, underline, userline
+from petal.util.format import bold, escape, mono, underline, userline
 
 
 class CommandsMod(core.Commands):
@@ -701,7 +701,7 @@ class CommandsMod(core.Commands):
                 continue
             member: discord.Member = message.author
 
-            ct = message.content if _preserve or _p else message.clean_content
+            ct = escape(message.content if _preserve or _p else message.clean_content)
             if len(ct) > 1000:
                 ct = ct[:997] + "..."
 

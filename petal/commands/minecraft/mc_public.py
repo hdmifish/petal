@@ -35,9 +35,8 @@ class CommandsMCPublic(auth.CommandsMCAuth):
             )
 
             if wlreq:
-                await self.client.edit_message(
-                    message=wlreq,
-                    new_content="Whitelist Request from: `"
+                await wlreq.edit(
+                    content="Whitelist Request from: `"
                     + src.author.name
                     + "#"
                     + src.author.discriminator
