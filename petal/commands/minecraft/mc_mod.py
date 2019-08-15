@@ -4,6 +4,7 @@ Access: Server Operators"""
 import discord
 
 from petal.commands.minecraft import auth
+from petal.types import Src
 
 
 wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the Server Address is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect."
@@ -38,9 +39,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
             )
             if doSend and not _nosend:
-                recipientobj = self.client.get_server(
-                    self.config.get("mainServer")
-                ).get_member(recipientid)
+                recipientobj = self.client.main_guild.get_member(recipientid)
                 try:
                     msg = await self.client.send_message(channel=recipientobj, message=wlpm)
                 except discord.DiscordException as e:
@@ -106,9 +105,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         if not searchres:
             return noresult.format(submission)
         else:
-            qout = await self.client.send_message(
-                channel=src.channel, message="<query loading...>"
-            )
+            qout = await src.channel.send("<query loading...>")
             oput = "Results for {} ({}):\n".format(submission, len(searchres))
             for entry in searchres:
                 oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
@@ -123,9 +120,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                     oput += "Status: *`-#- PENDING -#-`*\n"
                 else:
                     oput += "Status: __`--- APPROVED ---`__\n"
-                duser = self.client.get_server(
-                    self.config.get("mainServer")
-                ).get_member(entry.get("discord", 0))
+                duser = self.client.main_guild.get_member(entry.get("discord", 0))
                 oput += "- On Discord: "
                 if duser:
                     oput += "**__`YES`__**\n"
@@ -154,19 +149,19 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 else:
                     oput += "- Notes: `{}`\n".format(len(entry.get("notes", [])))
             oput += "--------"
-            await self.client.edit_message(message=qout, new_content=oput)
+            await qout.edit(content=oput)
             # return oput
 
-    async def cmd_wlrefresh(self, src, **_):
+    async def cmd_wlrefresh(self, src: Src, **_):
         """Force an immediate rebuild of both the PlayerDB and the whitelist itself.
 
         Syntax: `{p}wlrefresh`
         """
-        await self.client.send_typing(src.channel)
-        refreshReturn = self.minecraft.etc.EXPORT_WHITELIST(True, True)
-        refstat = ["Whitelist failed to refresh.", "Whitelist Fully Refreshed."]
-
-        return refstat[refreshReturn]
+        async with src.channel.typing():
+            if self.minecraft.etc.EXPORT_WHITELIST(True, True):
+                return "Whitelist fully refreshed."
+            else:
+                return "Whitelist failed to refresh."
 
     async def cmd_wlgone(self, **_):
         """Check the WL database for any users whose Discord ID is that of someone who has left the server.
@@ -181,7 +176,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         leftnum = 0
         for userid, username in [(entry["discord"], entry["name"]) for entry in uList]:
             try:
-                user = self.client.get_server(self.config.get("mainServer")).get_member(
+                user = self.client.main_guild.get_member(
                     userid
                 )
                 if user is None:
