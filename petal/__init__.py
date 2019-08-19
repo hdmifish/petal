@@ -880,6 +880,10 @@ class Petal(PetalClientABC):
         ):
             return
 
+        if len(message.mentions) >= 10:
+            # Potential here to autoban tag spammers.
+            pass
+
         for word in message.content.split():
             if message.channel.id in self.config.get("ignoreChannels"):
                 break
