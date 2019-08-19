@@ -21,6 +21,9 @@ from petal.util import dice
 from petal.types import Args, Src
 
 
+link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
+
+
 class CommandsPublic(core.Commands):
     auth_fail = "This command is public. If you are reading this, something went wrong."
 
@@ -735,26 +738,26 @@ class CommandsPublic(core.Commands):
             if "@everyone" in response or "@here" in response:
                 self.client.db.delete_void()
                 return (
-                    "Someone (" + author + ") is a butt and tried to "
-                    "sneak an @ev tag into the void."
-                    "\n\nIt was deleted..."
+                    f"{author} tried to sneak a mass tag into the void."
+                    f"\n\nI have deleted it."
                 )
 
-            if response.startswith("http"):
-                return "*You grab a link from the void* \n" + response
+            # if response.startswith("http"):
+            if link.search(response):
+                return f"*You grab a link from the void:*\n{response}"
             else:
                 self.log.f(
                     "VOID",
-                    src.author.name + " retrieved " + str(num) + " from the void",
+                    f"{src.author.name} retrieved {num} from the void",
                 )
                 return response
         else:
             count = self.client.db.save_void(
-                src.content.split(" ", 1)[1], src.author.name, src.author.id
+                src.content.split(" ", 1)[1], src.author.name, str(src.author.id)
             )
 
             if count is not None:
-                return "Added item number " + str(count) + " to the void"
+                return f"Added item number {count} to the void"
 
     async def cmd_spookyclock(self, **_):
         """Be careful, Skeletons are closer than you think..."""
