@@ -1,7 +1,7 @@
 """Dedicated Module for the creation of various standardized Embeds."""
 
 from datetime import datetime as dt, timedelta as td
-from typing import Union
+from typing import Dict, List, Union
 
 from discord import Embed, Member, User
 
