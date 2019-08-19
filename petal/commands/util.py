@@ -136,10 +136,8 @@ class CommandsUtil(core.Commands):
             args = ["help"]
             # raise CommandExit("`<Default helptext goes here>`\n`#BlameIso`")
 
-        mod, cmd, denied = self.router.find_command(args[0], src)
-        if denied:
-            raise CommandAuthError(denied)
-        elif cmd.__doc__:
+        mod, cmd = self.router.find_command(args[0], src)
+        if cmd.__doc__:
             if cmd.__name__ in self.help_cache:
                 return self.help_cache[cmd.__name__]
             else:
@@ -274,10 +272,8 @@ class CommandsUtil(core.Commands):
             await self.client.embed(src.channel, em)
             return
 
-        mod, cmd, denied = self.router.find_command(args[0], src)
-        if denied:
-            raise CommandAuthError(denied)
-        elif cmd:
+        mod, cmd = self.router.find_command(args[0], src)
+        if cmd:
             if cmd.__doc__:
                 # Grab the docstring and insert the correct prefix wherever needed
                 doc0 = cmd.__doc__.format(p=self.config.prefix)
@@ -290,7 +286,7 @@ class CommandsUtil(core.Commands):
 
             em = discord.Embed(
                 title="`" + self.config.prefix + cmd.__name__[4:] + "`",
-                description=summary,
+                description=summary or "Command summary unavailable.",
                 colour=0xFFCD0A,
             )
 
@@ -306,17 +302,19 @@ class CommandsUtil(core.Commands):
 
             hints = get_type_hints(cmd)
             if hints:
-                em.add_field(
-                    name="Typed Parameters:",
-                    # value=str(hints) + str(cmd.__annotations__)
-                    value="\n".join(
-                        [
-                            "`{}`: `{}`".format(k, v)
-                            for k, v in hints.items()
-                            if k.startswith("_")
-                        ]
-                    ),
+                params: str = "\n".join(
+                    [
+                        "`{}`: `{}`".format(k, v)
+                        for k, v in hints.items()
+                        if k.startswith("_")
+                    ]
                 )
+                if params:
+                    em.add_field(
+                        name="Typed Parameters:",
+                        # value=str(hints) + str(cmd.__annotations__)
+                        value=params,
+                    )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
             return em
@@ -403,11 +401,11 @@ class CommandsUtil(core.Commands):
         cl2 = []
         for cmd in cmd_list:
             if _all or _a:
-                mod, func, denied = self.router.find_command(kword=cmd, src=None)
+                mod, func = self.router.find_command(kword=cmd, src=None)
             else:
                 # Unless --all or -a, remove any restricted commands.
                 try:
-                    mod, func, denied = self.router.find_command(kword=cmd, src=src)
+                    mod, func = self.router.find_command(kword=cmd, src=src)
                 except CommandAuthError:
                     continue
             cl2.append(f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}")

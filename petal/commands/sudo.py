@@ -17,11 +17,9 @@ class CommandSudo(core.Commands):
             return "`usage: sudo [command]`"
         kword = args.pop(0)
         msg = msg.split(maxsplit=1)[-1]
-        engine, func, denied = self.router.find_command(kword)
+        engine, func = self.router.find_command(kword)
 
-        if denied:
-            return "Authentication failure: " + denied
-        elif not func:
+        if not func:
             return "`sudo: {}: command not found`".format(kword)
         else:
             return await func(args=args, **etc, msg=msg, src=src)

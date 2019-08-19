@@ -6,10 +6,7 @@ import sys
 from typing import get_type_hints, List, Tuple
 
 from petal.etc import check_types, split, unquote
-from petal.exceptions import (
-    CommandArgsError,
-    CommandAuthError,
-)
+from petal.exceptions import CommandArgsError, CommandAuthError
 from petal.social_integration import Integrated
 from petal.types import Args, Src
 
@@ -47,7 +44,7 @@ auth_fail_dict = {
 _uquote_1 = compile(r"[‹›‘’]")
 _uquote_2 = compile(r"[«»“”„]")
 
-_unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub("\"", s))
+_unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub('"', s))
 
 
 class CommandRouter(Integrated):
@@ -77,42 +74,48 @@ class CommandRouter(Integrated):
         self.log.ready("Command modules loaded.")
 
     def find_command(self, kword, src=None, recursive=True):
-        """
-        Find and return a class method whose name matches kword.
-        """
-        denied = ""
+        """Find and return a Class Method whose name matches kword."""
+        reason = ""
+        func, submod, mod_src = [None] * 3
+
         for mod in self.engines:
             func, submod = mod.get_command(kword)
-            if not func:
-                continue
-            else:
+            if func:
                 mod_src = submod or mod
                 permitted, reason = mod_src.authenticate(src)
                 if not src or permitted:
-                    return mod_src, func, False
-                else:  # src and not permitted
-                    if reason in auth_fail_dict:
-                        denied = auth_fail_dict[reason]
-                    elif reason == "denied":
-                        denied = mod_src.auth_fail.format(
-                            op=mod_src.op,
-                            role=(
-                                self.config.get(mod_src.role)
-                                if mod_src.role
-                                else "!! ERROR !!"
-                            ),
-                            user=src.author.name,
-                        )
-                    else:
-                        denied = "`{}`.".format(reason)
-                    raise CommandAuthError(denied)
+                    # Allow if no Source Message was provided. That would
+                    #   indicate that this is not a check meant to be enforced.
+                    return mod_src, func
+        if func:
+            # The Loop above successfully found a Method for this Command, but
+            #   did NOT find that its use was permitted.
+            # (If it were found permitted, it would have returned and we would
+            #   not be here.)
+            if reason in auth_fail_dict:
+                raise CommandAuthError(auth_fail_dict[reason])
+            elif reason == "denied":
+                raise CommandAuthError(
+                    mod_src.auth_fail.format(
+                        op=mod_src.op,
+                        role=(
+                            self.config.get(mod_src.role)
+                            if mod_src.role
+                            else "!! ERROR !!"
+                        ),
+                        user=src.author.name,
+                    )
+                )
+            else:
+                raise CommandAuthError(f"`{reason}`.")
+        else:
+            # This command is not "real". Check whether it is an alias.
+            if recursive:
+                alias = dict(self.config.get("aliases")) or {}
+                if kword in alias:
+                    return self.find_command(alias[kword], src, False)
 
-        # This command is not "real". Check whether it is an alias.
-        alias = dict(self.config.get("aliases")) or {}
-        if recursive and kword in alias:
-            return self.find_command(alias[kword], src, False)
-
-        return None, None, denied
+            return None, None
 
     def get_all(self, src=None):
         full = []
@@ -186,12 +189,8 @@ class CommandRouter(Integrated):
         cword = cline.pop(0)
 
         # Find the method, if one exists.
-        engine, func, denied = self.find_command(cword, src)
-        if denied:
-            # User is not permitted to use this.
-            # TODO: This is redundant. Remove all references to `denied` outside of `find_command`.
-            raise CommandAuthError(denied)
-        elif func:
+        engine, func = self.find_command(cword, src)
+        if func:
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
@@ -205,7 +204,7 @@ class CommandRouter(Integrated):
                 raise CommandArgsError("Sorry, an option is mistyped: {}".format(e))
 
             # Execute the method, passing the arguments as a list and the options
-            #     as keyword arguments.
+            #   as keyword arguments.
             if cword != "argtest" and "|" in args:
                 await self.client.send_message(
                     channel=src.channel,

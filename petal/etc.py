@@ -94,10 +94,13 @@ def mash(*data: Any, digits: int = 4, base: int = 10) -> int:
     """
     sha = sha256()
     sha.update(bytes("".join(str(d) for d in data), "utf-8"))
-    hashval = int(sha.hexdigest(), 16)
-    ceiling = (base ** digits) - (base ** (digits - 1))  # 10^4 - 10^3 = 9000
+
+    hashval: int = int(sha.hexdigest(), 16)
+    diff: int = base ** (digits - 1)
+    ceiling: int = (base ** digits) - diff  # 10^4 - 10^3 = 9000
+
     hashval %= ceiling  # 0000 <= N <= 8999
-    hashval += base ** (digits - 1)  # 1000 <= N <= 9999
+    hashval += diff  # 1000 <= N <= 9999
     return hashval
 
 
