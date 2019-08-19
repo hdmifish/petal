@@ -17,8 +17,8 @@ from petal.exceptions import (
     CommandOperationError,
 )
 from petal.grasslands import Pidgeon, Define
-from petal.util import dice
 from petal.types import Args, Src
+from petal.util import dice
 
 
 link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
@@ -51,9 +51,7 @@ class CommandsPublic(core.Commands):
                 "Sorry, the bot maintainer has not enabled Trello bug reports."
             )
         try:
-            url = "https://api.trello.com/1/lists/{}/cards".format(
-                self.config.get("trello/list_id")
-            )
+            url = f"https://api.trello.com/1/lists/{self.config.get('trello/list_id')}/cards"
             params = {
                 "key": self.config.get("trello/app_key"),
                 "token": self.config.get("trello/token"),
@@ -94,7 +92,7 @@ class CommandsPublic(core.Commands):
                         message=" ".join(args),
                         author=src.author,
                         channel=src.channel,
-                        guild=src.server,
+                        guild=src.guild,
                         time=dt.utcnow(),
                     )
                 ),
@@ -113,7 +111,7 @@ class CommandsPublic(core.Commands):
                 "Could not create bug report. Talk to your bot owner."
             )
 
-        return "Created bug report with ID `{}`".format(ticketnumber)
+        return f"Created bug report with ID `{ticketnumber}`"
 
     async def cmd_osu(
         self, args: Args, src: Src, _set: str = None, _s: str = None, **_
