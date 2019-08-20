@@ -541,7 +541,7 @@ class Petal(PetalClientABC):
 
     async def on_member_join(self, member):
         """To be called When a new member joins the server"""
-        card = membership_card(member, colour=0x_00_FF_00)
+        card = await membership_card(member, colour=0x_00_FF_00)
 
         if self.db.member_exists(member):
             # This User has been here before.
@@ -579,7 +579,7 @@ class Petal(PetalClientABC):
 
     async def on_member_remove(self, member):
         """To be called when a member leaves"""
-        card = membership_card(member, colour=0x_FF_00_00)
+        card = await membership_card(member, colour=0x_FF_00_00)
         card.set_author(
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )

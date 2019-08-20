@@ -3,10 +3,11 @@
 from datetime import datetime as dt, timedelta as td
 from typing import Dict, List, Union
 
-from discord import Embed, Member, User
+from discord import Embed, Guild, Member, Message, User
 
 from .cdn import get_avatar
 from .format import bold, escape, italic, mono, underline, userline
+from .messages import member_message_history
 
 
 Muser = Union[Member, User]
@@ -21,10 +22,12 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     since_created: td = now - created_at
     since_joined: td = now - joined_at
 
+    guild: Guild = member.guild
+
     em = (
         Embed(
             title=member.display_name,
-            description=f"Member of {bold(member.guild.name)}\n{member.mention}",
+            description=f"Member of {bold(guild.name)}\n{member.mention}",
             colour=member.colour if colour is None else colour,
             timestamp=now,
         )
@@ -35,6 +38,23 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
         name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
     )
     em.add_field(name="Joined Server", value=f"{joined_at}\n({bold(since_joined)} ago)")
+
+    # TODO: There is a faster way to get the last message; Find it.
+    last: Message = await member_message_history(
+        member, limit=1, oldest_first=False
+    ).__anext__()
+
+    if last:
+        em.add_field(
+            name="Last Message",
+            value=f"{now - last.created_at} ago in"
+            f" `#{last.channel.name}` ({last.channel.mention}):"
+            f"\n{escape(repr(last.content))}",
+        )
+    else:
+        em.add_field(
+            name="Last Message", value=f"Member has no Message History in {guild.name}."
+        )
 
     return em
 
@@ -88,7 +108,7 @@ def minecraft_card(
         f"\nMinecraft UUID: {repr(profile.get('uuid'))}"
         f"\nDiscord Identity: {mono(escape(userline(member)))}"
         f"\nDiscord Tag: {member.mention}",  # TODO: Handle missing Member
-        colour=col
+        colour=col,
     ).add_field(name="Application Status", value=status)
 
     # TODO: Add fields for Date, Operator Status, Name History, and Notes
