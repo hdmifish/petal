@@ -345,10 +345,14 @@ class Petal(PetalClientABC):
 
             if isinstance(response, AsyncGenerator):
                 async for y in response:
+                    while isinstance(y, Coroutine):
+                        y = await y
                     await push(y)
 
             elif isinstance(response, (Generator, list, tuple)):
                 for y in response:
+                    while isinstance(y, Coroutine):
+                        y = await y
                     await push(y)
 
             # print("Iterator Exhausted; Flushing Buffer.")
