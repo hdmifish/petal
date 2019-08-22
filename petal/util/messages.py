@@ -1,8 +1,10 @@
 """Module dedicated to utilities concerning Discord Messages."""
 
-from typing import Dict, List, AsyncIterator
+from typing import AsyncGenerator, Dict, List
 
 import discord
+
+from ..checks import Messages
 
 
 async def member_message_history(
@@ -13,12 +15,12 @@ async def member_message_history(
     after=None,
     around=None,
     oldest_first=None,
-) -> AsyncIterator[discord.Message]:
+) -> AsyncGenerator[discord.Message]:
     limited: bool = limit > 0
     key = lambda o: o.created_at
 
     guild: discord.Guild = member.guild
-    chans = guild.text_channels
+    chans: List[discord.TextChannel] = guild.text_channels
 
     # Associate Channels with the Iterators of their Histories.
     iters: Dict[discord.TextChannel, discord.abc.HistoryIterator] = {
@@ -53,8 +55,21 @@ async def member_message_history(
             del lasts[iterator]
             del iters[channel]
 
-    while not limited or limit > 0:
+    while lasts and (not limited or limit > 0):
         recents = sorted(lasts.values(), key=key, reverse=True)
         msg: discord.Message = recents[0]
         yield msg
         await used(msg)
+
+
+async def read_messages(
+    client, channel: discord.TextChannel, limit: int = 0
+) -> AsyncGenerator[discord.Message]:
+    """Return an Asynchronous Generator yielding Discord Messages from a Channel
+        as they are received.
+    """
+    check = Messages.in_channel(channel)
+    limited = limit > 0
+    while not limited or limit > 0:
+        yield await client.wait_for("message", check=check)
+        limit -= 1
