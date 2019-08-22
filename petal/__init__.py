@@ -307,6 +307,12 @@ class Petal(PetalClientABC):
             # Ignore Void Responses.
             return
 
+        elif isinstance(response, BaseException):
+            await src.channel.send(
+                f"Command Yielded an Exception: {type(response).__name__}"
+                + (f": {response}" if str(response) else "")
+            )
+
         elif isinstance(
             response, (AsyncGenerator, AsyncIterator, Generator, Iterator, list, tuple)
         ):
@@ -337,7 +343,7 @@ class Petal(PetalClientABC):
                     # print("    Discarding Buffer:", repr(buffer))
                     buffer.clear()
 
-                elif isinstance(line, (dict, discord.Embed)):
+                elif isinstance(line, (dict, discord.Embed, BaseException)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
                     await self.print_response(src, line)
