@@ -3,11 +3,10 @@
 from datetime import datetime as dt, timedelta as td
 from typing import Dict, List, Union
 
-from discord import Embed, Guild, Member, Message, User
+from discord import Embed, Guild, Member, User
 
 from .cdn import get_avatar
 from .format import bold, escape, italic, mono, underline, userline
-from .messages import member_message_history
 
 
 Muser = Union[Member, User]
@@ -38,23 +37,6 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
         name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
     )
     em.add_field(name="Joined Server", value=f"{joined_at}\n({bold(since_joined)} ago)")
-
-    # TODO: There is a faster way to get the last message; Find it.
-    last: Message = await member_message_history(
-        member, limit=1, oldest_first=False
-    ).__anext__()
-
-    if last:
-        em.add_field(
-            name="Last Message",
-            value=f"{dt.utcnow() - last.created_at} ago in"
-            f" `#{last.channel.name}` ({last.channel.mention}):"
-            f"\n{escape(repr(last.content))}",
-        )
-    else:
-        em.add_field(
-            name="Last Message", value=f"Member has no Message History in {guild.name}."
-        )
 
     return em
 
