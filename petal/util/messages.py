@@ -1,6 +1,7 @@
 """Module dedicated to utilities concerning Discord Messages."""
 
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, NamedTuple, TypeVar
+from dataclasses import dataclass
+from typing import Any, AsyncIterator, Callable, Iterator, List, TypeVar
 
 import discord
 
@@ -10,7 +11,8 @@ from ..checks import Messages
 T = TypeVar("T")
 
 
-class Pair(NamedTuple):
+@dataclass
+class Pair:
     iterator: AsyncIterator
     last: T
 
@@ -31,40 +33,36 @@ async def aitermux(
     limited: bool = limit > 0
 
     # Associate Iterators with their most recent Yields.
-    lasts: Dict[AsyncIterator, Pair] = {}
+    lasts: List[Pair] = []
 
     for ITER in iters:
         try:
-            p: Pair = Pair(ITER, await ITER.__anext__())
+            p = await ITER.__anext__()
         except StopAsyncIteration:
             pass
         else:
-            lasts[ITER] = p
+            lasts.append(Pair(ITER, p))
 
-    async def increment(iterator: AsyncIterator) -> None:
+    async def increment(pair: Pair) -> None:
         try:
-            lasts[iterator] = Pair(iterator, await iterator.__anext__())
+            pair.last = await pair.iterator.__anext__()
         except StopAsyncIteration:
             if shortest:
                 # We have been told to stop once the shortest is exhausted.
                 raise
             else:
                 # Everything must go.
-                del lasts[iterator]
+                lasts.remove(pair)
 
-    def key_true(o: Pair) -> Any:
-        return key(o.last)
+    def key_true(pair: Pair) -> Any:
+        return key(pair.last)
 
     while lasts and (not limited or limit > 0):
-        item: Pair = (
-            max(lasts.values(), key=key_true)
-            if reverse
-            else min(lasts.values(), key=key_true)
-        )
-        yield item.last
+        lasts.sort(key=key_true, reverse=reverse)
+        yield lasts[0].last
 
         try:
-            await increment(item.iterator)
+            await increment(lasts[0])
         except StopAsyncIteration:
             break
         else:
