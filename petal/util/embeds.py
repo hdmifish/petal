@@ -47,7 +47,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     if last:
         em.add_field(
             name="Last Message",
-            value=f"{now - last.created_at} ago in"
+            value=f"{dt.utcnow() - last.created_at} ago in"
             f" `#{last.channel.name}` ({last.channel.mention}):"
             f"\n{escape(repr(last.content))}",
         )
