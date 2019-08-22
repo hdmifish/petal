@@ -36,7 +36,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     em.add_field(
         name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
     )
-    em.add_field(name="Joined Server", value=f"{joined_at}\n({bold(since_joined)} ago)")
+    em.add_field(name="Joined Guild", value=f"{joined_at}\n({bold(since_joined)} ago)")
 
     return em
 
