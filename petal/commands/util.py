@@ -650,18 +650,21 @@ class CommandsUtil(core.Commands):
             Define this Option to be displayed.
         """
         print(args, opts, src)
-        for x in ["ARGS:", *args, "OPTS:"]:
-            yield x
-        for opt, val in (
-            ("`--boolean`, `-b`", _boolean or _b),
-            ("`--string`, `-s`", _string or _s),
-            ("`--dashed-long-opt`", _dashed_long_opt),
-            ("`--digit`, `-d`", _digit or _d),
-            ("`--number`, `-n`", _number or _n),
-        ):
-            if val is not None:
-                yield "{} = `{}` ({})".format(opt, repr(val), type(val).__name__)
-        yield "MSG: " + msg
+        yield "ARGS:", args, "OPTS:"
+
+        yield (
+            f"{opt} = `{repr(val)}` ({type(val).__name__})"
+            for opt, val in (
+                ("`--boolean`, `-b`", _boolean or _b),
+                ("`--string`, `-s`", _string or _s),
+                ("`--dashed-long-opt`", _dashed_long_opt),
+                ("`--digit`, `-d`", _digit or _d),
+                ("`--number`, `-n`", _number or _n),
+            )
+            if val is not None
+        )
+
+        yield f"MSG: {msg}"
 
     async def cmd_history(self, src, _n: int = 10, **_):
         """Print your Message History.

@@ -10,7 +10,15 @@ import random
 import re
 import time
 from traceback import format_exc
-from typing import AsyncGenerator, Coroutine, Generator, List, Optional
+from typing import (
+    AsyncGenerator,
+    AsyncIterator,
+    Coroutine,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+)
 
 import discord
 
@@ -299,7 +307,9 @@ class Petal(PetalClientABC):
             # Ignore Void Responses.
             return
 
-        elif isinstance(response, (AsyncGenerator, Generator, list, tuple)):
+        elif isinstance(
+            response, (AsyncGenerator, AsyncIterator, Generator, Iterator, list, tuple)
+        ):
             # Response is a Generator, indicating the method used Yielding, or a
             #   List or Tuple, which should be treated the same. Yield command
             #   returns support flushing and clearing the List of Buffered
@@ -332,10 +342,12 @@ class Petal(PetalClientABC):
                     #   immediately.
                     await self.print_response(src, line)
 
-                elif isinstance(line, (list, tuple)):
-                    # Upon reception of a List or Tuple, treat it the same as
+                elif isinstance(line, (Generator, Iterator, list, tuple)):
+                    # Upon reception of any Sequence, treat it the same as
                     #   reception of its elements in sequence.
                     for elem in line:
+                        while isinstance(elem, Coroutine):
+                            elem = await elem
                         await push(elem)
 
                 else:
@@ -343,13 +355,13 @@ class Petal(PetalClientABC):
                     # print("    Appending to Buffer.")
                     buffer.append(line)
 
-            if isinstance(response, AsyncGenerator):
+            if isinstance(response, (AsyncGenerator, AsyncIterator)):
                 async for y in response:
                     while isinstance(y, Coroutine):
                         y = await y
                     await push(y)
 
-            elif isinstance(response, (Generator, list, tuple)):
+            else:
                 for y in response:
                     while isinstance(y, Coroutine):
                         y = await y
