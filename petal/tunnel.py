@@ -1,9 +1,10 @@
-"""Chat Tunneling module for Petal
+"""Chat Tunneling module for Petal.
 
 Manage bridges between Messageables, such as two DMs, or a DM and a Channel.
 """
 
-from asyncio import ensure_future as create_task, CancelledError, TimeoutError
+from asyncio import ensure_future as create_task, CancelledError, Task, TimeoutError
+from typing import List, Optional, Set
 
 import discord
 
@@ -11,30 +12,50 @@ from petal.exceptions import TunnelSetupError
 from petal.types import TunnelABC
 
 
-class Tunnel(TunnelABC):
-    def __init__(self, client, origin, *gates, anonymous=False, timeout=600):
-        self.anon = anonymous
-        self.client = client
-        self.gates = {origin.id, *gates}
-        self.timeout = timeout
+def mkembed(src: discord.Message):
+    """Build a Discord Embed representing the passed Message."""
+    em = discord.Embed(
+        colour=src.author.colour,
+        description=src.content,
+        timestamp=src.created_at,
+        title=f"Message from `#{src.channel.name}`"
+        if hasattr(src.channel, "name")
+        else "Message via DM",
+    ).set_author(name=src.author.display_name, icon_url=src.author.avatar_url)
+    return {"embed": em}
 
-        self.active = False
-        self.connected = []
+
+class Tunnel(TunnelABC):
+    def __init__(
+        self,
+        client,
+        origin: discord.TextChannel,
+        *gates: int,
+        anonymous: bool = False,
+        timeout: int = 600
+    ):
+        self.anon: bool = anonymous
+        self.client = client
+        self.gates: Set[int] = {origin.id, *gates}
+        self.timeout: int = timeout
+
+        self.active: bool = False
+        self.connected: List[discord.TextChannel] = []
         # self.names_c = {}  # Channel aliases
         # self.names_u = {}  # User aliases
 
-        self.origin = origin
-        self.waiting = None
+        self.origin: discord.TextChannel = origin
+        self.waiting: Optional[Task] = None
 
     async def activate(self):
         """Resolve all Channel IDs into usable Channel Objects, and store them
             in memory in a List.
         """
-        for c_id in [i for i in self.gates if type(i) == int]:
-            channel = self.client.get_channel(c_id)
-            user = self.client.get_user(c_id)
+        for c_id in self.gates:
+            channel: discord.TextChannel = self.client.get_channel(c_id)
+            user: discord.User = self.client.get_user(c_id)
             if user and not channel:
-                channel = user.dm_channel or await user.create_dm()
+                channel: discord.DMChannel = user.dm_channel or await user.create_dm()
 
             if channel:
                 if not self.client.get_tunnel(channel):
@@ -42,54 +63,38 @@ class Tunnel(TunnelABC):
                         await channel.send("Connecting to Messaging Tunnel...")
                     except discord.Forbidden as e:
                         await self.origin.send(
-                            "Failed to connect to `{}`: {}".format(channel.id, e)
+                            f"Failed to connect to `{channel.id}`: {e}"
                         )
                     else:
                         self.connected.append(channel)
                 else:
                     await self.origin.send(
-                        "Failed to connect to `{}`: "
-                        "Channel is already Tunneling.".format(channel.id)
+                        f"Failed to connect to `{channel.id}`: Channel is"
+                        f" already Tunneling."
                     )
             else:
                 await self.origin.send(
-                    "Failed to connect to `{}`: "
-                    "Channel or User not found.".format(c_id)
+                    f"Failed to connect to `{c_id}`: Channel or User not found."
                 )
         if len(self.connected) < 2:
             await self.broadcast("Failed to establish Tunnel.")
-            self.connected = []
+            self.connected.clear()
             raise TunnelSetupError()
         else:
             self.active = True
             tunnel_coro = create_task(self.run_tunnel())
             await self.broadcast(
-                "Messaging Tunnel between {} channels established. "
-                "Invoke `{}tunnel (--disconnect | -d)` to disconnect "
-                "from the Tunnel.".format(
-                    len(self.connected), self.client.config.prefix
-                )
+                f"Messaging Tunnel established. This Channel is now connected"
+                f" directly to {len(self.connected)} other Channels."
             )
             return tunnel_coro
-
-    def convert(self, src: discord.Message):
-        """Build a Discord Embed representing the passed Message."""
-        em = discord.Embed(
-            colour=src.author.colour,
-            description=src.content,
-            timestamp=src.created_at,
-            title="Message from `#{}`".format(src.channel.name)
-            if hasattr(src.channel, "name")
-            else "Message via DM",
-        ).set_author(name=src.author.display_name, icon_url=src.author.avatar_url)
-        return {"embed": em}
 
     async def broadcast(
         self,
         content: str = None,
         embed: discord.Embed = None,
         file=None,
-        exclude: list = None,
+        exclude: List[int] = None,
     ):
         """Post a Message with the supplied values to all connected Channels."""
         exclude = exclude or []
@@ -132,7 +137,7 @@ class Tunnel(TunnelABC):
 
     async def receive(self, msg: discord.Message):
         """Forward a received Message to all connected Channels."""
-        await self.broadcast(exclude=[msg.channel.id], **self.convert(msg))
+        await self.broadcast(exclude=[msg.channel.id], **mkembed(msg))
 
     async def run_tunnel(self):
         """Begin Tunnel operation loop."""
