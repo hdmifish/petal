@@ -19,6 +19,7 @@ from petal.exceptions import (
     CommandOperationError,
 )
 from petal.util import cdn, format
+from petal.util.messages import member_message_history
 
 
 # Reference: strftime.org
@@ -661,6 +662,28 @@ class CommandsUtil(core.Commands):
             if val is not None:
                 yield "{} = `{}` ({})".format(opt, repr(val), type(val).__name__)
         yield "MSG: " + msg
+
+    async def cmd_history(self, src, _n: int = 10, **_):
+        """Print your Message History.
+
+        Useful for Debugging and not much else. Can tell you whether Petal is
+            able to see a certain Message.
+        """
+        history = member_message_history(src.author, limit=_n)
+        now = dt.utcnow()
+        s = 0
+
+        async for m in history:
+            if s > 30:
+                break
+            else:
+                s += 1
+                yield (
+                    f"{m.channel.mention}, `{str(now - m.created_at)[:-7]}` ago:"
+                    f"{format.mono_block(format.escape(m.content))}"
+                )
+
+        yield f"Showing last __{s}__ Messages."
 
 
 # Keep the actual classname unique from this common identifier
