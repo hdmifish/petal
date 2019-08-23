@@ -1,7 +1,7 @@
 """Module dedicated to utilities concerning Discord Messages."""
 
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Callable, Iterator, List, TypeVar
+from typing import Any, AsyncIterator, Callable, Generator, List, TypeVar
 
 import discord
 
@@ -32,39 +32,38 @@ async def aitermux(
     """
     limited: bool = limit > 0
 
-    # Associate Iterators with their most recent Yields.
-    lasts: List[Pair] = []
-
-    for ITER in iters:
-        try:
-            p = await ITER.__anext__()
-        except StopAsyncIteration:
-            pass
-        else:
-            lasts.append(Pair(ITER, p))
-
-    async def increment(pair: Pair) -> None:
-        try:
-            pair.last = await pair.iterator.__anext__()
-        except StopAsyncIteration:
-            if shortest:
-                # We have been told to stop once the shortest is exhausted.
-                raise
-            else:
-                # Everything must go.
-                lasts.remove(pair)
-
+    # To make the Multiplexer transparent, we must wrap the Key Function so that
+    #   it will operate on a Pair containing a value, not the value itself.
     def key_true(pair: Pair) -> Any:
         return key(pair.last)
 
+    # Associate Iterators with their most recent Yields.
+    lasts: List[Pair] = []
+    for ITER in iters:
+        try:
+            # Get the first Value from each Iterator.
+            p = await ITER.__anext__()
+        except StopAsyncIteration:
+            continue
+        else:
+            # Store it in a Dataclass next to the Iterator from whence it came.
+            lasts.append(Pair(ITER, p))
+
+    # Evaluate Reversal outside the Loop.
+    cmp: Callable[..., T] = max if reverse else min
     while lasts and (not limited or limit > 0):
-        lasts.sort(key=key_true, reverse=reverse)
-        yield lasts[0].last
+        next_: Pair = cmp(lasts, key=key_true)
+        yield next_.last
 
         try:
-            await increment(lasts[0])
+            next_.last = await next_.iterator.__anext__()
         except StopAsyncIteration:
-            break
+            if shortest:
+                # We have been told to stop once the shortest is exhausted.
+                break
+            else:
+                # Everything must go.
+                lasts.remove(next_)
         else:
             limit -= 1
 
@@ -78,7 +77,7 @@ def member_message_history(
     around=None,
     oldest_first: bool = None,
 ) -> AsyncIterator[discord.Message]:
-    iters: Iterator[Iterator[discord.Message]] = (
+    iters: Generator[Generator[discord.Message]] = (
         (
             msg
             async for msg in channel.history(
