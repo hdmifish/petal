@@ -6,7 +6,7 @@ from typing import Dict, List, Union
 from discord import Embed, Guild, Member, User
 
 from .cdn import get_avatar
-from .format import bold, escape, italic, mono, underline, userline
+from .format import bold, escape, italic, mono, smallid, underline, userline
 
 
 Muser = Union[Member, User]
@@ -26,7 +26,9 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     em = (
         Embed(
             title=member.display_name,
-            description=f"Member of {bold(guild.name)}\n{member.mention}",
+            description=f"Member of {bold(guild.name)}"
+            f"\n{member.mention}"
+            f"\n`[{smallid(member.id)}]`",
             colour=member.colour if colour is None else colour,
             timestamp=now,
         )

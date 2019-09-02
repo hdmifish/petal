@@ -22,6 +22,11 @@ def mono_block(text: str, syntax: str = None) -> str:
     return f"```{syntax or ''}\n{text}```"
 
 
+def smallid(n: int, seglen: int = 3) -> str:
+    ns = str(n)
+    return f"{ns[:seglen]}..{ns[-seglen:]}"
+
+
 def userline(user: Union[discord.Member, discord.User]) -> str:
     return f"{user.name}#{user.discriminator} / {user.id}"
 
