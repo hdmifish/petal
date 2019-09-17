@@ -750,12 +750,17 @@ class CommandsPublic(core.Commands):
                 )
                 return response
         else:
-            count = self.client.db.save_void(
-                src.content.split(" ", 1)[1], src.author.name, str(src.author.id)
-            )
+            msg: str = src.content.split(" ", 1)[1]
 
-            if count is not None:
-                return f"Added item number {count} to the void"
+            if "@everyone" in msg or "@here" in msg:
+                raise CommandAuthError("Mass tags are not permitted into the Void.")
+            else:
+                count = self.client.db.save_void(
+                    msg, src.author.name, str(src.author.id)
+                )
+
+                if count is not None:
+                    return f"Added item number {count} to the void"
 
     async def cmd_spookyclock(self, **_):
         """Be careful, Skeletons are closer than you think..."""
