@@ -2,11 +2,13 @@
 Access: Role-based"""
 
 import asyncio
+from typing import List
 
 import discord
 
 from petal.checks import all_checks, Messages
 from petal.commands import core, shared
+from petal.exceptions import CommandOperationError
 from petal.menu import Menu
 
 
@@ -74,7 +76,7 @@ class CommandsEvent(core.Commands):
                 if chans is None:
                     return (
                         "Sorry, the request timed out. Please make sure you"
-                        + " type a valid sequence of numbers."
+                        " type a valid sequence of numbers."
                     )
                 if self.validate_channel(channels_list, chans.content):
                     break
@@ -98,7 +100,7 @@ class CommandsEvent(core.Commands):
                 user=src.author,
             )
             if _image:
-                menu.em.set_thumbnail(_image)
+                menu.em.set_thumbnail(url=_image)
             selection = await menu.get_multi(
                 list(channels_dict), title="Target Channels"
             )
@@ -118,20 +120,27 @@ class CommandsEvent(core.Commands):
             )
             await menu.post()
 
-        msgstr = (
-            _message
-            or (
-                await Messages.waitfor(
-                    self.client,
-                    all_checks(
-                        Messages.by_user(src.author), Messages.in_channel(src.channel)
-                    ),
-                    timeout=120,
-                    channel=src.channel,
-                    prompt="What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
-                )
-            ).content
-        ).format(e="@everyone", h="@here")
+        try:
+            msgstr = (
+                _message
+                or (
+                    await Messages.waitfor(
+                        self.client,
+                        all_checks(
+                            Messages.by_user(src.author),
+                            Messages.in_channel(src.channel),
+                        ),
+                        timeout=120,
+                        channel=src.channel,
+                        prompt="What do you want to send?"
+                        " (remember: {e} = `@ev` and {h} = `@here`)",
+                    )
+                ).content
+            ).format(e="@everyone", h="@here")
+
+        except AttributeError:
+            # Likely tried to get `None.content`.
+            raise CommandOperationError("Text Input timed out.")
 
         if _nomenu:
             embed = discord.Embed(
@@ -171,7 +180,7 @@ class CommandsEvent(core.Commands):
                 menu.add_section("Posting cancelled.", "Confirmation", overwrite=-1)
                 return
 
-        posted = []
+        posted: List[discord.Message] = []
         # TODO
         # em = discord.Embed()
         # if _image:
@@ -195,23 +204,22 @@ class CommandsEvent(core.Commands):
             pass
         else:
             if subkey is None:
-                await self.client.send_message(
-                    src.author,
-                    src.channel,
-                    "I was unable to auto-detect any game titles in your post. "
-                    + "No subscribers will be notified for this event.",
+                return (
+                    "I was unable to auto-detect any game titles in your post."
+                    " No subscribers will be notified for this event."
                 )
             else:
-                tempm = await self.client.send_message(
-                    src.author,
-                    src.channel,
-                    "I auto-detected a possible game in your announcement: **"
-                    + subname
-                    + "**. Would you like to notify subscribers? [y/N]",
+                n = await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    timeout=20,
+                    channel=src.channel,
+                    prompt=f"I auto-detected a possible game in your announcement:"
+                    f" **{subname}**. Would you like to notify subscribers? [y/N]",
                 )
-                n = await self.client.wait_for_message(
-                    channel=tempm.channel, author=src.author, timeout=20
-                )
+
                 if not n:
                     return "Timed out."
                 elif n.content.lower() not in ("y", "yes"):
@@ -229,7 +237,7 @@ class CommandsEvent(core.Commands):
                             # print("replacing")
                             content = content.replace(todelete, "")
                             # print("replaced: " + content)
-                            await self.client.edit_message(post, content)
+                            await post.edit(content=content)
 
                     return response
 
