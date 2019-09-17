@@ -1,7 +1,7 @@
 """Small utility module for wrapping text in Discord Markdown Formatting."""
 
 from re import compile
-from typing import Union
+from typing import Any, Callable, Union
 
 import discord
 
@@ -22,17 +22,20 @@ def mono_block(text: str, syntax: str = None) -> str:
     return f"```{syntax or ''}\n{text}```"
 
 
-def smallid(n: int, seglen: int = 3) -> str:
+def smallid(n: Any, seglen: int = 3, sep: str = ":") -> str:
     ns = str(n)
-    return f"{ns[:seglen]}..{ns[-seglen:]}"
+    return f"{ns[:seglen]}{sep}{ns[-seglen:]}"
 
 
-def userline(user: Union[discord.Member, discord.User]) -> str:
-    return f"{user.name}#{user.discriminator} / {user.id}"
+def userline(user: Union[discord.Member, discord.User], idf: Callable = None) -> str:
+    return (
+        f"{user.name}#{user.discriminator} /"
+        f" {idf(user.id) if callable(idf) else user.id}"
+    )
 
 
 _spec = compile(r"(?=[\\*>~_|`])")
 
 
 def escape(text: str) -> str:
-    return _spec.sub(r"\\", text)
+    return _spec.sub(r"\\", str(text))
