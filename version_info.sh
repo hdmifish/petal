@@ -3,7 +3,7 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION="1.0.0-b8"
+VERSION="1.0.0-rc0"
 
 #(optional) what the webhook message should say.
 UPDATE_TITLE="The Great Migration"
