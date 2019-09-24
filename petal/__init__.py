@@ -445,7 +445,7 @@ class Petal(PetalClientABC):
                     )
                     .add_field(
                         name=type(e).__name__,
-                        value=str(e) or "<No Details>",
+                        value=escape(str(e) or "<No Details>"),
                         inline=False,
                     )
                     .add_field(
