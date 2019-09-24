@@ -409,7 +409,11 @@ class CommandsUtil(core.Commands):
                     mod, func = self.router.find_command(kword=cmd, src=src)
                 except CommandAuthError:
                     continue
-            cl2.append(f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}")
+
+            if mod:
+                cl2.append(
+                    f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}"
+                )
 
         if not cl2:
             raise CommandOperationError(
