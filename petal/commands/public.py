@@ -10,10 +10,18 @@ import requests
 import discord
 
 from petal.commands import core
-from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandInputError,
+    CommandOperationError,
+)
 from petal.grasslands import Pidgeon, Define
-from petal.util import dice
 from petal.types import Args, Src
+from petal.util import dice
+
+
+link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
 
 
 class CommandsPublic(core.Commands):
@@ -43,9 +51,7 @@ class CommandsPublic(core.Commands):
                 "Sorry, the bot maintainer has not enabled Trello bug reports."
             )
         try:
-            url = "https://api.trello.com/1/lists/{}/cards".format(
-                self.config.get("trello/list_id")
-            )
+            url = f"https://api.trello.com/1/lists/{self.config.get('trello/list_id')}/cards"
             params = {
                 "key": self.config.get("trello/app_key"),
                 "token": self.config.get("trello/token"),
@@ -86,7 +92,7 @@ class CommandsPublic(core.Commands):
                         message=" ".join(args),
                         author=src.author,
                         channel=src.channel,
-                        guild=src.server,
+                        guild=src.guild,
                         time=dt.utcnow(),
                     )
                 ),
@@ -105,7 +111,7 @@ class CommandsPublic(core.Commands):
                 "Could not create bug report. Talk to your bot owner."
             )
 
-        return "Created bug report with ID `{}`".format(ticketnumber)
+        return f"Created bug report with ID `{ticketnumber}`"
 
     async def cmd_osu(
         self, args: Args, src: Src, _set: str = None, _s: str = None, **_
@@ -333,42 +339,40 @@ class CommandsPublic(core.Commands):
         `{p}askpatch submit "<question>"` - Submit a question to Patch Asks. Should be quoted.
         """
         if not args:
-            return "Subcommand required."
+            raise CommandArgsError("Subcommand required.")
 
         subcom = args.pop(0)
 
         if subcom == "submit":
-            # msg = msg.split(maxsplit=2)
-            # if len(msg) < 3:
-            #     return "Question cannot be empty."
-            # msg = msg[2]
             if not args:
-                return "Question cannot be empty."
+                raise CommandInputError("Question cannot be empty.")
             elif len(args) > 1:
-                return "Question should be put in quotes."
+                raise CommandInputError("Question should be put in quotes.")
             else:
                 msg = args[0]
 
             response = self.db.submit_motd(src.author.id, msg)
             if response is None:
-                return "Unable to add to database, ask your bot owner as to why."
+                raise CommandOperationError(
+                    "Unable to add to database, ask your bot owner as to why."
+                )
 
-            newEmbed = discord.Embed(
+            em = discord.Embed(
                 title="Entry " + str(response["num"]),
                 description="New question from " + src.author.name,
                 colour=0x8738F,
             )
-            newEmbed.add_field(name="content", value=response["content"])
+            em.add_field(name="content", value=response["content"])
 
             chan = self.client.get_channel(self.config.get("motdModChannel"))
-            await self.client.embed(chan, embedded=newEmbed)
+            await self.client.embed(chan, embedded=em)
 
             return "Question added to database."
 
         elif subcom in ("approve", "reject", "count"):
-            return "Restricted subcommand."
+            raise CommandAuthError("Restricted subcommand.")
         else:
-            return "Unrecognized subcommand."
+            raise CommandInputError("Unrecognized subcommand.")
 
     async def cmd_wiki(self, args: Args, src: Src, **_):
         """Retrieve information about a query from Wikipedia.
@@ -732,26 +736,31 @@ class CommandsPublic(core.Commands):
             if "@everyone" in response or "@here" in response:
                 self.client.db.delete_void()
                 return (
-                    "Someone (" + author + ") is a butt and tried to "
-                    "sneak an @ev tag into the void."
-                    "\n\nIt was deleted..."
+                    f"{author} tried to sneak a mass tag into the void."
+                    f"\n\nI have deleted it."
                 )
 
-            if response.startswith("http"):
-                return "*You grab a link from the void* \n" + response
+            # if response.startswith("http"):
+            if link.search(response):
+                return f"*You grab a link from the void:*\n{response}"
             else:
                 self.log.f(
                     "VOID",
-                    src.author.name + " retrieved " + str(num) + " from the void",
+                    f"{src.author.name} retrieved {num} from the void",
                 )
                 return response
         else:
-            count = self.client.db.save_void(
-                src.content.split(" ", 1)[1], src.author.name, src.author.id
-            )
+            msg: str = src.content.split(" ", 1)[1]
 
-            if count is not None:
-                return "Added item number " + str(count) + " to the void"
+            if "@everyone" in msg or "@here" in msg:
+                raise CommandAuthError("Mass tags are not permitted into the Void.")
+            else:
+                count = self.client.db.save_void(
+                    msg, src.author.name, str(src.author.id)
+                )
+
+                if count is not None:
+                    return f"Added item number {count} to the void"
 
     async def cmd_spookyclock(self, **_):
         """Be careful, Skeletons are closer than you think..."""

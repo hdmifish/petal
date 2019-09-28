@@ -1,4 +1,8 @@
+from typing import Union
+
 from ruamel import yaml
+
+from .exceptions import ConfigError
 from .grasslands import Peacock
 
 log = Peacock()
@@ -79,17 +83,50 @@ class Config(object):
     # def flip(self):
     #    self.lockLog = not self.lockLog
 
-    def get(self, field, default=None):
+    def get(self, field, default=None, err: Union[BaseException, bool] = None):
+        """Retrieve a Configuration Value.
+
+        Splits the given "field" apart into a kind of Path by slashes ("/"), and
+            walks the Config file, following the Path. If the Path cannot be
+            complete, the Default is returned instead.
+
+        If the "err" Parameter is passed, an Exception will be raised instead of
+            returning the Default.
+        """
         here = self.doc
 
         for step in field.split("/"):
             if step in here:
                 here = here[step]
             else:
-                log.err("'{}' is not found in config.".format(field))
-                return default
+                log.err(f"'{field}' is not found in config.")
+
+                if err is True:
+                    raise ConfigError(field)
+                elif err and isinstance(err, BaseException):
+                    raise err
+                else:
+                    return default
 
         return here
+
+    def __getitem__(self, key: Union[slice, str, tuple]):
+        """Retrieve a Configuration Value by way of Object Indexing.
+
+        Allows a more succinct, if somewhat more opaque, way of writing Config
+            queries.
+        """
+        if isinstance(key, slice):
+            # config["field" : "default" : "err"]
+            return self.get(str(key.start), key.stop, key.step)
+
+        elif isinstance(key, tuple):
+            # config["field", "default", "err"]
+            return self.get(*key[:3])
+
+        else:
+            # config["field"]
+            return self.get(key)
 
     def save(self, vb=False):
         if vb:

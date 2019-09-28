@@ -4,6 +4,8 @@ Access: Role-based"""
 import discord
 
 from petal.commands import core
+from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
+from petal.util.format import userline
 
 
 class CommandsMgr(core.Commands):
@@ -20,88 +22,88 @@ class CommandsMgr(core.Commands):
         `{p}askpatch count` - Return the number of questions currently queued for use.
         """
         if not args:
-            return "Subcommand required."
+            raise CommandArgsError("Subcommand required.")
 
         subcom = args.pop(0)
 
         if subcom == "submit":
-            # msg = msg.split(maxsplit=2)
-            # if len(msg) < 3:
-            #     return "Question cannot be empty."
-            # msg = msg[2]
             if not args:
-                return "Question cannot be empty."
+                raise CommandInputError("Question cannot be empty.")
             elif len(args) > 1:
-                return "Question should be put in quotes."
+                raise CommandInputError("Question should be put in quotes.")
             else:
                 msg = args[0]
 
             response = self.db.submit_motd(src.author.id, msg)
             if response is None:
-                return "Unable to add to database, ask your bot owner as to why."
+                raise CommandOperationError(
+                    "Unable to add to database, ask your bot owner as to why."
+                )
 
-            newEmbed = discord.Embed(
-                title="Entry " + str(response["num"]),
-                description="New question from " + src.author.name,
+            em = discord.Embed(
+                title=f"Entry {response['num']}",
+                description=f"New question from `{userline(src.author)}`",
                 colour=0x8738F,
             )
-            newEmbed.add_field(name="content", value=response["content"])
+            em.add_field(name="content", value=response["content"])
 
             chan = self.client.get_channel(self.config.get("motdModChannel"))
-            await self.client.embed(chan, embedded=newEmbed)
+            await self.client.embed(chan, embedded=em)
 
             return "Question added to database."
 
         elif subcom == "approve":
             if src.channel.id != self.config.get("motdModChannel"):
-                return "You can't use that here."
+                raise CommandOperationError("You can't use that here.")
             if not args:
-                return "You need to specify an entry."
-            if not all([x.isdigit() for x in args]):
-                return "Every entry must be an integer."
+                raise CommandInputError("You need to specify an entry.")
+            if not all(x.isdigit() for x in args):
+                raise CommandInputError("Every entry must be an integer.")
 
             for targ in args:
                 result = self.db.update_motd(int(targ), approve=True)
                 if result is None:
-                    return "No entries exist with id number: " + targ
+                    raise CommandOperationError(
+                        f"No entries exist with id number: {targ}"
+                    )
 
-                newEmbed = discord.Embed(
-                    title="Approved " + str(result["num"]),
+                em = discord.Embed(
+                    title=f"Approved {result['num']}",
                     description=result["content"],
                     colour=0x00FF00,
-                ).add_field(name="Submitted by", value="<@{}>".format(result["author"]))
+                ).add_field(name="Submitted by", value=f"<@{result['author']}>")
 
-                chan = self.client.get_channel(self.config.get("motdModChannel"))
-                await self.client.embed(chan, newEmbed)
+                return em
 
         elif subcom == "reject":
             if src.channel.id != self.config.get("motdModChannel"):
-                return "You can't use that here."
+                raise CommandOperationError("You can't use that here.")
             if not args:
-                return "You need to specify an entry."
-            if not all([x.isdigit() for x in args]):
-                return "Every entry must be an integer."
+                raise CommandInputError("You need to specify an entry.")
+            if not all(x.isdigit() for x in args):
+                raise CommandInputError("Every entry must be an integer.")
 
             for targ in args:
                 result = self.db.update_motd(int(targ), approve=False)
                 if result is None:
-                    return "No entries exist with id number: " + targ
+                    raise CommandOperationError(
+                        f"No entries exist with id number: {targ}"
+                    )
 
-                newEmbed = discord.Embed(
-                    title="Rejected " + str(result["num"]),
+                em = discord.Embed(
+                    title=f"Rejected {result['num']}",
                     description=result["content"],
                     colour=0xFFA500,
-                ).add_field(name="Submitted by", value="<@{}>".format(result["author"]))
+                ).add_field(name="Submitted by", value=f"<@{result['author']}>")
 
-                chan = self.client.get_channel(self.config.get("motdModChannel"))
-                await self.client.embed(chan, newEmbed)
+                return em
 
         elif subcom == "count":
             count = self.db.motd.count({"approved": True, "used": False})
-            return "Question queue currently contains `{}` entries.".format(count)
+            return f"Question queue currently contains `{count}` entries."
 
         else:
-            return "Unrecognized subcommand."
+            raise CommandInputError("Unrecognized subcommand.")
 
     async def cmd_paforce(self, src, **_):
         """Initiate a forced AskPatch."""
@@ -109,10 +111,7 @@ class CommandsMgr(core.Commands):
 
         self.log.f(
             "pa",
-            src.author.name
-            + " with ID: "
-            + str(src.author.id)
-            + " used the force!",
+            src.author.name + " with ID: " + str(src.author.id) + " used the force!",
         )
         await src.delete()
         if response is not None:
@@ -126,7 +125,7 @@ class CommandsMgr(core.Commands):
         _d: bool = False,
         _kill: bool = False,
         _k: bool = False,
-        **_
+        **_,
     ):
         """Establish or manipulate a live connection between multiple Channels.
 

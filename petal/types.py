@@ -37,10 +37,6 @@ class TunnelABC(object):
         ...
 
     @abstractmethod
-    def convert(self, src: discord.Message) -> Dict[str, discord.Embed]:
-        ...
-
-    @abstractmethod
     async def broadcast(
         self,
         content: str = None,
@@ -55,7 +51,7 @@ class TunnelABC(object):
         ...
 
     @abstractmethod
-    async def drop(self, gate: int) -> None:
+    async def drop(self, gate: discord.TextChannel) -> None:
         ...
 
     @abstractmethod

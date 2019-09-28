@@ -10,7 +10,15 @@ import random
 import re
 import time
 from traceback import format_exc
-from typing import AsyncGenerator, Coroutine, Generator, List, Optional
+from typing import (
+    AsyncGenerator,
+    AsyncIterator,
+    Coroutine,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+)
 
 import discord
 
@@ -299,7 +307,15 @@ class Petal(PetalClientABC):
             # Ignore Void Responses.
             return
 
-        elif isinstance(response, (AsyncGenerator, Generator, list, tuple)):
+        elif isinstance(response, BaseException):
+            await src.channel.send(
+                f"Command Yielded an Exception: {type(response).__name__}"
+                + (f": {response}" if str(response) else "")
+            )
+
+        elif isinstance(
+            response, (AsyncGenerator, AsyncIterator, Generator, Iterator, list, tuple)
+        ):
             # Response is a Generator, indicating the method used Yielding, or a
             #   List or Tuple, which should be treated the same. Yield command
             #   returns support flushing and clearing the List of Buffered
@@ -327,15 +343,17 @@ class Petal(PetalClientABC):
                     # print("    Discarding Buffer:", repr(buffer))
                     buffer.clear()
 
-                elif isinstance(line, (dict, discord.Embed)):
+                elif isinstance(line, (dict, discord.Embed, BaseException)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
                     await self.print_response(src, line)
 
-                elif isinstance(line, (list, tuple)):
-                    # Upon reception of a List or Tuple, treat it the same as
+                elif isinstance(line, (Generator, Iterator, list, tuple)):
+                    # Upon reception of any Sequence, treat it the same as
                     #   reception of its elements in sequence.
                     for elem in line:
+                        while isinstance(elem, Coroutine):
+                            elem = await elem
                         await push(elem)
 
                 else:
@@ -343,12 +361,16 @@ class Petal(PetalClientABC):
                     # print("    Appending to Buffer.")
                     buffer.append(line)
 
-            if isinstance(response, AsyncGenerator):
+            if isinstance(response, (AsyncGenerator, AsyncIterator)):
                 async for y in response:
+                    while isinstance(y, Coroutine):
+                        y = await y
                     await push(y)
 
-            elif isinstance(response, (Generator, list, tuple)):
+            else:
                 for y in response:
+                    while isinstance(y, Coroutine):
+                        y = await y
                     await push(y)
 
             # print("Iterator Exhausted; Flushing Buffer.")
@@ -423,7 +445,7 @@ class Petal(PetalClientABC):
                     )
                     .add_field(
                         name=type(e).__name__,
-                        value=str(e) or "<No Details>",
+                        value=escape(str(e) or "<No Details>"),
                         inline=False,
                     )
                     .add_field(
@@ -568,9 +590,6 @@ class Petal(PetalClientABC):
         else:
             card.add_field(name="Welcome", value="No Welcome Message is configured.")
 
-        # Wait a short time before posting. This should hopefully make the
-        #   mention tag more reliable.
-        await asyncio.sleep(3)
         await self.log_membership(embed=card)
 
     async def on_member_remove(self, member):
@@ -580,9 +599,6 @@ class Petal(PetalClientABC):
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )
 
-        # Wait for at least as long as the Join delay, so that the Part Message
-        #   will never be posted before the Join Message.
-        await asyncio.sleep(4)
         await self.log_membership(embed=card)
 
     async def on_message_delete(self, message: discord.Message):
@@ -692,17 +708,11 @@ class Petal(PetalClientABC):
             Petal.logLock
             or before.content == ""
             or not isinstance(before.channel, discord.TextChannel)
+            or after.content == ""
+            or before.content == after.content
+            or before.guild.id in self.config.get("ignoreServers")
+            or before.channel.id in self.config.get("ignoreChannels")
         ):
-            return
-
-        if before.guild.id in self.config.get(
-            "ignoreServers"
-        ) or before.channel.id in self.config.get("ignoreChannels"):
-            return
-
-        if after.content == "":
-            return
-        if before.content == after.content:
             return
 
         edit_time = datetime.utcnow()
@@ -744,7 +754,7 @@ class Petal(PetalClientABC):
 
             return
 
-    async def on_member_update(self, before, after):
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
         if Petal.logLock:
             return
         gained = None
@@ -759,34 +769,66 @@ class Petal(PetalClientABC):
                 gained = "Gained"
                 role = r
 
-        if not role:
-            return
-
         if gained is not None:
-            userEmbed = discord.Embed(
+            em = discord.Embed(
                 title=f"({role.guild.name}) User Role {gained}",
                 description=f"{after.name}#{after.discriminator} {gained} role",
                 colour=0x0093C3,
             )
-            userEmbed.set_author(
+            em.set_author(
                 name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
             )
-            userEmbed.add_field(name="Role", value=role.name)
-            userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            await self.log_moderation(embed=userEmbed)
+            em.add_field(name="Role", value=role.name)
+            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            em.set_thumbnail(url=get_avatar(after))
 
-        if before.name != after.name:
-            userEmbed = discord.Embed(
-                title="User Name Change",
-                description=f"{escape(before.name)} changed their name to {escape(after.name)}",
+            await self.log_moderation(embed=em)
+
+        if before.nick != after.nick:
+            em = discord.Embed(
+                title="Nickname Change",
+                description=f"`{userline(after)}` changed their nickname."
+                f"\nBefore: `{escape(before.nick)}`"
+                f"\nAfter: `{escape(after.nick)}`"
+                f"\n({after.mention})",
                 colour=0x34F3AD,
             )
 
-            userEmbed.add_field(name="UUID", value=str(before.id))
+            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            em.set_thumbnail(url=get_avatar(after))
 
-            userEmbed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            await self.log_moderation(embed=em)
 
-            await self.log_moderation(embed=userEmbed)
+    async def on_user_update(self, before: discord.User, after: discord.User):
+        if before.name != after.name:
+            em = discord.Embed(
+                title="Username Change",
+                description=f"`{userline(after)}` changed their username."
+                f"\nBefore: `{escape(before.name)}`"
+                f"\nAfter: `{escape(after.name)}`"
+                f"\n({after.mention})",
+                colour=0x34F3AD,
+            )
+
+            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+            em.set_thumbnail(url=get_avatar(after))
+
+            await self.log_moderation(embed=em)
+
+        if before.avatar_url != after.avatar_url:
+            em = discord.Embed(
+                title="Avatar Change",
+                description=f"{escape(before.name)} changed their Avatar.",
+                colour=0x34F3AD,
+            )
+
+            em.set_thumbnail(url=get_avatar(before))
+            em.set_image(url=get_avatar(after))
+
+            em.add_field(name="UUID", value=str(before.id))
+            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+
+            await self.log_moderation(embed=em)
 
     # async def on_voice_state_update(self, before, after):
     #

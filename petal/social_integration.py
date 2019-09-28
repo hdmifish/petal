@@ -102,9 +102,9 @@ class Integrated:
             self.log.warn("No Tumblr keys found.")
 
     @staticmethod
-    def get_member_name(server, member):
+    def get_member_name(guild, member):
         try:
-            m = server.get_member(member).name
+            m = guild.get_member(member).name
             if m is None:
                 m = member
         except AttributeError:
@@ -161,7 +161,7 @@ class Integrated:
                     msg.channel,
                     "*today's question was "
                     + "written by "
-                    + self.get_member_name(msg.server, response["author"])
+                    + self.get_member_name(msg.guild, response["author"])
                     + "*",
                 )
                 self.log.f(
@@ -169,7 +169,7 @@ class Integrated:
                     "Going with entry: "
                     + str(response["num"])
                     + " by "
-                    + self.get_member_name(msg.server, response["author"]),
+                    + self.get_member_name(msg.guild, response["author"]),
                 )
 
             except KeyError:

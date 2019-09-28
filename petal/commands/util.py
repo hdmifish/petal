@@ -19,6 +19,7 @@ from petal.exceptions import (
     CommandOperationError,
 )
 from petal.util import cdn, format
+from petal.util.messages import member_message_history
 
 
 # Reference: strftime.org
@@ -408,7 +409,11 @@ class CommandsUtil(core.Commands):
                     mod, func = self.router.find_command(kword=cmd, src=src)
                 except CommandAuthError:
                     continue
-            cl2.append(f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}")
+
+            if mod:
+                cl2.append(
+                    f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}"
+                )
 
         if not cl2:
             raise CommandOperationError(
@@ -649,18 +654,43 @@ class CommandsUtil(core.Commands):
             Define this Option to be displayed.
         """
         print(args, opts, src)
-        for x in ["ARGS:", *args, "OPTS:"]:
-            yield x
-        for opt, val in (
-            ("`--boolean`, `-b`", _boolean or _b),
-            ("`--string`, `-s`", _string or _s),
-            ("`--dashed-long-opt`", _dashed_long_opt),
-            ("`--digit`, `-d`", _digit or _d),
-            ("`--number`, `-n`", _number or _n),
-        ):
-            if val is not None:
-                yield "{} = `{}` ({})".format(opt, repr(val), type(val).__name__)
-        yield "MSG: " + msg
+        yield "ARGS:", args, "OPTS:"
+
+        yield (
+            f"{opt} = `{repr(val)}` ({type(val).__name__})"
+            for opt, val in (
+                ("`--boolean`, `-b`", _boolean or _b),
+                ("`--string`, `-s`", _string or _s),
+                ("`--dashed-long-opt`", _dashed_long_opt),
+                ("`--digit`, `-d`", _digit or _d),
+                ("`--number`, `-n`", _number or _n),
+            )
+            if val is not None
+        )
+
+        yield f"MSG: {msg}"
+
+    async def cmd_history(self, src, _n: int = 10, **_):
+        """Print your Message History.
+
+        Useful for Debugging and not much else. Can tell you whether Petal is
+            able to see a certain Message.
+        """
+        history = member_message_history(src.author, limit=_n)
+        now = dt.utcnow()
+        s = 0
+
+        async for m in history:
+            if s > 30:
+                break
+            else:
+                s += 1
+                yield (
+                    f"{m.channel.mention}, `{str(now - m.created_at)[:-7]}` ago:"
+                    f"{format.mono_block(format.escape(m.content))}"
+                )
+
+        yield f"Showing last __{s}__ Messages."
 
 
 # Keep the actual classname unique from this common identifier

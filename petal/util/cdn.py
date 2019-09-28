@@ -1,6 +1,6 @@
 """Module dedicated to accessing the Avatar CDN."""
 
-from typing import NewType, Union
+from typing import Dict, NewType, Union
 from urllib.parse import ParseResult, urlparse
 
 import discord
@@ -16,6 +16,9 @@ __all__ = ["get_asset", "get_avatar"]
 URL: type = NewType("URL String", str)
 DiscordURL: type = NewType("Discord URL", URL)
 PetalURL: type = NewType("Petal URL", URL)
+
+
+CACHE: Dict[DiscordURL, URL] = {}
 
 
 def cdn_save(url: DiscordURL, dest: PetalURL = None) -> PetalURL:
@@ -58,15 +61,25 @@ def get_asset(url_discord: DiscordURL) -> URL:
         there, upload it and return the Mirror URL. If it cannot be uploaded,
         return the Discord URL.
     """
-    url_cdn: PetalURL = convert(url_discord)
+    if url_discord in CACHE:
+        return CACHE[url_discord]
 
-    req: requests.Response = requests.get(url_cdn)
-    if req:
-        # File exists on CDN. Return.
-        return url_cdn
     else:
-        # File does NOT exist on CDN. Add it.
-        return cdn_save(url_discord, url_cdn)
+        url_cdn: PetalURL = convert(url_discord)
+
+        req: requests.Response = requests.get(url_cdn)
+        if req:
+            # File exists on CDN. Return.
+            url = url_cdn
+        else:
+            # File does NOT exist on CDN. Add it.
+            url = cdn_save(url_discord, url_cdn)
+
+        while len(CACHE) >= 15:
+            del CACHE[list(CACHE)[0]]
+
+        CACHE[url_discord] = url
+        return url
 
 
 def get_avatar(user: Union[discord.Member, discord.User]) -> URL:

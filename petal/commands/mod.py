@@ -837,7 +837,7 @@ class CommandsMod(core.Commands):
         if not args:
             raise CommandArgsError("Must provide User ID.")
 
-        if not lambdall(args, lambda x: x.isdigit()):
+        if not all(map(lambda x: x.isdigit(), args)):
             raise CommandArgsError("All IDs must be positive Integers.")
 
         for userid in args:
@@ -848,6 +848,7 @@ class CommandsMod(core.Commands):
             if target is None:
                 raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
             else:
+                await src.channel.trigger_typing()
                 yield membership_card(target)
 
 
