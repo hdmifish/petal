@@ -5,7 +5,8 @@ from collections import OrderedDict
 from datetime import datetime as dt
 from functools import partial
 from re import compile
-from typing import get_type_hints, List
+from string import punctuation
+from typing import get_type_hints, List, Tuple
 
 import dateparser
 import discord
@@ -37,7 +38,7 @@ us_cap = partial(compile(r"\b[Uu]s\b").sub, "US")
 zip_zag = lambda sequence, tuple_size=2: (
     (
         first,
-        *[sequence[tuple_size * idx + offset + 1] for offset in range(tuple_size - 1)],
+        *(sequence[tuple_size * idx + offset + 1] for offset in range(tuple_size - 1)),
     )
     for idx, first in enumerate(sequence[::tuple_size])
 )
@@ -126,11 +127,11 @@ class CommandsUtil(core.Commands):
             Embed Object to be embedded into a reply Message.
         """
         if _extreme:
-            for line in helptext:
-                await self.client.send_message(
-                    src.author, src.channel, line.format(p=self.config.prefix)
-                )
-            return
+            # for line in helptext:
+            #     await self.client.send_message(
+            #         src.author, src.channel, line.format(p=self.config.prefix)
+            #     )
+            return ((line.format(p=self.config.prefix), True) for line in helptext)
 
         if not args:
             # With no specified command, show help for "help".
@@ -154,23 +155,23 @@ class CommandsUtil(core.Commands):
                 doc: List[List[str]] = [doc1.split("\n") for doc1 in doc0.split("\n\n")]
 
                 # First paragraph is Summary.
-                summary = "\n".join([line.strip() for line in doc.pop(0)])
+                summary = "\n".join(line.strip() for line in doc[0])
                 em = discord.Embed(
-                    title="`" + self.config.prefix + cmd.__name__[4:] + "`",
+                    title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                     description=summary,
                     colour=0x0ACDFF,
                 )
-                details: List[List[str]] = []
+                details: List[Tuple[str]] = []
                 syntax: str = ""
                 opts: str = ""
 
                 # while doc:
                 #     paragraph = doc.pop(0)
-                for paragraph in doc:
+                for paragraph in doc[1:]:
                     if paragraph[0].lower().strip().startswith("syntax:"):
                         # Paragraph is the Syntax block.
                         paragraph[0] = paragraph[0].strip()[7:]
-                        syntax = "\n".join([x.strip() for x in paragraph if x.strip()])
+                        syntax = "\n".join(x.strip() for x in paragraph if x.strip())
 
                     elif paragraph[0].lower().strip().startswith("options:"):
                         # Paragraph is the manual-style Options block.
@@ -178,7 +179,7 @@ class CommandsUtil(core.Commands):
                             continue
 
                         paragraph[0] = paragraph[0].strip()[8:]
-                        opts = "\n".join([x.strip() for x in paragraph if x.strip()])
+                        opts = "\n".join(x.strip() for x in paragraph if x.strip())
 
                     elif [l.strip() for l in paragraph[0:2]] == [
                         "Parameters",
@@ -190,7 +191,8 @@ class CommandsUtil(core.Commands):
 
                         opts_list = []
                         for dat, descrip in zip_zag(
-                            [l.strip() for l in paragraph[2:] if l.strip()]
+                            # l.strip() for l in paragraph[2:] if l.strip()
+                            tuple(filter(None, map(str.strip, paragraph[2:])))
                         ):
                             onames, otype = (
                                 dat.replace(" ", "").split(":")
@@ -198,9 +200,11 @@ class CommandsUtil(core.Commands):
                                 else (dat.replace(" ", ""), "")
                             )
                             onames = [
-                                ("`-" if len(name) == 2 else "`--")
-                                + name[1:].replace("_", "-")
-                                + ("`" if otype == "bool" else " <{}>`".format(otype))
+                                "{}{}{}".format(
+                                    ("`-" if len(name) == 2 else "`--"),
+                                    name[1:].replace("_", "-"),
+                                    ("`" if otype == "bool" else f" <{otype}>`"),
+                                )
                                 for name in onames.split(",")
                                 if name.startswith("_") and len(name) > 1
                             ]
@@ -218,12 +222,13 @@ class CommandsUtil(core.Commands):
 
                     elif len(paragraph) < 2 or paragraph[1].strip("- "):
                         # Safe to conclude this is not a NumPy block.
-                        details.append([x.strip() for x in paragraph if x.strip()])
+                        details.append(tuple(filter(None, map(str.strip, paragraph))))
+                        # details.append([x.strip() for x in paragraph if x.strip()])
 
                 if details and not (_short or _s):
                     em.add_field(
                         name="Details:",
-                        value="\n\n".join(["\n".join(p) for p in details])[:1024],
+                        value="\n\n".join("\n".join(p) for p in details)[:1024],
                     )
                 if syntax:
                     em.add_field(name="Syntax:", value=syntax[:1024])
@@ -236,9 +241,7 @@ class CommandsUtil(core.Commands):
         else:
             if cmd:
                 raise CommandOperationError(
-                    "No help for `{}` available.".format(
-                        self.config.prefix + cmd.__name__[4:]
-                    )
+                    f"No help for `{self.config.prefix}{cmd.__name__[4:]}` available."
                 )
             else:
                 raise CommandInputError("Command not found.")
@@ -286,29 +289,23 @@ class CommandsUtil(core.Commands):
                 summary = "Command summary unavailable."
 
             em = discord.Embed(
-                title="`" + self.config.prefix + cmd.__name__[4:] + "`",
+                title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                 description=summary or "Command summary unavailable.",
                 colour=0xFFCD0A,
             )
 
             em.add_field(
                 name="Restriction:",
-                value="Role: `{}`\nOperator Level: `{}`\nWhitelist: `{}`".format(
-                    self.config.get(mod.role),
-                    mod.op if 0 <= mod.op <= 4 else None,
-                    mod.whitelist or None,
-                ),
+                value=f"Role: `{self.config.get(mod.role)}`"
+                f"\nOperator Level: `{mod.op if 0 <= mod.op <= 4 else None}`"
+                f"\nWhitelist: `{mod.whitelist or None}`",
             )
-            em.add_field(name="Auth Module:", value="`{}`".format(mod.__module__))
+            em.add_field(name="Auth Module:", value=f"`{mod.__module__}`")
 
             hints = get_type_hints(cmd)
             if hints:
                 params: str = "\n".join(
-                    [
-                        "`{}`: `{}`".format(k, v)
-                        for k, v in hints.items()
-                        if k.startswith("_")
-                    ]
+                    [f"`{k}`: `{v}`" for k, v in hints.items() if k.startswith("_")]
                 )
                 if params:
                     em.add_field(
@@ -361,12 +358,8 @@ class CommandsUtil(core.Commands):
         cmd_list = (
             list(
                 OrderedDict.fromkeys(
-                    [
-                        method.__name__[4:]
-                        for method in self.router.get_all(
-                            src=None if _all or _a else src
-                        )
-                    ]
+                    method.__name__[4:]
+                    for method in self.router.get_all(src=None if _all or _a else src)
                 )
             )
             if not (_custom_only or _C)
@@ -375,7 +368,7 @@ class CommandsUtil(core.Commands):
 
         if _custom or _custom_only or _c or _C:
             line_2 = "" if _custom_only or _C else ", including custom commands"
-            cmd_list += list(sorted(self.config.get("commands"))) or []
+            cmd_list.extend(sorted(self.config.get("commands")))
         else:
             line_2 = ""
 
@@ -390,8 +383,7 @@ class CommandsUtil(core.Commands):
             cmd_list = [
                 cmd
                 for cmd in cmd_list
-                if not args
-                or any(
+                if any(
                     cmd.lower() in term.lower() or term.lower() in cmd.lower()
                     for term in args
                 )
@@ -412,7 +404,7 @@ class CommandsUtil(core.Commands):
 
             if mod:
                 cl2.append(
-                    f"{self.config.prefix + cmd} - {mod.__module__.split('.')[-1]}"
+                    f"{self.config.prefix}{cmd} - {mod.__module__.split('.')[-1]}"
                 )
 
         if not cl2:
@@ -435,7 +427,7 @@ class CommandsUtil(core.Commands):
         if not args:
             user = src.author
         else:
-            uid = args[0]
+            uid = args[0].strip(punctuation)
             if not uid.isdigit():
                 raise CommandInputError("User IDs are Integers.")
             uid = int(uid)
@@ -446,8 +438,8 @@ class CommandsUtil(core.Commands):
 
         em = discord.Embed(
             colour=0x0ACDFF,
-            description="`{}` / {}".format(format.userline(user), user.mention),
-            title="Avatar of Member: {}".format(user.display_name),
+            description=f"`{format.userline(user)}` / {user.mention}",
+            title=f"Avatar of Member: {user.display_name}",
         ).set_image(url=cdn.get_avatar(user))
 
         return em
@@ -467,7 +459,7 @@ class CommandsUtil(core.Commands):
 
         self.config.save(vb=0)
         truedelta = int(
-            self.config.stats["pingScore"] / (self.config.stats["pingCount"]) or 1
+            self.config.stats["pingScore"] / (self.config.stats["pingCount"] or 1)
         )
 
         yield (
@@ -487,18 +479,17 @@ class CommandsUtil(core.Commands):
         `{p}time <region>/<location>` - Show d/t somewhere specific, such as `Europe/Rome`.
         `{p}time <location>` - Show d/t somewhere specific that lacks a "region", such as `GB`.
         """
-        tzone = get_tz(args[0]) if args else get_tz("UTC")
+        tzstr = args[0] if args else "UTC"
+        tzone = get_tz(tzstr)
 
         if tzone:
-            return "Current time is {}.".format(dt.now(tzone).strftime(tstring))
+            return f"Current time is {dt.now(tzone).strftime(tstring)}."
         else:
-            raise CommandInputError(
-                "Could not find the `{}` timezone.".format(args[0] if args else "UTC")
-            )
+            raise CommandInputError(f"Could not find the `{tzstr}` timezone.")
 
     async def cmd_utc(self, **_):
         """Print the current time and date in UTC. This is equivalent to `{p}time "UTC"`."""
-        return await self.cmd_time(["UTC"])
+        return await self.cmd_time(args=["UTC"])
 
     async def cmd_when(self, args, _from: str = None, _to: str = None, **_):
         """Take a given time and convert it to another time zone (Default UTC).
@@ -523,7 +514,7 @@ class CommandsUtil(core.Commands):
             # Determine the time zone of the time provided by the user.
             tz_from = get_tz(_from)
             if not tz_from:
-                raise CommandInputError("Cannot find the `{}` timezone.".format(_from))
+                raise CommandInputError(f"Cannot find the `{_from}` timezone.")
         else:
             tz_from = pytz.UTC
 
@@ -531,7 +522,7 @@ class CommandsUtil(core.Commands):
             # Determine the time zone the user wants to receive.
             tz_to = get_tz(_to)
             if not tz_to:
-                raise CommandInputError("Cannot find the `{}` timezone.".format(_to))
+                raise CommandInputError(f"Cannot find the `{_to}` timezone.")
         else:
             tz_to = pytz.UTC
 
@@ -543,13 +534,13 @@ class CommandsUtil(core.Commands):
         if not when:
             # Cannot parse the input.
             raise CommandArgsError(
-                'Sorry, I can\'t understand when you mean by "{}".'.format(source_time)
+                f"Sorry, I can't understand when you mean by {source_time!r}."
             )
 
         yield (
             "Current time:"
             if source_time.lower() == "now"
-            else "Time described by `'{}'`:".format(source_time)
+            else f"Time described by `{source_time!r}`:"
         )
         yield when.strftime(tstring)
 
@@ -577,14 +568,12 @@ class CommandsUtil(core.Commands):
             self.client.get_guild(self.config.get("mainServer")).roles,
             name=self.config.get("mainRole"),
         )
-        c = 0
-        if role is not None:
-            for m in self.client.get_all_members():
+        if role is None:
+            c = 0
+        else:
+            c = sum(1 for m in self.client.get_all_members() if role in m.roles)
 
-                if role in m.roles:
-                    c += 1
-            em.add_field(name="Total Validated Members", value=str(c), inline=False)
-
+        em.add_field(name="Total Validated Members", value=str(c), inline=False)
         return em
 
     async def cmd_animalcrossing(self, src, **_):
