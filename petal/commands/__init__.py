@@ -3,7 +3,7 @@ import getopt
 import importlib
 from re import compile
 import sys
-from typing import get_type_hints, List, Tuple
+from typing import Dict, get_type_hints, List, Optional, Tuple
 
 from petal.etc import check_types, split, unquote
 from petal.exceptions import CommandArgsError, CommandAuthError
@@ -60,16 +60,16 @@ class CommandRouter(Integrated):
         # Load all command engines.
         for MODULE in LoadModules:
             # Get the module.
-            self.log.info("Loading {} commands...".format(MODULE.title()))
+            self.log.info(f"Loading {MODULE.title()} commands...")
             mod = sys.modules.get(__name__ + "." + MODULE, None)
             if mod:
                 # Instantiate its command engine.
                 cmod = mod.CommandModule(client, self, *a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
-                self.log.ready("{} commands loaded.".format(MODULE.title()))
+                self.log.ready(f"{MODULE.title()} commands loaded.")
             else:
-                self.log.warn("FAILED to load {} commands.".format(MODULE.title()))
+                self.log.warn(f"FAILED to load {MODULE.title()} commands.")
 
         self.log.ready("Command modules loaded.")
 
@@ -117,16 +117,17 @@ class CommandRouter(Integrated):
 
             return None, None
 
-    def get_all(self, src=None):
+    def get_all(self, src: Src = None):
         full = []
         for mod in self.engines:
             if not src or mod.authenticate(src):
                 full += mod.get_all()
         return full
 
+    @staticmethod
     def parse(
-        self, args: List[str], shorts: str = "", longs: list = None
-    ) -> Tuple[list, dict]:
+        args: List[str], shorts: str = "", longs: list = None
+    ) -> Tuple[List[str], Dict[str, Optional[str]]]:
         """Just a hinted proxy for GetOpt. Allows commands to more easily use it.
         Also reverses the output because I dislike the normal order, but dont
             tell anyone.
@@ -137,7 +138,7 @@ class CommandRouter(Integrated):
 
     def parse_from_hinting(
         self, cline: List[str], func: classmethod
-    ) -> Tuple[Args, dict]:
+    ) -> Tuple[Args, Dict[str, Optional[str]]]:
         """cline is a List of Strings, and func is a Command Method. Generate a
             Dict of Types that can be accepted by the various kwargs of func.
             With that information, use Getopt to break cline down into
@@ -185,7 +186,7 @@ class CommandRouter(Integrated):
         try:
             cline, msg = split(command)
         except ValueError as e:
-            raise CommandArgsError("Could not parse arguments: {}".format(e))
+            raise CommandArgsError(f"Could not parse arguments: {e}")
         cword = cline.pop(0)
 
         # Find the method, if one exists.
@@ -194,21 +195,23 @@ class CommandRouter(Integrated):
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
-                bad_opt = ("-{}" if len(e.opt) == 1 else "--{}").format(e.opt)
+                bad_opt = f"-{e.opt}" if len(e.opt) == 1 else f"--{e.opt}"
                 raise CommandArgsError(
-                    "Sorry, {}.".format(
-                        e.msg.replace(bad_opt, "`{} {}`".format(cword, bad_opt))
-                    )
+                    f"Sorry, {e.msg.replace(bad_opt, f'`{cword} {bad_opt}`')}."
                 )
             except TypeError as e:
-                raise CommandArgsError("Sorry, an option is mistyped: {}".format(e))
+                raise CommandArgsError(f"Sorry, an option is mistyped: {e}")
 
             # Execute the method, passing the arguments as a list and the options
             #   as keyword arguments.
             if cword != "argtest" and "|" in args:
                 await self.client.send_message(
                     channel=src.channel,
-                    message="It looks like you might have tried to separate arguments with a pipe (`|`). I will still try to run that command, but just so you know, arguments are now *space-separated*, and grouped by quotes. Check out the `argtest` command for more info.",
+                    message="It looks like you might have tried to separate"
+                    " arguments with a pipe (`|`). I will still try to run that"
+                    " command, but just so you know, arguments are now"
+                    " *space-separated*, and grouped by quotes. Check out the"
+                    " `argtest` command for more info.",
                 )
             return func(args=args, **opts, msg=msg, src=src)
 
@@ -216,12 +219,11 @@ class CommandRouter(Integrated):
         """Given a message, determine whether it is a command;
         If it is, route it accordingly.
         """
-        if src.author == self.client.user:
-            return
-        prefix = self.config.prefix
-        if src.content.startswith(prefix):
+        if src.author != self.client.user and src.content.startswith(
+            self.config.prefix
+        ):
             # Message begins with the invocation prefix.
-            command = src.content[len(prefix) :]
+            command = src.content[len(self.config.prefix) :]
             # Remove the prefix and route the command.
             return await self.route(command, src)
 
@@ -235,4 +237,4 @@ class CommandRouter(Integrated):
         m = divmod(h[1], 60)  # minutes
         s = m[1]  # seconds
 
-        return "%d days, %d hours, %d minutes, %d seconds" % (d[0], h[0], m[0], s)
+        return f"{d[0]:d} days, {h[0]:d} hours, {m[0]:d} minutes, {s:d} seconds"
