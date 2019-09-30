@@ -76,17 +76,19 @@ class CommandRouter(Integrated):
     def find_command(self, kword, src=None, recursive=True):
         """Find and return a Class Method whose name matches kword."""
         reason = ""
-        func, submod, mod_src = [None] * 3
+        func = mod_src = None
 
         for mod in self.engines:
-            func, submod = mod.get_command(kword)
-            if func:
-                mod_src = submod or mod
+            _func, _submod = mod.get_command(kword)
+            if _func:
+                func = _func
+                mod_src = _submod or mod
                 permitted, reason = mod_src.authenticate(src)
                 if not src or permitted:
                     # Allow if no Source Message was provided. That would
                     #   indicate that this is not a check meant to be enforced.
-                    return mod_src, func
+                    return mod_src, _func
+
         if func:
             # The Loop above successfully found a Method for this Command, but
             #   did NOT find that its use was permitted.
@@ -94,6 +96,7 @@ class CommandRouter(Integrated):
             #   not be here.)
             if reason in auth_fail_dict:
                 raise CommandAuthError(auth_fail_dict[reason])
+
             elif reason == "denied":
                 raise CommandAuthError(
                     mod_src.auth_fail.format(
@@ -111,7 +114,7 @@ class CommandRouter(Integrated):
         else:
             # This command is not "real". Check whether it is an alias.
             if recursive:
-                alias = dict(self.config.get("aliases")) or {}
+                alias = self.config.get("aliases", {})
                 if kword in alias:
                     return self.find_command(alias[kword], src, False)
 
@@ -191,7 +194,9 @@ class CommandRouter(Integrated):
 
         # Find the method, if one exists.
         engine, func = self.find_command(cword, src)
+        print("found")
         if func:
+            print("func")
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
@@ -214,6 +219,7 @@ class CommandRouter(Integrated):
                     " `argtest` command for more info.",
                 )
             return func(args=args, **opts, msg=msg, src=src)
+        print("no func")
 
     async def run(self, src: Src):
         """Given a message, determine whether it is a command;
