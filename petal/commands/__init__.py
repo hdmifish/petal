@@ -194,9 +194,7 @@ class CommandRouter(Integrated):
 
         # Find the method, if one exists.
         engine, func = self.find_command(cword, src)
-        print("found")
         if func:
-            print("func")
             try:
                 args, opts = self.parse_from_hinting(cline, func)
             except getopt.GetoptError as e:
