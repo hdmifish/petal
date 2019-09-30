@@ -361,25 +361,24 @@ class Petal(PetalClientABC):
                     # print("    Appending to Buffer.")
                     buffer.append(line)
 
-            if isinstance(response, (AsyncGenerator, AsyncIterator)):
-                async for y in response:
-                    while isinstance(y, Coroutine):
-                        y = await y
-                    await push(y)
+            try:
+                if isinstance(response, (AsyncGenerator, AsyncIterator)):
+                    async for y in response:
+                        while isinstance(y, Coroutine):
+                            y = await y
+                        await push(y)
 
-            else:
-                for y in response:
-                    while isinstance(y, Coroutine):
-                        y = await y
-                    await push(y)
+                else:
+                    for y in response:
+                        while isinstance(y, Coroutine):
+                            y = await y
+                        await push(y)
 
-            # print("Iterator Exhausted; Flushing Buffer.")
-            if buffer:
-                # print("Printing Final Buffer:", repr(buffer))
-                await push(True)
-                # await self.print_response(message, "\n".join(map(str, buffer)))
+            finally:
+                if buffer:
+                    await push(True)
 
-            del buffer
+                del buffer
 
         elif isinstance(response, dict):
             # If the response is a Dict, it is a series of keyword arguments
