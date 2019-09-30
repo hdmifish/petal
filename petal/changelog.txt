@@ -145,7 +145,7 @@ Since the last documented update:
 [v0.11.4] (2019-05-11)
 = Fixed an issue with a command not accepting conversational numbers.
 
-[v1.0.0] (2019-09-17)
+[v1.0.0] (2019-09-29)
 * Migrated to version 1.x of Discord Library.
 * All IDs now Integers.
 * Config.get() now allows "pathed" option fetching.
