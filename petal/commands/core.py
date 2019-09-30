@@ -62,50 +62,44 @@ class CommandPending:
                 #   their Yielded values output as they come in, which may take
                 #   a while, and may involve raising an Exception. Therefore we
                 #   must still be ready to catch it.
+
         except CommandArgsError as e:
             # Arguments not valid. Cease, but do not necessarily desist.
-            out = f"Problem with Arguments: {str(e) or d}"
-            if self.reply:
-                await self.reply.edit(content=out)
-            else:
-                self.reply = await self.channel.send(out)
+            await self.post_or_edit(f"Problem with Arguments: {str(e) or d}")
 
         except CommandAuthError as e:
             # Access denied. Cease and desist.
             self.unlink()
-            await self.channel.send(f"Sorry, not permitted; {str(e) or d}")
+            await self.post_or_edit(f"Sorry, not permitted; {str(e) or d}")
 
         except CommandExit as e:
             # Command cancelled itself. Cease and desist.
             self.unlink()
+            await self.post_or_edit(f"Command exited; {str(e) or d}")
             executed = True  # This Exit was intentional. Count it as Executed.
-            await self.channel.send(f"Command exited; {str(e) or d}")
 
         except CommandInputError as e:
             # Input not valid. Cease, but do not necessarily desist.
-            out = f"Bad input: {str(e) or d}"
-            if self.reply:
-                await self.reply.edit(content=out)
-            else:
-                self.reply = await self.channel.send(out)
+            await self.post_or_edit(f"Bad input: {str(e) or d}")
 
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
             self.unlink()
-            await self.channel.send(f"Command failed; {str(e) or d}")
+            await self.post_or_edit(f"Command failed; {str(e) or d}")
 
         except NotImplementedError as e:
             # Command ran into something that is not done. Cease and desist.
             self.unlink()
-            await self.channel.send(
+            await self.post_or_edit(
                 f"Sorry, this Command is not completely done; {str(e) or d}"
             )
 
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
             self.unlink()
-            await self.channel.send(
-                "Sorry, something went wrong, but I do not know what{}".format(
+            await self.post_or_edit(
+                "Sorry, something went wrong, but I do not know what"
+                + (
                     f": `{type(e).__name__} / {e}`"
                     if str(e)
                     else f" ({type(e).__name__})."
@@ -123,6 +117,12 @@ class CommandPending:
                 self.router.config.get("stats")["comCount"] += 1
 
         return executed
+
+    async def post_or_edit(self, content: str):
+        if self.reply:
+            await self.reply.edit(content=content)
+        else:
+            self.reply = await self.channel.send(content)
 
     async def wait(self):
         self.active = True
