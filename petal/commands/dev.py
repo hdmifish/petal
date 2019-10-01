@@ -1,5 +1,6 @@
 """Commands module for BOT ADMINISTRATION.
-Access: Config Whitelist"""
+Access: Config Whitelist
+"""
 
 from petal.commands import core
 from petal.checks import all_checks, Messages
@@ -183,7 +184,8 @@ class CommandsMaintenance(core.Commands):
         )
         await m.post()
         m.add_section(
-            await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"]) or "(None)", #overwrite=0
+            await m.get_one(["aaaaaaaaa", "wysiwyg", "zzz"])
+            or "(None)"  # , overwrite=0,
         )
         await m.post()
 
@@ -251,18 +253,6 @@ class CommandsMaintenance(core.Commands):
                     prompt="say thing",
                 )
             ).content
-        )
-
-    async def cmd_bytes(self, src, **_):
-        """Encode the message provided into a Bytes object. Then, print it.
-
-        Debug utility to sanity check **__exactly__** what is received over Discord.
-
-        Syntax: `{p}bytes <literally anything>...`
-        """
-        raw = src.content.encode("utf-8")
-        return "`discord.Message.content`:```{}```Hexadecimal:```{}```".format(
-            repr(raw)[2:-1], raw.hex()
         )
 
 
