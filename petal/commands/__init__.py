@@ -217,7 +217,6 @@ class CommandRouter(Integrated):
                     " `argtest` command for more info.",
                 )
             return func(args=args, **opts, msg=msg, src=src)
-        print("no func")
 
     async def run(self, src: Src):
         """Given a message, determine whether it is a command;
@@ -241,4 +240,4 @@ class CommandRouter(Integrated):
         m = divmod(h[1], 60)  # minutes
         s = m[1]  # seconds
 
-        return f"{d[0]:d} days, {h[0]:d} hours, {m[0]:d} minutes, {s:d} seconds"
+        return f"{d[0]:.0f} days, {h[0]:.0f} hours, {m[0]:.0f} minutes, {s:.2F} seconds"
