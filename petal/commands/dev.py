@@ -2,16 +2,10 @@
 Access: Config Whitelist
 """
 
-from typing import List
-
-import discord
-
 from petal.commands import core
 from petal.checks import all_checks, Messages
 from petal.exceptions import CommandInputError
 from petal.menu import Menu
-from petal.util.bits import bytes_to_braille, chunk
-from petal.util.format import bold, escape, mono
 from petal.util.grammar import pluralize, sequence_words
 
 
@@ -260,48 +254,6 @@ class CommandsMaintenance(core.Commands):
                 )
             ).content
         )
-
-    async def cmd_bytes(self, src, **_):
-        """Encode the message provided into a Bytes object. Then, print it.
-
-        Debug utility to sanity check **__exactly__** what is received over Discord.
-
-        Syntax: `{p}bytes <literally anything>...`
-        """
-        raw: bytes = src.content[7:].encode("utf-8")
-
-        _bin: List[str] = [f"{b:0>8b}" for b in raw]
-        _hex: List[str] = [f"{b:0>2X}" for b in raw]
-
-        return (
-            discord.Embed(
-                title="Detailed String Analysis",
-                description=bold(escape(repr(raw)[2:-1])),
-                color=0xFFCD0A,
-            )
-            .add_field(
-                name="Binary",
-                value="\n".join(
-                    f"`{i * 4:0>2}`-`{min((i * 4 + 3, len(_bin) - 1)):0>2}` :: "
-                    + " ".join(f"__`{c}`__" for c in ch if c is not None)
-                    for i, ch in enumerate(chunk(_bin, 4))
-                ),
-            )
-            .add_field(
-                name="Hexadecimal",
-                value="\n".join(
-                    f"`{i * 16:0>2}`-`{min((i * 16 + 15, len(_hex) - 1)):0>2}` :: "
-                    + " ".join(f"__`{c}`__" for c in ch if c is not None)
-                    for i, ch in enumerate(chunk(_hex, 16))
-                ),
-            )
-            .add_field(name="Raw Bits", value=bold(mono(bytes_to_braille(raw))))
-        )
-
-        # yield f"`discord.Message.content`:```{repr(raw)[2:-1]}```"
-        # yield f"Binary:```{_bin}```"
-        # yield f"Hexadecimal:```{_hex}```"
-        # yield f"Raw Bits:**```{bytes_to_braille(raw)}```**"
 
 
 # Keep the actual classname unique from this common identifier
