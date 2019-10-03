@@ -20,7 +20,7 @@ from petal.exceptions import (
 from petal.menu import confirm_action, Menu
 from petal.types import Src
 from petal.util.embeds import membership_card
-from petal.util.format import bold, escape, mono, underline, userline
+from petal.util.fmt import bold, escape, mono, underline, userline
 
 
 class CommandsMod(core.Commands):

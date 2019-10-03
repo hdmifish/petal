@@ -33,7 +33,7 @@ from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
-from petal.util.format import escape, mono_block, userline
+from petal.util.fmt import escape, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.numbers import word_number
 

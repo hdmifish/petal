@@ -6,7 +6,7 @@ from typing import Dict, List, Union
 from discord import Embed, Guild, Member, User
 
 from .cdn import get_avatar
-from .format import bold, escape, italic, mono, smallid, underline, userline
+from .fmt import bold, escape, italic, mono, smallid, underline, userline
 
 
 Muser = Union[Member, User]
