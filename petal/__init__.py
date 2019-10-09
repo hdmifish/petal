@@ -75,6 +75,7 @@ class Petal(PetalClientABC):
         self.startup = datetime.utcnow()
         self.commands = Commands(self)
         self.commands.version = version
+        self.loop_tasks: List[asyncio.Future] = []
         self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
         self.tempBanFlag = False
@@ -82,7 +83,6 @@ class Petal(PetalClientABC):
 
         self.dev_mode = devmode
         log.info("Configuration object initalized")
-        return
 
     def run(self):
         try:
@@ -121,6 +121,21 @@ class Petal(PetalClientABC):
             log.err("This client is not a member of any guilds")
             exit(404)
         return self.get_guild(self.config.get("mainServer"))
+
+    def register_loop(self, coro: Coroutine, name):
+        async def run():
+            log.ready(f"{name} coroutine running...")
+
+            try:
+                await coro
+            except asyncio.CancelledError:
+                log.err(f"{name} coroutine cancelled.")
+            except Exception as e:
+                log.err(f"{name} coroutine FAILED: {type(e).__name__}: {e}")
+            else:
+                log.info(f"{name} coroutine finished.")
+
+        self.loop_tasks.append(self.loop.create_task(run()))
 
     async def status_loop(self):
         interv = 32
@@ -269,23 +284,18 @@ class Petal(PetalClientABC):
             f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})"
         )
         log.info(f"Prefix: {self.config.prefix}")
-        log.info(f"SelfBot: {['true', 'false'][self.config.useToken]}")
+        log.info(f"SelfBot: {not bool(self.config.useToken)}")
 
-        self.loop.create_task(self.status_loop())
-        log.ready("Gamestatus coroutine running...")
-        self.loop.create_task(self.save_loop())
-        log.ready("Autosave coroutine running...")
-        self.loop.create_task(self.ban_loop())
-        log.ready("Auto-unban coroutine running...")
+        self.register_loop(self.status_loop(), "Gamestatus")
+        self.register_loop(self.save_loop(), "Autosave")
+        self.register_loop(self.ban_loop(), "Auto-unban")
+
         if self.config.get("dbconf") is not None:
-            self.loop.create_task(self.ask_patch_loop())
-            log.ready("MOTD system running...")
-            pass
+            self.register_loop(self.ask_patch_loop(), "MOTD")
         else:
             log.warn(
                 "No dbconf configuration in config.yml, motd features are disabled"
             )
-        return
 
     async def print_response(self, src: Src, response, to_edit: discord.Message = None):
         """Use a discrete method for this, so that it can be used recursively if
