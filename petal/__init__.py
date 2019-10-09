@@ -151,18 +151,26 @@ class Petal(PetalClientABC):
             type=discord.ActivityType.playing,
         )
         while True:
-            await self.change_presence(
-                activity=discord.Game(name=self.config.prefix + "info")
-            )
-            await asyncio.sleep(interv)
-            await self.change_presence(activity=g_ses)
-            await asyncio.sleep(interv)
-            await self.change_presence(
-                activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
-            )
-            await asyncio.sleep(interv)
-            await self.change_presence(activity=g_ver)
-            await asyncio.sleep(interv)
+            try:
+                await self.change_presence(activity=g_ses)
+                await asyncio.sleep(interv)
+                await self.change_presence(
+                    activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
+                )
+                await asyncio.sleep(interv)
+                await self.change_presence(activity=g_ver)
+                await asyncio.sleep(interv)
+                await self.change_presence(
+                    activity=discord.Game(name=self.config.prefix + "info")
+                )
+                await asyncio.sleep(interv)
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as e:
+                log.warn(f"Failed to change Status: {type(e).__name__}: {e}")
+                await asyncio.sleep(interv * 4)
 
     async def save_loop(self):
         if self.dev_mode:
