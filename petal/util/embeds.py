@@ -1,6 +1,7 @@
 """Dedicated Module for the creation of various standardized Embeds."""
 
 from datetime import datetime as dt, timedelta as td
+from enum import IntEnum
 from typing import Dict, List, Union
 
 from discord import Embed, Guild, Member, User
@@ -10,6 +11,18 @@ from .fmt import bold, escape, italic, mono, smallid, underline, userline
 
 
 Muser = Union[Member, User]
+
+
+class Color(IntEnum):
+    """An Enumeration of some "standard" RGB colors for use in Embeds."""
+
+    info = 0x_0A_CD_FF  # For when Petal provides help or information.
+    tech = 0x_FF_CD_0A  # For information which is a bit more advanced.
+
+    question = 0x_8738F  # AskPatch
+    wiki = 0x_F8_F9_FA  # Wiki
+    wiki_vague = 0x_FF_CC_33  # Wiki (Disambiguation)
+    xkcd = 0x_96_A8_C8  # XKCD
 
 
 def membership_card(member: Muser, *, colour: int = None) -> Embed:
@@ -28,6 +41,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
             title=member.display_name,
             description=f"Member of {bold(guild.name)}"
             f"\n{member.mention}"
+            f"\n{escape(ascii(member.display_name))}"
             f"\n`[{smallid(member.id)}]`",
             colour=member.colour if colour is None else colour,
             timestamp=now,
