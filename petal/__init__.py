@@ -89,16 +89,17 @@ class Petal(PetalClientABC):
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
             log.err(f"Could not connect using the token provided: {str(e)}")
-            exit(1)
+            return 1
 
         except discord.errors.LoginFailure as e:
             log.err(
-                "Authenication Failure. Your auth: \n"
-                + str(self.config.token)
-                + " is invalid "
-                + str(e)
+                f"Authenication Failure. Your auth: \n{self.config.token}"
+                f"\n is invalid: {e}"
             )
-            exit(401)
+            return 401
+
+        else:
+            return 0
 
     @property
     def uptime(self):
