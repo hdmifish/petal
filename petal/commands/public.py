@@ -4,6 +4,7 @@ Access: Public"""
 from datetime import datetime as dt
 import json
 from random import randint
+from bs4 import BeautifulSoup
 import re
 
 import requests
@@ -787,8 +788,13 @@ class CommandsPublic(core.Commands):
         return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes, and {} seconds` away :christmas_tree:".format(
             str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
         )
-
-
+    async def cmd_trees(self, **_):
+        """how many trees has the internet planted?"""
+        ua = { 'User-Agent': 'Petal-beta/python3.7 DiscordBot' }
+        raw = requests.get("https://teamtrees.org", headers=ua).text
+        bs = BeautifulSoup(raw,features="html.parser")
+        tag = bs.find('div', {"id" : "totalTrees"})
+        return "According to https://teamtrees.org, money has been raised to plant **{:,}** trees so far!\n\nThis is {}% of the initial goal of **20 million** trees".format(int(tag.attrs['data-count']), int((float(tag.attrs['data-count'])/20000000.00)*100.00))
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
 CommandModule = CommandsPublic
