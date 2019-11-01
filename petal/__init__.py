@@ -7,6 +7,7 @@ written by isometricramen
 import asyncio
 from datetime import datetime, timedelta
 import random
+from requests import post
 import re
 import time
 from traceback import format_exc
@@ -27,7 +28,7 @@ from petal.commands import CommandRouter as Commands
 from petal.commands.core import CommandPending
 from petal.config import cfg
 from petal.dbhandler import DBHandler
-from petal.etc import mash
+from petal.etc import mash, filter_members_with_role
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
@@ -207,6 +208,26 @@ class Petal(PetalClientABC):
 
             await asyncio.sleep(interval)
 
+    async def member_stats_update_loop(self):
+        interval = 30
+        while True:
+            d = datetime.utcnow()
+            if not (d.hour == 0 and d.minute == 00):
+                log.debug(f"UTC Time is actually: {d.hour}:{d.minute} which is wrong")
+                await asyncio.sleep(60)
+                continue
+            guild: discord.Guild = self.get_guild(self.config.get("mainServer"))
+            member_role: discord.Role = guild.get_role(self.config.get("mainRoleId"))
+            log.debug(f"Member role for guild: {guild.name} is {member_role.name}")
+            body = {"value1": guild.member_count, "value2": len(filter_members_with_role(guild.members, member_role))}
+            url = self.config.get("iftttEvent")
+            response = post(url, body)
+            if response.status_code == 200:
+                log.debug("Successfully pushed data to IFTTT")
+            else:
+                log.error(f"An error occurred while trying to push to IFTTT: ({response.status_code})[{response.text}]")
+            await asyncio.sleep(interval)
+
     async def close_tunnels_to(self, channel):
         """Given a Channel, remove it from any/all Tunnels connecting to it."""
         for t in self.tunnels:
@@ -277,6 +298,8 @@ class Petal(PetalClientABC):
         log.ready("Autosave coroutine running...")
         self.loop.create_task(self.ban_loop())
         log.ready("Auto-unban coroutine running...")
+        self.loop.create_task(self.member_stats_update_loop())
+        log.ready("Daily Stats update coroutine running...")
         if self.config.get("dbconf") is not None:
             self.loop.create_task(self.ask_patch_loop())
             log.ready("MOTD system running...")
