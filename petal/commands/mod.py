@@ -835,7 +835,8 @@ class CommandsMod(core.Commands):
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
-            raise CommandArgsError("Must provide User ID.")
+            # raise CommandArgsError("Must provide User ID.")
+            args = [src.author.id]
 
         if not all(map(lambda x: x.isdigit(), args)):
             raise CommandArgsError("All IDs must be positive Integers.")
