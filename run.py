@@ -39,4 +39,4 @@ try:
     sys.exit(bot.run())
 except Exception as e:
     traceback.print_exc()
-    sys.exit(-1)
+    sys.exit(e)

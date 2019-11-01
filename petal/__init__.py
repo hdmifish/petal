@@ -94,7 +94,7 @@ class Petal(PetalClientABC):
         except discord.errors.LoginFailure as e:
             log.err(
                 f"Authenication Failure. Your auth: \n{self.config.token}"
-                f"\n is invalid: {e}"
+                f"\nis invalid: {e}"
             )
             return 401
 
