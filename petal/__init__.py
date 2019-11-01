@@ -225,7 +225,7 @@ class Petal(PetalClientABC):
             if response.status_code == 200:
                 log.debug("Successfully pushed data to IFTTT")
             else:
-                log.error(f"An error occurred while trying to push to IFTTT: ({response.status_code})[{response.text}]")
+                log.err(f"An error occurred while trying to push to IFTTT: ({response.status_code})[{response.text}]")
             await asyncio.sleep(interval)
 
     async def close_tunnels_to(self, channel):
