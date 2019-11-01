@@ -746,7 +746,16 @@ class CommandsMod(core.Commands):
             # Add a field for ATTACHED FILES (if any).
             if message.attachments:
                 if _image or _i:
-                    e.set_image(url=message.attachments[0]["url"])
+                    if isinstance(message.attachments, list):
+                        attach = message.attachments[0]
+                    else:
+                        attach = message.attachments
+
+                    try:
+                        e.set_image(url=attach["url"])
+                    except:
+                        pass
+
                 e.add_field(
                     name="Attached Files",
                     value="\n".join(
