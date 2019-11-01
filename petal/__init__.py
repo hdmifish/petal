@@ -13,6 +13,7 @@ from traceback import format_exc
 from typing import (
     AsyncGenerator,
     AsyncIterator,
+    Callable,
     Coroutine,
     Generator,
     Iterator,
@@ -123,18 +124,32 @@ class Petal(PetalClientABC):
             exit(404)
         return self.get_guild(self.config.get("mainServer"))
 
-    def register_loop(self, coro: Coroutine, name):
+    def register_loop(
+        self, coro: Callable[..., Coroutine], name: str, *, restart: bool = False
+    ):
         async def run():
             log.ready(f"{name} coroutine running...")
 
-            try:
-                await coro
-            except asyncio.CancelledError:
-                log.err(f"{name} coroutine cancelled.")
-            except Exception as e:
-                log.err(f"{name} coroutine FAILED: {type(e).__name__}: {e}")
-            else:
-                log.info(f"{name} coroutine finished.")
+            while True:
+                try:
+                    await coro()
+
+                except asyncio.CancelledError:
+                    log.err(f"{name} coroutine cancelled.")
+                    break
+
+                except Exception as e:
+                    log.err(f"{name} coroutine FAILED: {type(e).__name__}: {e}")
+
+                    if restart:
+                        log.ready(f"{name} coroutine RESTARTING...")
+                        continue
+                    else:
+                        break
+
+                else:
+                    log.info(f"{name} coroutine finished.")
+                    break
 
         self.loop_tasks.append(self.loop.create_task(run()))
 
@@ -295,12 +310,12 @@ class Petal(PetalClientABC):
         log.info(f"Prefix: {self.config.prefix}")
         log.info(f"SelfBot: {not bool(self.config.useToken)}")
 
-        self.register_loop(self.status_loop(), "Gamestatus")
-        self.register_loop(self.save_loop(), "Autosave")
-        self.register_loop(self.ban_loop(), "Auto-unban")
+        self.register_loop(self.status_loop, "Gamestatus", restart=True)
+        self.register_loop(self.save_loop, "Autosave", restart=True)
+        self.register_loop(self.ban_loop, "Auto-unban", restart=True)
 
         if self.config.get("dbconf") is not None:
-            self.register_loop(self.ask_patch_loop(), "MOTD")
+            self.register_loop(self.ask_patch_loop, "MOTD", restart=True)
         else:
             log.warn(
                 "No dbconf configuration in config.yml, motd features are disabled"
