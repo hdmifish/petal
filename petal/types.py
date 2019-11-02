@@ -123,7 +123,7 @@ class PetalClientABC(discord.Client):
 
     @abstractmethod
     async def dig_tunnel(
-        self, origin: discord.abc.Messageable, *channels: List[int], anon: bool = False
+        self, origin: discord.TextChannel, *channels: List[int], anon: bool = False
     ) -> Coroutine:
         ...
 

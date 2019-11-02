@@ -849,7 +849,7 @@ class CommandsMod(core.Commands):
             # raise CommandArgsError("Must provide User ID.")
             args = [src.author.id]
 
-        if not all(map(lambda x: x.isdigit(), args)):
+        if not all(map(lambda x: isinstance(x, int) or x.isdigit(), args)):
             raise CommandArgsError("All IDs must be positive Integers.")
 
         for userid in args:
