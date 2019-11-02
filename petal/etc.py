@@ -2,16 +2,9 @@
 
 from hashlib import sha256
 import shlex
-from discord import Role, Member
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional as Opt,
-    Sequence,
-    Tuple,
-)
+from typing import Any, Callable, Dict, List, Optional as Opt, Sequence, Tuple
+
+from discord import Role
 
 from petal.types import kwopt, T1, T2
 from petal.exceptions import CommandArgsError
@@ -141,6 +134,7 @@ def unquote(string: str) -> str:
         if string.startswith(q) and string.endswith(q):
             return string[1:-1]
     return string
+
 
 def filter_members_with_role(members: list, role: Role):
     """Returns a filtered list of members that have a specific role"""

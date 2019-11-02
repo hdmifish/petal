@@ -258,13 +258,19 @@ class Petal(PetalClientABC):
             guild: discord.Guild = self.get_guild(self.config.get("mainServer"))
             member_role: discord.Role = guild.get_role(self.config.get("mainRoleId"))
             log.debug(f"Member role for guild: {guild.name} is {member_role.name}")
-            body = {"value1": guild.member_count, "value2": len(filter_members_with_role(guild.members, member_role))}
+            body = {
+                "value1": guild.member_count,
+                "value2": len(filter_members_with_role(guild.members, member_role)),
+            }
             url = self.config.get("iftttEvent")
             response = post(url, body)
             if response.status_code == 200:
                 log.debug("Successfully pushed data to IFTTT")
             else:
-                log.err(f"An error occurred while trying to push to IFTTT: ({response.status_code})[{response.text}]")
+                log.err(
+                    f"An error occurred while trying to push to IFTTT:"
+                    f" ({response.status_code})[{response.text}]"
+                )
             await asyncio.sleep(interval)
 
     async def close_tunnels_to(self, channel):
@@ -334,7 +340,9 @@ class Petal(PetalClientABC):
         self.register_loop(self.status_loop, "Gamestatus", restart=True)
         self.register_loop(self.save_loop, "Autosave", restart=True)
         self.register_loop(self.ban_loop, "Auto-unban", restart=True)
-        self.register_loop(self.member_stats_update_loop, "Daily Stats Update", restart=True)
+        self.register_loop(
+            self.member_stats_update_loop, "Daily Stats Update", restart=True
+        )
 
         if self.config.get("dbconf") is not None:
             self.register_loop(self.ask_patch_loop, "MOTD", restart=True)

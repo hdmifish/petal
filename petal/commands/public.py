@@ -658,7 +658,8 @@ class CommandsPublic(core.Commands):
             await self.client.send_message(
                 src.author,
                 src.channel,
-                "You will be held accountable for whatever you post in here. Just a heads up ^_^",
+                "You will be held accountable for whatever you post in here."
+                " Just a heads up ^_^",
             )
             gal.append(
                 {
@@ -682,7 +683,8 @@ class CommandsPublic(core.Commands):
             await self.client.send_message(
                 src.author,
                 src.channel,
-                "You will be held accountable for whatever is posted in here. Just a heads up ^_^",
+                "You will be held accountable for whatever is posted in here."
+                " Just a heads up ^_^",
             )
             gal.append(
                 {
@@ -706,7 +708,8 @@ class CommandsPublic(core.Commands):
             await self.client.send_message(
                 src.author,
                 src.channel,
-                "You will be held accountable for whatever is posted in here. Just a heads up ^_^",
+                "You will be held accountable for whatever is posted in here."
+                " Just a heads up ^_^",
             )
             gal.append(
                 {
@@ -745,10 +748,7 @@ class CommandsPublic(core.Commands):
             if link.search(response):
                 return f"*You grab a link from the void:*\n{response}"
             else:
-                self.log.f(
-                    "VOID",
-                    f"{src.author.name} retrieved {num} from the void",
-                )
+                self.log.f("VOID", f"{src.author.name} retrieved {num} from the void")
                 return response
         else:
             msg: str = src.content.split(" ", 1)[1]
@@ -772,29 +772,47 @@ class CommandsPublic(core.Commands):
         h = divmod(d[1], 3600)
         m = divmod(h[1], 60)
         s = int(m[1])
-        return ":ghost: **Spooky Clock Says:** Skeletons are `{} days, {} hours, {} minutes, and {} seconds` away :ghost:".format(
-            str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
+        return (
+            ":ghost: **Spooky Clock Says:** Skeletons are"
+            " `{} days, {} hours, {} minutes, and {} seconds`"
+            " away :ghost:".format(int(d[0]), int(h[0]), int(m[0]), s)
         )
 
     async def cmd_santaclock(self, **_):
         """How long is it till you have to buy people nerdy tshirts?"""
         td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
-            return "Christmas already happened...Gotta wait a bit more for presents. Enjoy the snow! Unless you live in the south where climate change prevents snow now."
+            return (
+                "Christmas already happened...Gotta wait a bit more for"
+                " presents. Enjoy the snow! Unless you live in the south where"
+                " climate change prevents snow now."
+            )
         d = divmod(td, 86400)
         h = divmod(d[1], 3600)
         m = divmod(h[1], 60)
         s = int(m[1])
-        return ":christmas_tree: **Santa Clock Says:** Santa is `{} days, {} hours, {} minutes, and {} seconds` away :christmas_tree:".format(
-            str(int(d[0])), str(int(h[0])), str(int(m[0])), str(s)
+        return (
+            ":christmas_tree: **Santa Clock Says:** Santa is"
+            " `{} days, {} hours, {} minutes, and {} seconds`"
+            " away :christmas_tree:".format(int(d[0]), int(h[0]), int(m[0]), s)
         )
+
     async def cmd_trees(self, **_):
         """how many trees has the internet planted?"""
-        ua = { 'User-Agent': 'Petal-beta/python3.7 DiscordBot' }
+        ua = {"User-Agent": "Petal-beta/python3.7 DiscordBot"}
         raw = requests.get("https://teamtrees.org", headers=ua).text
-        bs = BeautifulSoup(raw,features="html.parser")
-        tag = bs.find('div', {"id" : "totalTrees"})
-        return "According to https://teamtrees.org, money has been raised to plant **{:,}** trees so far!\n\nThis is {}% of the initial goal of **20 million** trees".format(int(tag.attrs['data-count']), int((float(tag.attrs['data-count'])/20000000.00)*100.00))
+        bs = BeautifulSoup(raw, features="html.parser")
+        tag = bs.find("div", {"id": "totalTrees"})
+        return (
+            "According to https://teamtrees.org, money has been raised to plant"
+            " **{:,}** trees so far!\n\nThis is {}% of the initial goal of **20"
+            " million** trees".format(
+                int(tag.attrs["data-count"]),
+                int((float(tag.attrs["data-count"]) / 20000000.00) * 100.00),
+            )
+        )
+
+
 # Keep the actual classname unique from this common identifier
 # Might make debugging nicer
 CommandModule = CommandsPublic

@@ -716,9 +716,7 @@ class CommandsUtil(core.Commands):
                     for i, ch in enumerate(chunk(_hex, 16))
                 ),
             )
-            .add_field(
-                name="Raw Bits", value=fmt.bold(fmt.mono(bytes_to_braille(raw)))
-            )
+            .add_field(name="Raw Bits", value=fmt.bold(fmt.mono(bytes_to_braille(raw))))
         )
 
 
