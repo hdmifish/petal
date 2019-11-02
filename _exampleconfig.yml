@@ -108,7 +108,7 @@ welcomeMessage: 'null'
 modChannel: '0'
 mainServer: '0'
 mainRole: Member
-
+mainRoleId: 12345
 # Petal uses MongoDB to perform a lot of features, a setup guide can be found by searching mongodb setup on cuil.co- aww T_T
 #dbconf:
 #  remote_uri: mongodb://<username>:<password>@some-mongodb-shard.mongodb.net
@@ -256,6 +256,7 @@ hugDonors:
 #osu: asdfghjkl
 #weather: asdhaoifhaisof1
 
+#iftttEvent: https://maker.ifttt.com/trigger/your_event/with/key/your_key
 #aliases allow you to change the names of commands.
 #do not change this list unless you know what you are doing
 stats:

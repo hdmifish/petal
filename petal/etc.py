@@ -2,6 +2,7 @@
 
 from hashlib import sha256
 import shlex
+from discord import Role, Member
 from typing import (
     Any,
     Callable,
@@ -140,3 +141,7 @@ def unquote(string: str) -> str:
         if string.startswith(q) and string.endswith(q):
             return string[1:-1]
     return string
+
+def filter_members_with_role(members: list, role: Role):
+    """Returns a filtered list of members that have a specific role"""
+    return list(filter(lambda mem: role in mem.roles, members))
