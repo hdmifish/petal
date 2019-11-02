@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime as dt, timedelta
 from operator import attrgetter
 import time
+from typing import Sequence
 
 import discord
 
@@ -20,7 +21,7 @@ from petal.exceptions import (
 from petal.menu import confirm_action, Menu
 from petal.types import Src
 from petal.util.embeds import membership_card
-from petal.util.format import bold, escape, mono, underline, userline
+from petal.util.fmt import bold, escape, mono, underline, userline
 
 
 class CommandsMod(core.Commands):
@@ -744,16 +745,27 @@ class CommandsMod(core.Commands):
                 )
 
             # Add a field for ATTACHED FILES (if any).
-            if message.attachments:
+            if isinstance(message.attachments, discord.Attachment):
+                attachments = [message.attachments]
+            elif isinstance(message.attachments, Sequence):
+                attachments = [
+                    a for a in message.attachments if isinstance(a, discord.Attachment)
+                ]
+            else:
+                attachments = None
+
+            if attachments:
                 if _image or _i:
-                    e.set_image(url=message.attachments[0]["url"])
+                    try:
+                        e.set_image(url=attachments[0].url)
+                    except:
+                        pass
+
                 e.add_field(
                     name="Attached Files",
                     value="\n".join(
-                        [
-                            "**`{filename}`:** ({size} bytes)\n{url}\n".format(**x)
-                            for x in message.attachments
-                        ]
+                        f"**`{x.filename}`:** ({x.size} bytes)\n{x.url}\n"
+                        for x in attachments
                     ),
                     inline=False,
                 )
@@ -792,10 +804,8 @@ class CommandsMod(core.Commands):
                 e.add_field(
                     name=f"User Tags ({len(message.mentions)})",
                     value="\n".join(
-                        [
-                            u.mention
-                            for u in sorted(message.mentions, key=attrgetter("name"))
-                        ]
+                        u.mention
+                        for u in sorted(message.mentions, key=attrgetter("name"))
                     ),
                     inline=False,
                 )
@@ -803,15 +813,16 @@ class CommandsMod(core.Commands):
                 e.add_field(
                     name=f"Reactions ({len(message.reactions)})",
                     value="\n".join(
-                        [
-                            "{} x{} (+1)".format(r.emoji, r.count - 1)
-                            if r.me
-                            else "{} x{}".format(r.emoji, r.count)
-                            for r in message.reactions
-                        ]
+                        "{} x{} (+1)".format(r.emoji, r.count - 1)
+                        if r.me
+                        else "{} x{}".format(r.emoji, r.count)
+                        for r in message.reactions
                     ),
                     inline=False,
                 )
+
+            if message.edited_at:
+                e.add_field(name="Last Edited", value=message.edited_at)
 
             try:  # Post it.
                 await self.client.embed(src.channel, e)
@@ -835,9 +846,10 @@ class CommandsMod(core.Commands):
         Syntax: `{p}mute <user tag/id>`
         """
         if not args:
-            raise CommandArgsError("Must provide User ID.")
+            # raise CommandArgsError("Must provide User ID.")
+            args = [src.author.id]
 
-        if not all(map(lambda x: x.isdigit(), args)):
+        if not all(map(lambda x: isinstance(x, int) or x.isdigit(), args)):
             raise CommandArgsError("All IDs must be positive Integers.")
 
         for userid in args:

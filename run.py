@@ -36,6 +36,7 @@ else:
 
 try:
     print("Attempting to connect to Discord, please wait....")
-    bot.run()
+    sys.exit(bot.run())
 except Exception as e:
     traceback.print_exc()
+    sys.exit(e)

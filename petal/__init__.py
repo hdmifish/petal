@@ -14,6 +14,7 @@ from traceback import format_exc
 from typing import (
     AsyncGenerator,
     AsyncIterator,
+    Callable,
     Coroutine,
     Generator,
     Iterator,
@@ -34,7 +35,7 @@ from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
-from petal.util.format import escape, mono_block, userline
+from petal.util.fmt import escape, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.numbers import word_number
 
@@ -76,6 +77,7 @@ class Petal(PetalClientABC):
         self.startup = datetime.utcnow()
         self.commands = Commands(self)
         self.commands.version = version
+        self.loop_tasks: List[asyncio.Future] = []
         self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
         self.tempBanFlag = False
@@ -83,23 +85,23 @@ class Petal(PetalClientABC):
 
         self.dev_mode = devmode
         log.info("Configuration object initalized")
-        return
 
     def run(self):
         try:
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
             log.err(f"Could not connect using the token provided: {str(e)}")
-            exit(1)
+            return 1
 
         except discord.errors.LoginFailure as e:
             log.err(
-                "Authenication Failure. Your auth: \n"
-                + str(self.config.token)
-                + " is invalid "
-                + str(e)
+                f"Authenication Failure. Your auth: \n{self.config.token}"
+                f"\nis invalid: {e}"
             )
-            exit(401)
+            return 401
+
+        else:
+            return 0
 
     @property
     def uptime(self):
@@ -123,6 +125,35 @@ class Petal(PetalClientABC):
             exit(404)
         return self.get_guild(self.config.get("mainServer"))
 
+    def register_loop(
+        self, coro: Callable[..., Coroutine], name: str, *, restart: bool = False
+    ):
+        async def run():
+            log.ready(f"{name} coroutine running...")
+
+            while True:
+                try:
+                    await coro()
+
+                except asyncio.CancelledError:
+                    log.err(f"{name} coroutine cancelled.")
+                    break
+
+                except Exception as e:
+                    log.err(f"{name} coroutine FAILED: {type(e).__name__}: {e}")
+
+                    if restart:
+                        log.ready(f"{name} coroutine RESTARTING...")
+                        continue
+                    else:
+                        break
+
+                else:
+                    log.info(f"{name} coroutine finished.")
+                    break
+
+        self.loop_tasks.append(self.loop.create_task(run()))
+
     async def status_loop(self):
         interv = 32
         # times = {"start": self.startup.timestamp() * 1000}
@@ -137,18 +168,26 @@ class Petal(PetalClientABC):
             type=discord.ActivityType.playing,
         )
         while True:
-            await self.change_presence(
-                activity=discord.Game(name=self.config.prefix + "info")
-            )
-            await asyncio.sleep(interv)
-            await self.change_presence(activity=g_ses)
-            await asyncio.sleep(interv)
-            await self.change_presence(
-                activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
-            )
-            await asyncio.sleep(interv)
-            await self.change_presence(activity=g_ver)
-            await asyncio.sleep(interv)
+            try:
+                await self.change_presence(activity=g_ses)
+                await asyncio.sleep(interv)
+                await self.change_presence(
+                    activity=discord.Game(name=f"Uptime: {str(self.uptime)[:-10]}")
+                )
+                await asyncio.sleep(interv)
+                await self.change_presence(activity=g_ver)
+                await asyncio.sleep(interv)
+                await self.change_presence(
+                    activity=discord.Game(name=self.config.prefix + "info")
+                )
+                await asyncio.sleep(interv)
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as e:
+                log.warn(f"Failed to change Status: {type(e).__name__}: {e}")
+                await asyncio.sleep(interv * 4)
 
     async def save_loop(self):
         if self.dev_mode:
@@ -290,25 +329,19 @@ class Petal(PetalClientABC):
             f"Logged in as {self.user.name}#{self.user.discriminator} ({self.user.id})"
         )
         log.info(f"Prefix: {self.config.prefix}")
-        log.info(f"SelfBot: {['true', 'false'][self.config.useToken]}")
+        log.info(f"SelfBot: {not bool(self.config.useToken)}")
 
-        self.loop.create_task(self.status_loop())
-        log.ready("Gamestatus coroutine running...")
-        self.loop.create_task(self.save_loop())
-        log.ready("Autosave coroutine running...")
-        self.loop.create_task(self.ban_loop())
-        log.ready("Auto-unban coroutine running...")
-        self.loop.create_task(self.member_stats_update_loop())
-        log.ready("Daily Stats update coroutine running...")
+        self.register_loop(self.status_loop, "Gamestatus", restart=True)
+        self.register_loop(self.save_loop, "Autosave", restart=True)
+        self.register_loop(self.ban_loop, "Auto-unban", restart=True)
+        self.register_loop(self.member_stats_update_loop, "Daily Stats Update", restart=True)
+
         if self.config.get("dbconf") is not None:
-            self.loop.create_task(self.ask_patch_loop())
-            log.ready("MOTD system running...")
-            pass
+            self.register_loop(self.ask_patch_loop, "MOTD", restart=True)
         else:
             log.warn(
                 "No dbconf configuration in config.yml, motd features are disabled"
             )
-        return
 
     async def print_response(self, src: Src, response, to_edit: discord.Message = None):
         """Use a discrete method for this, so that it can be used recursively if

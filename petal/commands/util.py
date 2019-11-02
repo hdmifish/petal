@@ -19,7 +19,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
-from petal.util import cdn, format
+from petal.util import cdn, fmt
 from petal.util.bits import bytes_to_braille, chunk
 from petal.util.messages import member_message_history
 
@@ -439,7 +439,7 @@ class CommandsUtil(core.Commands):
 
         em = discord.Embed(
             colour=0x0ACDFF,
-            description=f"`{format.userline(user)}` / {user.mention}",
+            description=f"`{fmt.userline(user)}` / {user.mention}",
             title=f"Avatar of Member: {user.display_name}",
         ).set_image(url=cdn.get_avatar(user))
 
@@ -452,7 +452,7 @@ class CommandsUtil(core.Commands):
             used for testing notifications.
         """
         msg: discord.Message = await src.channel.send(
-            format.italic(f"hugs {src.author.mention}")
+            fmt.italic(f"hugs {src.author.mention}")
         )
         delta = int((dt.now() - msg.created_at).microseconds / 1000)
         self.config.stats["pingScore"] += delta
@@ -677,7 +677,7 @@ class CommandsUtil(core.Commands):
                 s += 1
                 yield (
                     f"{m.channel.mention}, `{str(now - m.created_at)[:-7]}` ago:"
-                    f"{format.mono_block(format.escape(m.content))}"
+                    f"{fmt.mono_block(fmt.escape(m.content))}"
                 )
 
         yield f"Showing last __{s}__ Messages."
@@ -691,13 +691,13 @@ class CommandsUtil(core.Commands):
         """
         raw: bytes = src.content[7:].encode("utf-8")
 
-        _bin: List[str] = [f"{b:0>8b}" for b in raw]
-        _hex: List[str] = [f"{b:0>2X}" for b in raw]
+        _bin: List[str] = [format(b, "0>8b") for b in raw]
+        _hex: List[str] = [format(b, "0>2X") for b in raw]
 
         return (
             discord.Embed(
                 title="Detailed String Analysis",
-                description=format.bold(format.escape(repr(raw)[2:-1])),
+                description=fmt.bold(fmt.escape(repr(raw)[2:-1])),
                 color=0xFFCD0A,
             )
             .add_field(
@@ -717,7 +717,7 @@ class CommandsUtil(core.Commands):
                 ),
             )
             .add_field(
-                name="Raw Bits", value=format.bold(format.mono(bytes_to_braille(raw)))
+                name="Raw Bits", value=fmt.bold(fmt.mono(bytes_to_braille(raw)))
             )
         )
 

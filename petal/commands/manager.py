@@ -5,7 +5,7 @@ import discord
 
 from petal.commands import core
 from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
-from petal.util.format import userline
+from petal.util.fmt import userline
 
 
 class CommandsMgr(core.Commands):
