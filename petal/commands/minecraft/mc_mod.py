@@ -5,6 +5,7 @@ import discord
 
 from petal.commands.minecraft import auth
 from petal.types import Src
+from petal.util.fmt import escape
 
 
 wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the Server Address is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect."
@@ -41,7 +42,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
             if doSend and not _nosend:
                 recipientobj = self.client.main_guild.get_member(recipientid)
                 try:
-                    msg = await self.client.send_message(channel=recipientobj, message=wlpm)
+                    msg = await self.client.send_message(
+                        channel=recipientobj, message=wlpm
+                    )
                 except discord.DiscordException as e:
                     self.log.err("Error on WLAdd PM: " + str(e))
                     msg = None
@@ -163,30 +166,27 @@ class CommandsMCMod(auth.CommandsMCAuth):
             else:
                 return "Whitelist failed to refresh."
 
-    async def cmd_wlgone(self, **_):
+    async def cmd_wlgone(self, _page: int = 0, **_):
         """Check the WL database for any users whose Discord ID is that of someone who has left the server.
 
         Syntax: `{p}wlgone`
         """
-        uList = self.minecraft.etc.WLDump()
-        idList = []
-        for entry in uList:
-            idList.append((entry["discord"], entry["name"]))
-        oput = "Registered users who have left the server:\n"
-        leftnum = 0
-        for userid, username in [(entry["discord"], entry["name"]) for entry in uList]:
-            try:
-                user = self.client.main_guild.get_member(
-                    userid
-                )
-                if user is None:
-                    oput += "`{}` - {}\n".format(userid, username)
-                    leftnum += 1
-            except:  # Do not log an error here; An error here means a success
-                oput += "`{}` - {}\n".format(userid, username)
-                leftnum += 1
-        oput += "----({})----".format(leftnum)
-        return oput
+        _get = self.client.main_guild.get_member
+
+        gone_users = [
+            (entry["discord"], entry["name"])
+            for entry in self.minecraft.etc.WLDump()
+            if _get(int(entry.get("discord"))) is None
+        ]
+
+        start = 20 * _page
+        stop = 20 * (_page + 1)
+
+        yield f"Registered users who have left the Guild (Page {_page}):"
+        for entry in gone_users[start:stop]:
+            yield "`{}` - {}".format(*map(escape, entry))
+
+        yield "----({}-{} of __{}__)----".format(start + 1, stop, len(gone_users))
 
     async def cmd_wlsuspend(
         self, args, src, _help: bool = False, _h: bool = False, **_

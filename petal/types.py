@@ -5,7 +5,6 @@ from typing import (
     AsyncGenerator,
     Callable,
     Coroutine,
-    Dict,
     Generator,
     List,
     Optional,
@@ -68,6 +67,20 @@ class TunnelABC(object):
 
 
 class PetalClientABC(discord.Client):
+    __slots__ = (
+        "commands",
+        "config",
+        "db",
+        "dev_mode",
+        "logLock",
+        "loop_tasks",
+        "potential_typo",
+        "session_id",
+        "startup",
+        "tempBanFlag",
+        "tunnels",
+    )
+
     @property
     @abstractmethod
     def uptime(self) -> timedelta:
@@ -110,7 +123,7 @@ class PetalClientABC(discord.Client):
 
     @abstractmethod
     async def dig_tunnel(
-        self, origin: discord.abc.Messageable, *channels: List[int], anon: bool = False
+        self, origin: discord.TextChannel, *channels: List[int], anon: bool = False
     ) -> Coroutine:
         ...
 
@@ -136,7 +149,10 @@ class PetalClientABC(discord.Client):
 
     @abstractmethod
     async def print_response(
-        self, message: discord.Message, response: Response, to_edit: discord.Message = None
+        self,
+        message: discord.Message,
+        response: Response,
+        to_edit: discord.Message = None,
     ) -> None:
         ...
 
@@ -190,9 +206,7 @@ class PetalClientABC(discord.Client):
         ...
 
     @abstractmethod
-    async def on_message_edit(
-        self, before: Src, after: Src
-    ) -> None:
+    async def on_message_edit(self, before: Src, after: Src) -> None:
         ...
 
     @abstractmethod
