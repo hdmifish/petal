@@ -14,9 +14,10 @@ ERROR CODES:
 """
 
 from contextlib import contextmanager
+from datetime import datetime as dt
 import json
 from pathlib import Path
-from typing import Dict, Iterator, List, Type, Union
+from typing import Dict, Iterator, List, Type, Union, Tuple
 from uuid import UUID
 
 import requests
@@ -87,16 +88,75 @@ def find(data: type_db, *params: str) -> Iterator[type_entry_db]:
     )
 
 
-def id_from_name(uname: str):
+def id_from_name(name: str):
     """Given a Minecraft Username, get its UUID."""
     response = requests.get(
-        f"https://api.mojang.com/users/profiles/minecraft/{uname.lower()}"
+        f"https://api.mojang.com/users/profiles/minecraft/{name.lower()}"
     )
     log.f("WLME_RESP", str(response))
-    if response.status_code == 200:
-        return {"code": response.status_code, "udat": response.json()}
+
+    if response.ok:
+        return response.json()
     else:
-        return {"code": response.status_code}
+        response.raise_for_status()
+
+
+def make_lists(data: type_db, refresh: bool = False) -> Tuple[type_db, type_db]:
+    wl: type_db = []
+    op: type_db = []
+
+    if refresh:
+        data[:] = [refresh_entry(entry) for entry in data]
+
+    for entry in data:
+        if entry["approved"] and not entry["suspended"]:
+            wl.append({"uuid": entry["uuid"], "name": entry["name"]})
+
+        if entry["operator"] > 0:
+            op.append(
+                {
+                    "uuid": entry["uuid"],
+                    "name": entry["name"],
+                    "level": entry["operator"],
+                    "bypassesPlayerLimit": False,
+                }
+            )
+
+    return wl, op
+
+
+def new_entry(
+    uuid_discord: str, *, uuid_mc: str = None, name_mc: str = None
+) -> type_entry_db:
+    if uuid_mc is None and name_mc is None:
+        raise TypeError("Entry requires either Username or UUID.")
+    elif uuid_mc is None:
+        _d = id_from_name(name_mc)[0]
+        uuid_mc = _d["id"]
+
+    new = PLAYERDEFAULT.copy()
+    hist = requests.get(f"https://api.mojang.com/user/profiles/{uuid_mc}/names")
+
+    if hist.ok:
+        new["altname"] = [e["name"] for e in hist.json()]
+        new["name"] = new["altname"][-1]
+    else:
+        hist.raise_for_status()
+
+    new["uuid"] = uuid_mc
+    new["discord"] = uuid_discord
+    new["submitted"] = dt.utcnow().strftime("%Y-%m-%d_%0H:%M")
+
+    return new
+
+
+def refresh_entry(old: type_entry_db) -> type_entry_db:
+    try:
+        new = new_entry(old["discord"], uuid_mc=old["uuid"])
+        new["submitted"] = old["submitted"]
+        return new
+    except:
+        return old
 
 
 class Interface:
@@ -127,16 +187,35 @@ class Interface:
 
         return data
 
-    def db_write(self, data):
+    def db_write(self, data: type_db):
         try:
-            with self.path_db.open("w") as file_db:
+            with self.path_db.open("w") as fd:
                 # Save all the things.
-                json.dump(data, file_db, indent=2)
+                json.dump(data, fd, indent=2)
 
         except OSError as e:
             # Cannot write file: Well this was all rather pointless.
             log.err(f"OSError on DB save: {e}")
             raise WhitelistError("Cannot write PlayerDB file.") from e
+
+    def rebuild(self, data: type_db):
+        wl, op = make_lists(data)
+
+        try:
+            with self.path_wl.open("w") as fd:
+                json.dump(wl, fd, indent=2)
+
+        except OSError as e:
+            log.err(f"OSError on WL save: {e}")
+            raise WhitelistError("Cannot write Whitelist file.") from e
+
+        try:
+            with self.path_op.open("w") as fd:
+                json.dump(op, fd, indent=2)
+
+        except OSError as e:
+            log.err(f"OSError on OP save: {e}")
+            raise WhitelistError("Cannot write Operators file.") from e
 
     def whitelist_rebuild(self, refreshall=False, refreshnet=False) -> int:
         """Export the local database into the whitelist file itself. If Mojang
@@ -237,6 +316,10 @@ class Minecraft(object):
     def add_entries(self, *entries: type_entry_db):
         with self.db() as db:
             db.extend(entries)
+
+    def rebuild(self):
+        with self.db() as db:
+            ...
 
     @contextmanager
     def db(self, *params: str) -> type_db:
