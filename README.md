@@ -1,4 +1,4 @@
-[![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg?logoColor=white&logo=python&style=popout)](https://www.python.org/)
+[![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg?logoColor=white&logo=python&style=popout)](https://www.python.org/downloads/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![GitHub contributors](https://img.shields.io/github/contributors/hdmifish/petal.svg?logoColor=white&logo=github)](https://github.com/hdmifish/petal/graphs/contributors)
@@ -13,45 +13,45 @@ A friendly, practical, discord bot.
 ## Returning Users
 I keep an expanded changelog with every commit. If you need more than the short commit message to see what was changed, that would be a good place to look.
 
-**Warning:** includes stream of consciousness content that may confuse or annoy the reader
+**Warning:** Changelog includes stream of consciousness content that may confuse or annoy the reader
 
 ## Getting Started
-This bot is designed for hosting on Ubuntu and has not been tested on other platforms. It is possible to get it working on Windows but some features may produce unexpected results or not work at all
+This bot is designed on Ubuntu 16.04 and has not been tested on other platforms. It is possible to get it working on Windows but some features may produce unexpected results or not work at all. 
 
 ##### Requirements:
 - 64-bit Ubuntu/Debian
-- `pip3.6 install --upgrade -r requirements.txt`
+- `pip3.7 install --upgrade -r requirements.txt`
 - A discord application token (register [here](https://discordapp.com/developers/applications/me))
 
 
 ##### If you are new to Ubuntu/Debian, but have it ready to go already:
-(we are going to assume you are using ubuntu 14.04 (or Debian 7) or higher)
+(we are going to assume you are using Ubuntu 16.04 (or Debian 7) or higher)
 
 ##### Step 1: Get everything up to date
 This prevents problems later on
 `sudo apt-get update && sudo apt-get upgrade -y`
-##### Step 2: Install python3.6 and pip
-`sudo apt-get install python3.6 python3.6-dev -y`
-**Note:** To ensure python3.6 is installed, run the following:
-`python3.6 --version`
+##### Step 2: Install python3.7 and pip
+`sudo apt-get install python3.7 python3.7-dev -y`
+**Note:** To ensure python3.7 is installed, run the following:
+`python3.7 --version`
 
 
-##### Step 3: Download and Install pip for python 3.6+
-**Note:** You may skip this if you already have pip installed. You can verify this in the usual way of just typing `pip` or `pip3.6` and seeing if the command is recognized
+##### Step 3: Download and Install pip for python 3.7+
+**Note:** You may skip this if you already have pip installed. You can verify this in the usual way of just typing `pip` or `pip3.7` and seeing if the command is recognized
 
 
 In your home directory `cd ~` run the following:
 `sudo wget https://bootstrap.pypa.io/get-pip.py`
 then run:
-`sudo python3.6 get-pip.py`
+`sudo python3.7 get-pip.py`
 finally, verify the install:
-`python3.6 -m pip --version`
+`python3.7 -m pip --version`
 
 
 
-**Note**: If for some reason you get a __command not found__ error, replace `pip3.6` with `python3.6 -m pip`
+**Note**: If for some reason you get a __command not found__ error, replace `pip3.7` with `python3.7 -m pip`
 
-If you still get an error after that, make sure you built pip with python3.6 or higher. Sometimes it will even run as `pip` instead of `pip3.6`
+If you still get an error after that, make sure you built pip with python3.7 or higher. Sometimes it will even run as `pip` instead of `pip3.7`
 
 
 <br>
@@ -84,7 +84,7 @@ When you run `ls` you should see something like this:
 Now we need to install the other "stuff" that makes Petal work.
 That can be done via:
 
-`pip3.6 install --upgrade -r requirements.txt`
+`pip3.7 install --upgrade -r requirements.txt`
 
 ##### Step 6 (optional): Install GNU Screen:
 If you dont want to have to deal with terminal windows to keep your bot open, you can run a "Screen session" to run it in the background. This is a really good way to cleanly run your bot and doesnt require you to stay logged in to your current regular session. You can even lose connection to your terminal (e.g. your SSH session gets disconnected, times out) and your screen session will still be running
@@ -138,14 +138,14 @@ Congratulations, you have created a config file!
 
 ###### If using Screen:
 1. Navigate to the petal directory where *run.py* resides.
-2. run `screen -dmSL petal python3.6 run.py`
+2. run `screen -dmSL petal python3.7 run.py`
 3. To see your bot running, do `screen -r petal`
 4. All output from the bot, including errors is logged in `screenlog.0` in the directory in which you ran step 2
 5. To exit a screen session and leave the bot running do `CTRL + A` then press `d`
 
 ###### If not using Screen:
 1. Navigate to the petal directory where run.py resides.
-2. run `python3.6 run.py`
+2. run `python3.7 run.py`
 3. To stop the bot from executing, do `CTRL+C`
     **Note:** Only press CTRL+C once, as it does take a second for the bot to shutdown. If you repeatedly press it, it can wipe your config file.
 
