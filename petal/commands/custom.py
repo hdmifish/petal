@@ -2,6 +2,7 @@
 Access: Public"""
 
 import asyncio
+from string import Template
 
 import discord
 
@@ -28,45 +29,44 @@ class CommandsCustom(core.Commands):
         response = cmd_dict["com"]
 
         # Build the function to return the response. Note that "self" exists already.
-        async def cmd_custom(args, src, **_):
+        def cmd_custom(args, src, **_):
             if args:
                 member = self.get_member(src, args[0].strip())
                 tag = member.mention if member else None
             else:
                 tag = None
 
-            nsfw = cmd_dict.get("nsfw", False)
-            if nsfw and src.channel.id not in self.config.get("nsfwChannels"):
-                return None
-
-            # Replace tags where needed.
-            try:
-                output = response.format(
-                    self=src.author.name,
-                    myID=src.author.id,
-                    tag=tag or src.author.mention,
-                )
-            except KeyError:
-                return None
+            if cmd_dict.get("nsfw", False) and src.channel.id not in self.config.get(
+                "nsfwChannels"
+            ):
+                # Fail silently, the same as if there were no command found.
+                return
             else:
-                return output
+                # Replace tags where needed.
+                return Template(response).safe_substitute(
+                    SELF=src.author.name,
+                    MYID=src.author.id,
+                    TAG=tag or src.author.mention,
+                )
 
         # Specify the docstring and name so that !help will work on this.
         if len(response) > 80:
             short = response[:77] + "..."
         else:
             short = response
-        short = short.replace("{", "{{").replace("}", "}}")
-        #             ^TODO: Use Regex replacement instead.
-        cmd_custom.__doc__ = (
-            "{0}{1}Syntax: `{{p}}{2}{3}`".format("__Custom command__: Return the following text: ```{}```\n\n".format(short), (
-                    ((cmd_dict.get("desc") or "") + "\n\n")
-                    or "This is a custom command, so available help text is "
-                       "limited, but at the same time, the command is very simple. "
-                       "All it does is return a string, although the string may "
-                       "include formatting tags for invoker name, invoker ID, and a "
-                       "targeted mention.\n\n"
-            ), kword.lower(), (" <user_ID>" if "{tag}" in response else ""))
+
+        cmd_custom.__doc__ = "{0}{1}\n\nSyntax: `{{p}}{2}{3}`".format(
+            "__Custom command__: Return the following text: ```{}```\n\n".format(short),
+            (
+                cmd_dict.get("desc")
+                or "This is a custom command, so available help text is "
+                "limited, but at the same time, the command is very simple. "
+                "All it does is return a string, although the string may "
+                "include formatting tags for invoker name, invoker ID, and a "
+                "targeted mention."
+            ),
+            kword.lower(),
+            (" [<user_ID>]" if "$TAG" in response else ""),
         )
         cmd_custom.__name__ = "cmd_" + kword.lower()
 
@@ -80,11 +80,16 @@ class CommandsCustom(core.Commands):
         _image: str = None,
         _i: str = None,
         _nsfw: bool = False,
-        **_
+        **_,
     ):
         """That awesome custom command command.
 
         Create a custom Petal command that will print a specific text when run. This text can be anything, from a link to a copypasta to your own poetry. Just try not to be obnoxious with it, yeah?
+
+        A number of Substitution Tags are available, which will be replaced when the Command is run:
+            `$SELF` :: The Display Name of the User running the Command.
+            `$ID` :: The Discord ID of the User running the Command.
+            `$TAG` :: A Mention/Tag of the User running the Command.
 
         Syntax: `{p}new [OPTIONS] <name of command> "<output of command>"`
 
@@ -145,7 +150,7 @@ class CommandsCustom(core.Commands):
         else:
             saved = save()
             if saved is True:
-                return "New Command `{}` Created!".format(self.config.prefix + invoker)
+                return f"New Command `{self.config.prefix}{invoker}` Created!"
         return saved
 
 
