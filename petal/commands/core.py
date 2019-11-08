@@ -94,6 +94,16 @@ class CommandPending:
                 f"Sorry, this Command is not completely done; {str(e) or d}"
             )
 
+        except discord.errors.HTTPException:
+            # Discord prevented posting a Response. Cease and desist.
+            self.unlink()
+            await self.post_or_edit(
+                f"Sorry, could not post Command Response; The Response was"
+                f" probably too long."
+                # f"\n({type(e).__name__}: `{e}`)"
+            )
+            raise  # Raise the Exception anyway, so that it is logged.
+
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
             self.unlink()

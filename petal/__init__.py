@@ -556,19 +556,11 @@ class Petal(PetalClientABC):
             message = "[DEV]  " + str(message) + "  [DEV]"
         try:
             return await channel.send(content=message, embed=embed)
-        except discord.errors.InvalidArgument:
+        except (discord.errors.Forbidden, discord.errors.InvalidArgument) as e:
             log.err(
-                "A message: " + message + " was unable to be sent in " + channel.name
+                f"Message could not be sent in #{channel.name}/{channel.id}:"
+                f"\n    {message!r}\n    ({type(e).__name__}) {e}"
             )
-            return None
-        except discord.errors.Forbidden:
-            log.err(
-                "A message: "
-                + message
-                + " was unable to be sent in channel: "
-                + channel.name
-            )
-            return None
 
     async def log_membership(
         self, content: str = None, *, embed: discord.Embed = None
