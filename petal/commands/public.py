@@ -475,31 +475,42 @@ class CommandsPublic(core.Commands):
         """
         ex = _explain if _explain is not None else _e
         if ex is not None:
-            return "This is what XKCD #{0} means:\n<https://www.explainxkcd.com/wiki/index.php?title={0}>".format(
-                ex
+            return (
+                f"This is what XKCD #{ex} means:"
+                f"\n<https://www.explainxkcd.com/wiki/index.php?title={ex}>"
             )
 
         try:
             indexresp = json.loads(
-                requests.get("http://xkcd.com/info.0.json").content.decode()
+                requests.get("https://xkcd.com/info.0.json").content.decode()
             )
-        except requests.exceptions.ConnectionError:
-            return "XKCD did not return a valid response. It may be down."
+        except requests.exceptions.ConnectionError as e:
+            raise CommandOperationError(
+                "XKCD did not return a valid response. It may be down."
+            ) from e
         except ValueError as e:
-            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+            raise CommandOperationError(
+                f"XKCD response was missing data. Try again. [{e}]"
+            ) from e
 
+        number = indexresp["num"]
         if args:
             try:
                 target_number = int(args[0])
 
-            except ValueError:
-                return "You must enter a **number** for a custom xkcd"
-            else:
-                if int(target_number) == 404:
-                    return "Don't be that guy"
+                if not (0 <= target_number <= number):
+                    raise CommandInputError(
+                        "Cannot find an XKCD comic with that Index."
+                    )
 
+            except ValueError as e:
+                raise CommandInputError(
+                    "You must enter a **number** for a custom xkcd"
+                ) from e
+            else:
+                if target_number == 404:
+                    return "Don't be that guy."
         else:
-            number = indexresp["num"]
             target_number = randint(0, number)
             while target_number == 404:
                 target_number = randint(0, number)
@@ -508,31 +519,39 @@ class CommandsPublic(core.Commands):
             if target_number != 0:
                 resp = json.loads(
                     requests.get(
-                        "http://xkcd.com/{0}/info.0.json".format(target_number)
+                        f"https://xkcd.com/{target_number}/info.0.json"
                     ).content.decode()
                 )
             else:
-                resp = json.loads(
-                    requests.get("http://xkcd.com/info.0.json").content.decode()
-                )
+                resp = indexresp
 
-        except requests.exceptions.ConnectionError:
-            return "XKCD did not return a valid response. It may be down."
+        except requests.exceptions.ConnectionError as e:
+            raise CommandOperationError(
+                "XKCD did not return a valid response. It may be down."
+            ) from e
         except ValueError as e:
-            return "XKCD response was missing data. Try again. [{}]".format(str(e))
+            raise CommandOperationError(
+                f"XKCD response was missing data. Try again. [{e}]"
+            ) from e
 
         embed = (
-            discord.Embed(color=0x96A8C8)
+            discord.Embed(
+                color=0x96A8C8,
+                timestamp=dt(
+                    int(resp["year"]), int(resp["month"]), int(resp["day"]), 12
+                ),
+            )
             .set_image(url=resp["img"])
             .set_author(
-                name="XKCD #{}: {}".format(resp["num"], resp["safe_title"]),
+                name="XKCD #{num}: {safe_title}".format(**resp),
                 url="https://www.xkcd.com/{}".format(resp["num"]),
-                icon_url="https://is1-ssl.mzstatic.com/image/thumb/Purple128/v4/e0/a4/67/e0a467b3-dedf-cc50-aeeb-2efd42bb0386/source/512x512bb.jpg",
+                icon_url="https://is1-ssl.mzstatic.com/image/thumb/Purple128/v4"
+                "/e0/a4/67/e0a467b3-dedf-cc50-aeeb-2efd42bb0386/source/512x512bb.jpg",
             )
             .set_footer(text=resp["alt"])
         )
 
-        await self.client.embed(src.channel, embed)
+        return embed
 
     async def cmd_roll(
         self,
