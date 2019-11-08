@@ -35,7 +35,7 @@ from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
-from petal.util.fmt import escape, mono_block, userline
+from petal.util.fmt import escape, mono, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.numbers import word_number
 
@@ -56,6 +56,11 @@ def first_role_named(name: str, guild: discord.Guild):
     for role in guild.roles:
         if role.name == name:
             return role
+
+
+def timestr(dt: datetime = None) -> str:
+    # return str(dt or datetime.utcnow())[:-7]
+    return f"UTC {dt or datetime.utcnow():%Y-%m-%d %H:%M:%S}"
 
 
 class Petal(PetalClientABC):
@@ -645,13 +650,18 @@ class Petal(PetalClientABC):
                     name="Welcome",
                     value=f"User could not be sent a Welcome Message:"
                     f" {type(e).__name__}: {e}",
+                    inline=False,
                 )
             else:
                 card.add_field(
-                    name="Welcome", value="User was sent a Welcome Message in DM."
+                    name="Welcome",
+                    value="User was sent a Welcome Message in DM.",
+                    inline=False,
                 )
         else:
-            card.add_field(name="Welcome", value="No Welcome Message is configured.")
+            card.add_field(
+                name="Welcome", value="No Welcome Message is configured.", inline=False
+            )
 
         await self.log_membership(embed=card)
 
@@ -695,17 +705,18 @@ class Petal(PetalClientABC):
             else:
                 can_audit = True
 
-            em = discord.Embed(
-                title="Message Deleted",
-                description=f"A Message by {message.author.mention} was deleted."
-                f"\nMessage URL: {message.jump_url}",
-                colour=0xFC00A2,
+            em = (
+                discord.Embed(
+                    title="Message Deleted",
+                    description=f"A Message by {message.author.mention} was deleted.",
+                    colour=0xFC00A2,
+                )
+                .set_author(
+                    name=message.author.display_name,
+                    icon_url=get_avatar(message.author),
+                )
+                .set_footer(text=userline(message.author))
             )
-            em.set_author(
-                name=message.author.display_name, icon_url=get_avatar(message.author)
-            )
-            em.set_footer(text=f"{userline(message.author)}")
-            # em.set_thumbnail(url=get_avatar(message.author))
 
             if message.content:
                 em.add_field(
@@ -727,12 +738,6 @@ class Petal(PetalClientABC):
                     f" {pluralize(n, 'Attachment')}.",
                     inline=False,
                 )
-
-            em.add_field(name="Guild", value=guild.name)
-            em.add_field(
-                name="Channel",
-                value=f"`#{message.channel.name}`\n{message.channel.mention}",
-            )
 
             if can_audit:
                 if executor is None:
@@ -759,8 +764,20 @@ class Petal(PetalClientABC):
             if reason is not None:
                 em.add_field(name="Reason for Deletion", value=reason, inline=False)
 
-            em.add_field(name="Time of Creation", value=str(message.created_at)[:-7])
-            em.add_field(name="Time of Deletion", value=str(now)[:-7])
+            em.add_field(
+                name="Channel",
+                value=f"`#{message.channel.name}`\n{message.channel.mention}",
+            )
+            em.add_field(name="Guild", value=guild.name)
+            em.add_field(name="Message URL", value=message.jump_url, inline=False)
+
+            em.add_field(name="Time of Creation", value=timestr(message.created_at))
+
+            last = message.edited_at
+            if last is not None:
+                em.add_field(name="Last Edited", value=timestr(last))
+
+            em.add_field(name="Time of Deletion", value=timestr(now))
 
             await self.log_moderation(embed=em)
         except discord.errors.HTTPException:
@@ -778,44 +795,50 @@ class Petal(PetalClientABC):
         ):
             return
 
-        edit_time = datetime.utcnow()
-
         # If the message was marked as a possible typo by the command router,
         #   try running it again.
         executed = before.id in self.potential_typo and await self.execute_command(
             after
         )
 
-        userEmbed = (
+        em = (
             discord.Embed(
-                title="Message Edit with command execution"
+                title="Message Edit (with command execution)"
                 if executed
                 else "Message Edit",
-                description=before.author.name
-                + "#"
-                + before.author.discriminator
-                + " edited their message",
+                description=f"{before.author.mention} edited their message.",
                 colour=0xAE00FE,
             )
-            .add_field(name="Server", value=before.guild.name)
-            .add_field(name="Channel", value=before.channel.name)
             .add_field(
-                name="Previous message: ", value=escape(before.content), inline=False
+                name="Original Content", value=escape(before.content), inline=False
             )
-            .add_field(name="Edited message: ", value=escape(after.content))
-            .add_field(name="Timestamp", value=str(edit_time)[:-7], inline=False)
+            .add_field(name="Edited Content", value=escape(after.content), inline=False)
+            .add_field(
+                name="Channel",
+                value=f"`#{before.channel.name}`\n{before.channel.mention}",
+            )
+            .add_field(name="Guild", value=before.guild.name)
+            .add_field(name="Message URL", value=after.jump_url, inline=False)
+            .set_author(
+                name=before.author.display_name, icon_url=get_avatar(before.author)
+            )
             .set_footer(text=userline(before.author))
         )
+        em.add_field(name="Time of Creation", value=timestr(before.created_at))
+
+        last = before.edited_at
+        if last is not None:
+            em.add_field(name="Previous Edit", value=timestr(last))
+
+        em.add_field(name="Time of Edit", value=timestr())
 
         try:
-            await self.log_moderation(embed=userEmbed)
+            await self.log_moderation(embed=em)
         except discord.errors.HTTPException:
             log.warn(
                 "HTTP 400 error from the edit statement. "
                 + "Usually it's safe to ignore it"
             )
-
-            return
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if Petal.logLock:
@@ -833,63 +856,68 @@ class Petal(PetalClientABC):
                 role = r
 
         if gained is not None:
-            em = discord.Embed(
-                title=f"({role.guild.name}) User Role {gained}",
-                description=f"{after.name}#{after.discriminator} {gained} role",
-                colour=0x0093C3,
+            em = (
+                discord.Embed(
+                    title=f"({role.guild.name}) User Role {gained}",
+                    description=f"{after.display_name} {gained} role",
+                    colour=0x0093C3,
+                )
+                .set_author(
+                    name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
+                )
+                .add_field(name="Role", value=role.name)
+                .add_field(name="Timestamp", value=timestr(), inline=False)
+                .set_thumbnail(url=get_avatar(after))
+                .set_footer(text=userline(after))
             )
-            em.set_author(
-                name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
-            )
-            em.add_field(name="Role", value=role.name)
-            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            em.set_thumbnail(url=get_avatar(after))
 
             await self.log_moderation(embed=em)
 
         if before.nick != after.nick:
-            em = discord.Embed(
-                title="Nickname Change",
-                description=f"`{userline(after)}` changed their nickname."
-                f"\nBefore: `{escape(before.nick)}`"
-                f"\nAfter: `{escape(after.nick)}`"
-                f"\n({after.mention})",
-                colour=0x34F3AD,
+            em = (
+                discord.Embed(
+                    title="Nickname Change",
+                    description=f"{after.mention} changed their nickname.",
+                    colour=0x34F3AD,
+                )
+                .add_field(name="Before", value=escape(before.nick))
+                .add_field(name="After", value=escape(after.nick))
+                .add_field(name="Timestamp", value=timestr(), inline=False)
+                .set_thumbnail(url=get_avatar(after))
+                .set_footer(text=userline(after))
             )
-
-            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            em.set_thumbnail(url=get_avatar(after))
 
             await self.log_moderation(embed=em)
 
     async def on_user_update(self, before: discord.User, after: discord.User):
         if before.name != after.name:
-            em = discord.Embed(
-                title="Username Change",
-                description=f"`{userline(after)}` changed their username."
-                f"\nBefore: `{escape(before.name)}`"
-                f"\nAfter: `{escape(after.name)}`"
-                f"\n({after.mention})",
-                colour=0x34F3AD,
+            em = (
+                discord.Embed(
+                    title="Username Change",
+                    description=f"{after.mention} changed their username.",
+                    colour=0x34F3AD,
+                )
+                .add_field(name="Before", value=escape(before.name))
+                .add_field(name="After", value=escape(after.name))
+                .add_field(name="Timestamp", value=timestr(), inline=False)
+                .set_thumbnail(url=get_avatar(after))
+                .set_footer(text=userline(after))
             )
-
-            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
-            em.set_thumbnail(url=get_avatar(after))
 
             await self.log_moderation(embed=em)
 
         if before.avatar_url != after.avatar_url:
-            em = discord.Embed(
-                title="Avatar Change",
-                description=f"{escape(before.name)} changed their Avatar.",
-                colour=0x34F3AD,
+            em = (
+                discord.Embed(
+                    title="Avatar Change",
+                    description=f"{after.mention} changed their Avatar.",
+                    colour=0x34F3AD,
+                )
+                .add_field(name="Timestamp", value=timestr(), inline=False)
+                .set_thumbnail(url=get_avatar(before))
+                .set_footer(text=userline(after))
+                .set_image(url=get_avatar(after))
             )
-
-            em.set_thumbnail(url=get_avatar(before))
-            em.set_image(url=get_avatar(after))
-
-            em.add_field(name="UUID", value=str(before.id))
-            em.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
 
             await self.log_moderation(embed=em)
 
@@ -1004,10 +1032,10 @@ class Petal(PetalClientABC):
                     value=message.author.name + "#" + message.author.discriminator,
                 )
                 embed.add_field(name="Channel", value=message.channel.name)
-                embed.add_field(name="Server", value=message.guild.name)
+                embed.add_field(name="Guild", value=message.guild.name)
                 embed.add_field(name="Content", value=message.content)
                 embed.add_field(name="Detected word", value=word, inline=False)
-                embed.add_field(name="Timestamp", value=str(datetime.utcnow())[:-7])
+                embed.add_field(name="Timestamp", value=timestr(), inline=False)
                 embed.set_thumbnail(url=message.author.avatar_url)
                 await self.log_moderation(embed=embed)
                 break
