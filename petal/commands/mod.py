@@ -11,7 +11,7 @@ import discord
 
 from petal import checks
 from petal.commands import core, shared
-from petal.etc import lambdall, mash
+from petal.etc import flat_embed, lambdall, mash, timestr
 from petal.exceptions import (
     CommandArgsError,
     CommandExit,
@@ -674,7 +674,7 @@ class CommandsMod(core.Commands):
         `--short`, `-s` :: Display less detail, for a more compact embed. Overrides `--author`, `-a`.
         """
         if not args:
-            return "Must provide at least one URL or ID pair."
+            raise CommandInputError("Must provide at least one URL or ID pair.")
 
         for arg in args:
             id_c = _channel or _c or src.channel.id
@@ -685,21 +685,15 @@ class CommandsMod(core.Commands):
 
             channel: discord.TextChannel = self.client.get_channel(id_c)
             if not channel:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Cannot find Channel with id `{}`.".format(id_c),
-                )
+                yield f"Cannot find Channel with id `{id_c}`."
                 continue
+
             try:
                 message: discord.Message = await channel.fetch_message(id_m)
             except discord.NotFound:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Cannot find Message with id `{}` in channel `{}`.".format(
-                        id_m, id_c
-                    ),
-                )
+                yield f"Cannot find Message with id `{id_m}` in channel `{id_c}`."
                 continue
+
             member: discord.Member = message.author
 
             ct = escape(message.content if _preserve or _p else message.clean_content)
@@ -728,17 +722,11 @@ class CommandsMod(core.Commands):
             # Add a field for EMBEDS (mostly for bots).
             if message.embeds:
                 e.add_field(
-                    name=f"Embed Titles ({len(message.embeds)})",
+                    name=f"Rich Embeds ({len(message.embeds)})",
                     value="\n".join(
                         [
-                            (
-                                '#{}. ({} char) "{}"'.format(
-                                    i + 1,
-                                    len(e.get("description", "")),
-                                    e.get("title", "(No Title)"),
-                                )
-                            )
-                            for i, e in enumerate(message.embeds)
+                            flat_embed(e, i)
+                            for i, e in enumerate(message.embeds, 1)
                         ]
                     ),
                     inline=False,
@@ -821,16 +809,11 @@ class CommandsMod(core.Commands):
                     inline=False,
                 )
 
+            e.add_field(name="Time of Creation", value=timestr(message.created_at))
             if message.edited_at:
-                e.add_field(name="Last Edited", value=message.edited_at)
+                e.add_field(name="Time of Edit", value=timestr(message.edited_at))
 
-            try:  # Post it.
-                await self.client.embed(src.channel, e)
-            except discord.HTTPException:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Failed to post embed. Message may have been too long.",
-                )
+            yield e
 
     cmd_send = shared.factory_send(
         {
@@ -860,7 +843,6 @@ class CommandsMod(core.Commands):
             if target is None:
                 raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
             else:
-                await src.channel.trigger_typing()
                 yield membership_card(target)
 
 

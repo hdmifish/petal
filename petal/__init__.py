@@ -29,7 +29,7 @@ from petal.commands import CommandRouter as Commands
 from petal.commands.core import CommandPending
 from petal.config import cfg
 from petal.dbhandler import DBHandler
-from petal.etc import mash, filter_members_with_role
+from petal.etc import mash, filter_members_with_role, timestr
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
@@ -56,11 +56,6 @@ def first_role_named(name: str, guild: discord.Guild):
     for role in guild.roles:
         if role.name == name:
             return role
-
-
-def timestr(dt: datetime = None) -> str:
-    # return str(dt or datetime.utcnow())[:-7]
-    return f"UTC {dt or datetime.utcnow():%Y-%m-%d %H:%M:%S}"
 
 
 class Petal(PetalClientABC):
