@@ -520,17 +520,17 @@ class CommandsMod(core.Commands):
                     await target.remove_roles(role_mute, reason)
                     # await self.client.guild_voice_state(target, mute=False)
 
-                    warnEmbed = discord.Embed(
+                    em_send = discord.Embed(
                         title="User Unmute",
-                        description=f"You have been unmuted by {src.author.name}.",
+                        description=f"You have been unmuted by {src.author.mention}.",
                         colour=0x00FF11,
                     )
-                    warnEmbed.set_author(
+                    em_send.set_author(
                         name=self.client.user.name,
                         icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
                     )
-                    # warnEmbed.add_field(name="Reason", value=reason.content)
-                    warnEmbed.add_field(
+                    # em_send.add_field(name="Reason", value=reason.content)
+                    em_send.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
@@ -539,17 +539,17 @@ class CommandsMod(core.Commands):
                     await target.add_roles(role_mute, reason)
                     # await self.client.guild_voice_state(target, mute=True)
 
-                    warnEmbed = discord.Embed(
+                    em_send = discord.Embed(
                         title="User Mute",
-                        description=f"You have been muted by {src.author.name}.",
+                        description=f"You have been muted by {src.author.mention}.",
                         colour=0xFF0000,
                     )
-                    warnEmbed.set_author(
+                    em_send.set_author(
                         name=self.client.user.name,
                         icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
                     )
-                    warnEmbed.add_field(name="Reason", value=reason.content)
-                    warnEmbed.add_field(
+                    em_send.add_field(name="Reason", value=reason.content)
+                    em_send.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
@@ -562,7 +562,7 @@ class CommandsMod(core.Commands):
                 yield f"{target.name}  (ID: {target.id}) was successfully {muteswitch}d"
 
                 try:
-                    await target.send(embed=warnEmbed)
+                    await target.send(embed=em_send)
                 except discord.errors.Forbidden:
                     yield (
                         f"  (FAILED to send a DM notification to user `{target.id}`.)",
@@ -574,23 +574,23 @@ class CommandsMod(core.Commands):
                         True,
                     )
 
-                logEmbed = discord.Embed(
+                em_log = discord.Embed(
                     title=f"User {muteswitch}",
                     description=reason.content,
                     colour=0x1200FF,
                 )
 
-                logEmbed.add_field(
+                em_log.add_field(
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
-                logEmbed.add_field(
+                em_log.add_field(
                     name="Recipient", value=target.name + "\n" + target.id
                 )
-                logEmbed.add_field(name="Server", value=target.guild.name)
-                logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=target.avatar_url)
+                em_log.add_field(name="Server", value=target.guild.name)
+                em_log.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
+                em_log.set_thumbnail(url=target.avatar_url)
 
-                await self.client.log_moderation(embed=logEmbed)
+                await self.client.log_moderation(embed=em_log)
 
     async def cmd_purge(self, args, src: Src, **_):
         """Purge up to 200 messages in the current channel.

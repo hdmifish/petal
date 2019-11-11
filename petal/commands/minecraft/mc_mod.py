@@ -4,7 +4,7 @@ Access: Server Operators"""
 import discord
 
 from petal.commands.minecraft import auth
-from petal.exceptions import CommandOperationError
+from petal.exceptions import CommandInputError, CommandOperationError
 from petal.types import Src
 from petal.util.fmt import escape
 
@@ -88,6 +88,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
         submission = [arg.lower() for arg in args]
         _verbose = _verbose or _v
 
+        if not submission:
+            raise CommandInputError("Provide at least one Query Parameter.")
+
         limit = False
         show = []
 
@@ -116,7 +119,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 show.extend(db)
 
             if show:
-                yield from map(self.mc2.card, show)
+                yield from (self.mc2.card(x, _verbose) for x in show)
             else:
                 raise CommandOperationError("No Users found.")
 

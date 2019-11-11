@@ -355,7 +355,7 @@ class Minecraft(object):
             col = 0x_00_CC_00
             status = "\n".join((APPROVE, *(f"<@{i}>" for i in approved)))
         else:
-            col = 0x_FF_FF_00
+            col = 0x_CC_AA_00
             status = PENDING
 
         uuid_discord = profile.get("discord")
