@@ -1,4 +1,4 @@
-from asyncio import ensure_future as create_task, Future, sleep
+from asyncio import CancelledError, create_task, sleep, Task
 from traceback import print_exc
 from typing import Optional
 from urllib.parse import urlencode, quote_plus
@@ -42,7 +42,7 @@ class CommandPending:
         self.active = False
         self.react = None
         self.reply: Optional[discord.Message] = None
-        self.waiting: Future = create_task(self.wait())
+        self.waiting: Task = create_task(self.wait())
 
     async def run(self):
         """Try to execute this command. Return True if execution is carried out
@@ -133,10 +133,10 @@ class CommandPending:
             executed = True
 
         finally:
-            if self.active and self.waiting:
-                await self.post_listening()
             if executed:
                 self.router.config.get("stats")["comCount"] += 1
+            if self.active and self.waiting:
+                await self.src.add_reaction(view_icon)
 
         return executed
 
@@ -151,15 +151,10 @@ class CommandPending:
             self.active = True
             self.dict_[self.src.id] = self
             await sleep(60)
+        except:
+            pass
         finally:
             await self.unlink()
-
-    async def post_listening(self):
-        try:
-            if self.active:
-                await self.src.add_reaction(view_icon)
-        except Exception:
-            print_exc()
 
     async def unlink(self):
         """Prevent self from being executed."""
@@ -167,8 +162,13 @@ class CommandPending:
         if self.src.id in self.dict_:
             del self.dict_[self.src.id]
 
+        if self.waiting and not self.waiting.done():
+            self.waiting.cancel()
+
         try:
             await self.src.remove_reaction(view_icon, self.router.client.user)
+        except CancelledError:
+            pass
         except:
             print_exc()
 
