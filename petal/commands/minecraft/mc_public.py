@@ -30,7 +30,7 @@ class CommandsMCPublic(auth.CommandsMCAuth):
         self.mc2.add_entries(entry)
 
         try:
-            card = self.mc2.card(entry)
+            card = self.mc2.card(entry, True)
             card.title = "New Whitelist Request"
             chan = self.client.get_channel(self.config.get("mc_channel"))
             await chan.send(embed=card)

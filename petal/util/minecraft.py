@@ -340,7 +340,11 @@ class Minecraft(object):
         self._ctxs: int = 0
         self._db = None
 
-    def card(self, profile: Dict[str, Union[int, str, List[int], List[str]]]) -> Embed:
+    def card(
+        self,
+        profile: Dict[str, Union[int, str, List[int], List[str]]],
+        verbose: bool = False,
+    ) -> Embed:
         suspended: int = profile.get("suspended", 0)
         approved: List[int] = profile.get("approved", [])
 
@@ -362,25 +366,26 @@ class Minecraft(object):
                 title="Minecraft User",
                 description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
                 f"\nMinecraft UUID: {profile.get('uuid')!r}"
-                f"\nDiscord Identity: {mono(escape(userline(user)))}"
+                f"\nDiscord Identity: {mono(escape(userline(user))) if user else 'Not in Guild'}"
                 f"\nDiscord Tag: <@{uuid_discord}>",
                 colour=col,
             )
             .add_field(name="Application Status", value=status, inline=False)
             .add_field(name="Timestamp", value=profile.get("submitted"))
             .add_field(name="Op Level", value=profile.get("operator", 0))
-            .add_field(
+        )
+        if verbose:
+            em.add_field(
                 name="Username History",
                 value="\n".join(
                     f"- {escape(name)}" for name in profile.get("altname", [])
                 ),
                 inline=False,
             )
-        )
-        if profile.get("notes", []):
-            em.add_field(
-                name="User Notes", value="\n".join(profile["notes"]), inline=False
-            )
+            if profile.get("notes", []):
+                em.add_field(
+                    name="User Notes", value="\n".join(profile["notes"]), inline=False
+                )
 
         return em
 

@@ -4,6 +4,7 @@ Access: Server Operators"""
 import discord
 
 from petal.commands.minecraft import auth
+from petal.exceptions import CommandOperationError
 from petal.types import Src
 from petal.util.fmt import escape
 
@@ -72,8 +73,8 @@ class CommandsMCMod(auth.CommandsMCAuth):
         elif reply == -9:
             return "Sorry, iso and/or dav left in an unfinished function >:l"
 
-    async def cmd_wlquery(
-        self, args, src, _verbose: bool = False, _v: bool = False, **_
+    def cmd_wlquery(
+        self, args, _verbose: bool = False, _v: bool = False, **_
     ):
         """Take a string and finds any database entry that references it.
 
@@ -85,75 +86,107 @@ class CommandsMCMod(auth.CommandsMCAuth):
         Options: `--verbose`, `-v` :: Provide more detailed information about the user.
         """
         submission = [arg.lower() for arg in args]
-        _verbose = True in [_verbose, _v]
+        _verbose = _verbose or _v
 
-        if "pending" in submission:
-            searchres = []
-            noresult = "No requests are currently pending."
-            pList = self.minecraft.etc.WLDump()
-            for entry in pList:
-                if not entry["approved"]:
-                    searchres.append(entry)
-        elif "suspended" in submission or "restricted" in submission:
-            searchres = []
-            noresult = "No users are currently suspended."
-            pList = self.minecraft.etc.WLDump()
-            for entry in pList:
-                if entry["suspended"]:
-                    searchres.append(entry)
-        else:
-            searchres = self.minecraft.WLQuery(" ".join(submission))
-            noresult = "No database entries matching `{}` found."
+        limit = False
+        show = []
 
-        if not searchres:
-            return noresult.format(submission)
-        else:
-            qout = await src.channel.send("<query loading...>")
-            oput = "Results for {} ({}):\n".format(submission, len(searchres))
-            for entry in searchres:
-                oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
-                if entry.get("suspended"):
-                    oput += "Status: **`#!# SUSPENDED #!#`**\n"
-                    oput += "Reason: {}\n".format(
-                        self.minecraft.suspend_table.get(
-                            entry.get("suspended", True), "<ERROR>"
-                        )
-                    )
-                elif len(entry["approved"]) == 0:
-                    oput += "Status: *`-#- PENDING -#-`*\n"
+        with self.mc2.db(*(p for p in args if p != "pending" and p != "suspended")) as db:
+            if "pending" in submission:
+                limit = True
+                subs = [entry for entry in db if not entry.get("approved")]
+                if subs:
+                    for sub in subs:
+                        if sub not in show:
+                            show.append(sub)
                 else:
-                    oput += "Status: __`--- APPROVED ---`__\n"
-                duser = self.client.main_guild.get_member(entry.get("discord", 0))
-                oput += "- On Discord: "
-                if duser:
-                    oput += "**__`YES`__**\n"
+                    yield "No Pending Applications found."
+
+            if "suspended" in submission:
+                limit = True
+                subs = [entry for entry in db if entry.get("suspended")]
+                if subs:
+                    for sub in subs:
+                        if sub not in show:
+                            show.append(sub)
                 else:
-                    oput += "**__`! NO !`__**\n"
-                oput += (
-                    "- Operator level: `"
-                    + str(entry.get("operator", "<ERROR>"))
-                    + "`\n"
-                )
-                oput += "- Minecraft UUID: `" + entry.get("uuid", "<ERROR>") + "`\n"
-                oput += "- Discord UUID: `" + entry.get("discord", "<ERROR>") + "`\n"
-                if _verbose:
-                    oput += (
-                        "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
-                    )
-                    oput += (
-                        "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
-                    )
-                    oput += "- Alternate Usernames:\n"
-                    for pname in entry["altname"]:
-                        oput += "  - `" + pname + "`\n"
-                    oput += "- Notes:\n"
-                    for note in entry.get("notes", []):
-                        oput += "  - `" + note + "`\n"
-                else:
-                    oput += "- Notes: `{}`\n".format(len(entry.get("notes", [])))
-            oput += "--------"
-            await qout.edit(content=oput)
-            # return oput
+                    yield "No Suspended Users found."
+
+            if submission and not limit:
+                show.extend(db)
+
+            if show:
+                yield from map(self.mc2.card, show)
+            else:
+                raise CommandOperationError("No Users found.")
+
+        # if "pending" in submission:
+        #     searchres = []
+        #     noresult = "No requests are currently pending."
+        #     pList = self.minecraft.etc.WLDump()
+        #     for entry in pList:
+        #         if not entry["approved"]:
+        #             searchres.append(entry)
+        # elif "suspended" in submission or "restricted" in submission:
+        #     searchres = []
+        #     noresult = "No users are currently suspended."
+        #     pList = self.minecraft.etc.WLDump()
+        #     for entry in pList:
+        #         if entry["suspended"]:
+        #             searchres.append(entry)
+        # else:
+        #     searchres = self.minecraft.WLQuery(" ".join(submission))
+        #     noresult = "No database entries matching `{}` found."
+        #
+        # if not searchres:
+        #     return noresult.format(submission)
+        # else:
+        #     qout = await src.channel.send("<query loading...>")
+        #     oput = "Results for {} ({}):\n".format(submission, len(searchres))
+        #     for entry in searchres:
+        #         oput += "**Minecraft Name: `" + entry["name"] + "`**\n"
+        #         if entry.get("suspended"):
+        #             oput += "Status: **`#!# SUSPENDED #!#`**\n"
+        #             oput += "Reason: {}\n".format(
+        #                 self.minecraft.suspend_table.get(
+        #                     entry.get("suspended", True), "<ERROR>"
+        #                 )
+        #             )
+        #         elif len(entry["approved"]) == 0:
+        #             oput += "Status: *`-#- PENDING -#-`*\n"
+        #         else:
+        #             oput += "Status: __`--- APPROVED ---`__\n"
+        #         duser = self.client.main_guild.get_member(entry.get("discord", 0))
+        #         oput += "- On Discord: "
+        #         if duser:
+        #             oput += "**__`YES`__**\n"
+        #         else:
+        #             oput += "**__`! NO !`__**\n"
+        #         oput += (
+        #             "- Operator level: `"
+        #             + str(entry.get("operator", "<ERROR>"))
+        #             + "`\n"
+        #         )
+        #         oput += "- Minecraft UUID: `" + entry.get("uuid", "<ERROR>") + "`\n"
+        #         oput += "- Discord UUID: `" + entry.get("discord", "<ERROR>") + "`\n"
+        #         if _verbose:
+        #             oput += (
+        #                 "- Discord Tag: <@" + entry.get("discord", "<ERROR>") + ">\n"
+        #             )
+        #             oput += (
+        #                 "- Submitted at: `" + entry.get("submitted", "<ERROR>") + "`\n"
+        #             )
+        #             oput += "- Alternate Usernames:\n"
+        #             for pname in entry["altname"]:
+        #                 oput += "  - `" + pname + "`\n"
+        #             oput += "- Notes:\n"
+        #             for note in entry.get("notes", []):
+        #                 oput += "  - `" + note + "`\n"
+        #         else:
+        #             oput += "- Notes: `{}`\n".format(len(entry.get("notes", [])))
+        #     oput += "--------"
+        #     await qout.edit(content=oput)
+        #     # return oput
 
     async def cmd_wlrefresh(self, src: Src, **_):
         """Force an immediate rebuild of both the PlayerDB and the whitelist itself.
