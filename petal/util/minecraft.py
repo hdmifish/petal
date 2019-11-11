@@ -20,11 +20,12 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Type, Union, Tuple
 from uuid import UUID
 
+from discord import Embed
 import requests
 
 from ..exceptions import WhitelistError
 from ..grasslands import Peacock
-from .embeds import minecraft_card, minecraft_suspension
+from .fmt import bold, escape, italic, mono, underline, userline
 from petal.config import cfg
 from petal.types import PetalClientABC
 
@@ -48,6 +49,31 @@ PLAYERDEFAULT: type_entry_db = {
     "operator": 0,
     "notes": [],
 }
+
+
+minecraft_suspension = {
+    True: "Nonspecific suspension",
+    False: "Not suspended",
+    000: "Not suspended",
+    # Trivial suspensions
+    101: "Joke suspension",
+    102: "Self-sequested suspension",
+    103: "Old account",
+    104: "User not in Discord",
+    # Minor suspensions
+    201: "Minor trolling",
+    203: "Compromised account",
+    # Moderate suspensions
+    301: "Major trolling",
+    302: "Stealing",
+    # Major suspensions
+    401: "Use of slurs",
+    402: "Griefing",
+    403: "Discord banned",
+}
+APPROVE: str = underline(mono("--- APPROVED ---"))
+PENDING: str = italic(mono("-#- PENDING -#-"))
+SUSPEND: str = bold(mono("#!# SUSPENDED #!#"))
 
 
 def break_uid(uuid: str) -> str:
@@ -131,7 +157,8 @@ def new_entry(
     if uuid_mc is None and name_mc is None:
         raise TypeError("Entry requires either Username or UUID.")
     elif uuid_mc is None:
-        _d = id_from_name(name_mc)[0]
+        # print(id_from_name(name_mc))
+        _d = id_from_name(name_mc)
         uuid_mc = _d["id"]
 
     new = PLAYERDEFAULT.copy()
@@ -312,6 +339,50 @@ class Minecraft(object):
 
         self._ctxs: int = 0
         self._db = None
+
+    def card(self, profile: Dict[str, Union[int, str, List[int], List[str]]]) -> Embed:
+        suspended: int = profile.get("suspended", 0)
+        approved: List[int] = profile.get("approved", [])
+
+        if suspended:
+            col = 0x_AA_22_00
+            status = f"{SUSPEND}\n{minecraft_suspension.get(suspended, 'Unknown Code')}"
+        elif approved:
+            col = 0x_00_CC_00
+            status = "\n".join((APPROVE, *(f"<@{i}>" for i in approved)))
+        else:
+            col = 0x_FF_FF_00
+            status = PENDING
+
+        uuid_discord = profile.get("discord")
+        user = self.client.get_user(int(uuid_discord)) if uuid_discord else None
+
+        em = (
+            Embed(
+                title="Minecraft User",
+                description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
+                f"\nMinecraft UUID: {profile.get('uuid')!r}"
+                f"\nDiscord Identity: {mono(escape(userline(user)))}"
+                f"\nDiscord Tag: <@{uuid_discord}>",
+                colour=col,
+            )
+            .add_field(name="Application Status", value=status, inline=False)
+            .add_field(name="Timestamp", value=profile.get("submitted"))
+            .add_field(name="Op Level", value=profile.get("operator", 0))
+            .add_field(
+                name="Username History",
+                value="\n".join(
+                    f"- {escape(name)}" for name in profile.get("altname", [])
+                ),
+                inline=False,
+            )
+        )
+        if profile.get("notes", []):
+            em.add_field(
+                name="User Notes", value="\n".join(profile["notes"]), inline=False
+            )
+
+        return em
 
     def add_entries(self, *entries: type_entry_db):
         with self.db() as db:

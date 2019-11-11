@@ -2,12 +2,12 @@
 
 from datetime import datetime as dt, timedelta as td
 from enum import IntEnum
-from typing import Dict, List, Union
+from typing import Union
 
 from discord import Embed, Guild, Member, User
 
 from .cdn import get_avatar
-from .fmt import bold, escape, italic, mono, smallid, underline, userline
+from .fmt import bold, escape, smallid
 
 
 Muser = Union[Member, User]
@@ -53,62 +53,5 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
         name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
     )
     em.add_field(name="Joined Guild", value=f"{joined_at}\n({bold(since_joined)} ago)")
-
-    return em
-
-
-minecraft_suspension = {
-    True: "Nonspecific suspension",
-    False: "Not suspended",
-    000: "Not suspended",
-    # Trivial suspensions
-    101: "Joke suspension",
-    102: "Self-sequested suspension",
-    103: "Old account",
-    104: "User not in Discord",
-    # Minor suspensions
-    201: "Minor trolling",
-    203: "Compromised account",
-    # Moderate suspensions
-    301: "Major trolling",
-    302: "Stealing",
-    # Major suspensions
-    401: "Use of slurs",
-    402: "Griefing",
-    403: "Discord banned",
-}
-APPROVE: str = underline(mono("--- APPROVED ---"))
-PENDING: str = italic(mono("-#- PENDING -#-"))
-SUSPEND: str = bold(mono("#!# SUSPENDED #!#"))
-
-
-def minecraft_card(
-    profile: Dict[str, Union[int, str, List[int], List[str]]],
-    member: Muser = None,
-    verbose: bool = False,
-) -> Embed:
-    suspended: int = profile.get("suspended", 0)
-    approved: List[int] = profile.get("approved", [])
-
-    if suspended:
-        col = 0x_AA_22_00
-        status = f"{SUSPEND}\n{minecraft_suspension.get(suspended, 'Unknown Code')}"
-    elif approved:
-        col = 0x_00_CC_00
-        status = "\n".join((APPROVE, *(f"<@{i}>" for i in approved)))
-    else:
-        col = 0x_FF_FF_00
-        status = PENDING
-
-    em = Embed(
-        title="Minecraft User",
-        description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
-        f"\nMinecraft UUID: {repr(profile.get('uuid'))}"
-        f"\nDiscord Identity: {mono(escape(userline(member)))}"
-        f"\nDiscord Tag: {member.mention}",  # TODO: Handle missing Member
-        colour=col,
-    ).add_field(name="Application Status", value=status)
-
-    # TODO: Add fields for Date, Operator Status, Name History, and Notes
 
     return em
