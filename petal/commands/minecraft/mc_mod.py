@@ -1,12 +1,15 @@
 """Commands module for MINECRAFT-RELATED UTILITIES.
 Access: Server Operators"""
 
+from collections import defaultdict
+
 import discord
 
 from petal.commands.minecraft import auth
 from petal.exceptions import CommandInputError, CommandOperationError
 from petal.types import Src
-from petal.util.fmt import escape
+from petal.util.fmt import escape, userline
+from petal.util.grammar import sequence_words
 
 
 wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the Server Address is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect."
@@ -27,55 +30,101 @@ class CommandsMCMod(auth.CommandsMCAuth):
         Options: `--nosend` :: Do not send a message to the user telling them they have been whitelisted.
         """
         if not args:
-            return
+            raise CommandInputError("Provide at least one User to be accepted.")
 
-        submission = args[0]
-        # Send the submission through the function
-        reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
-            submission, str(src.author.id)
-        )
+        send = defaultdict(list)
 
-        if reply == 0:
-            self.log.f(
-                "wl+",
-                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
-            )
-            if doSend and not _nosend:
-                recipientobj = self.client.main_guild.get_member(recipientid)
-                try:
-                    msg = await self.client.send_message(
-                        channel=recipientobj, message=wlpm
+        with self.mc2.db():
+            # Open the DB File. We do not use it directly, so it does not need
+            #   to be assigned a Name; This is just to avoid excessive reads.
+            for ident in args:
+                with self.mc2.db(ident) as db:
+                    for entry in db:
+                        if str(src.author.id) not in entry["approved"]:
+                            if not entry["approved"]:
+                                # This is the first Approval of this Whitelist
+                                #   Application. Indicate that the user should
+                                #   be sent a DM.
+                                send[entry["discord"]].append(entry["name"])
+
+                            entry["approved"].append(str(src.author.id))
+                            yield self.mc2.card(entry, title="Application Approved")
+                        else:
+                            yield f"You have already approved {escape(entry['name'])!r}."
+
+        if send and not _nosend:
+            # Send the Users DMs to inform them of their acceptance.
+            for uuid, names in send.items():
+                member: discord.Member = self.client.main_guild.get_member(int(uuid))
+                if member:
+                    request, has = (
+                        ("request", "has") if len(names) == 1 else ("requests", "have")
                     )
-                except discord.DiscordException as e:
-                    self.log.err("Error on WLAdd PM: " + str(e))
-                    msg = None
-                if msg:
-                    return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(
-                        mcname, recipientid
-                    )
+                    try:
+                        await member.send(
+                            f"Your Minecraft whitelist {request} for "
+                            f"{sequence_words([repr(escape(name)) for name in names])}"
+                            f" {has} been accepted. Remember that the Server"
+                            f" Address is `mc.patchgaming.org`, and that it may"
+                            f" take up to 60 seconds to go into effect."
+                        )
+                    except:
+                        yield f"Failed to notify `{userline(member)}` via DM."
+                    else:
+                        yield f"Notified user `{userline(member)}` via DM."
                 else:
-                    return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(
-                        mcname, recipientid
-                    )
-            else:
-                return "You have successfully reapproved `{}` for <@{}> :D".format(
-                    mcname, recipientid
-                )
-            # return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
-        elif reply == -2:
-            return "You have already approved `{}` :o".format(mcname)
-        # elif reply == -:
-        #     return "Error (No Description Provided)"
-        elif reply == -7:
-            return "Could not access the database file D:"
-        elif reply == -8:
-            return "Cannot find a whitelist request matching `{}` D:".format(submission)
-        elif reply == -9:
-            return "Sorry, iso and/or dav left in an unfinished function >:l"
+                    yield f"User `{uuid}` not found."
 
-    def cmd_wlquery(
-        self, args, _verbose: bool = False, _v: bool = False, **_
-    ):
+        # yield (True, "Rebuilding Database...", True)
+        # # await src.channel.trigger_typing()
+        # self.mc2.rebuild()
+        # yield "Rebuild complete."
+
+        # submission = args[0]
+        # # Send the submission through the function
+        # reply, doSend, recipientid, mcname, wlwrite = self.minecraft.WLAdd(
+        #     submission, str(src.author.id)
+        # )
+        #
+        # if reply == 0:
+        #     self.log.f(
+        #         "wl+",
+        #         f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets APPROVED on '{mcname}'",
+        #     )
+        #     if doSend and not _nosend:
+        #         recipientobj = self.client.main_guild.get_member(recipientid)
+        #         try:
+        #             msg = await self.client.send_message(
+        #                 channel=recipientobj, message=wlpm
+        #             )
+        #         except discord.DiscordException as e:
+        #             self.log.err("Error on WLAdd PM: " + str(e))
+        #             msg = None
+        #         if msg:
+        #             return "You have successfully approved `{}` for <@{}> and a notification PM has been sent :D".format(
+        #                 mcname, recipientid
+        #             )
+        #         else:
+        #             return "You have approved `{}` for <@{}>...But a PM could not be sent D:".format(
+        #                 mcname, recipientid
+        #             )
+        #     else:
+        #         return "You have successfully reapproved `{}` for <@{}> :D".format(
+        #             mcname, recipientid
+        #         )
+        #     # return "You have successfully approved `{}` for <@{}> :D".format(mcname, recipientid)
+        # elif reply == -2:
+        #     return "You have already approved `{}` :o".format(mcname)
+        # # elif reply == -:
+        # #     return "Error (No Description Provided)"
+        # elif reply == -7:
+        #     return "Could not access the database file D:"
+        # elif reply == -8:
+        #     return "Cannot find a whitelist request matching `{}` D:".format(submission)
+        # elif reply == -9:
+        #     return "Sorry, iso and/or dav left in an unfinished function >:l"
+
+    def cmd_wlquery(self, args, _verbose: bool = False, _v: bool = False, **_):
         """Take a string and finds any database entry that references it.
 
         Search terms can be Discord UUID, Minecraft UUID, or Minecraft username. Multiple (non-special) terms (space-separated) can be queried at once.
@@ -94,7 +143,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
         limit = False
         show = []
 
-        with self.mc2.db(*(p for p in args if p != "pending" and p != "suspended")) as db:
+        with self.mc2.db(
+            *(p for p in args if p != "pending" and p != "suspended")
+        ) as db:
             if "pending" in submission:
                 limit = True
                 subs = [entry for entry in db if not entry.get("approved")]
@@ -196,11 +247,17 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         Syntax: `{p}wlrefresh`
         """
+        yield ("Rebuilding Database...", True)
+
         async with src.channel.typing():
-            if self.minecraft.etc.EXPORT_WHITELIST(True, True):
-                return "Whitelist fully refreshed."
-            else:
-                return "Whitelist failed to refresh."
+            self.mc2.rebuild()
+
+        yield "Rebuild complete."
+
+        #     if self.minecraft.etc.EXPORT_WHITELIST(True, True):
+        #         return "Whitelist fully refreshed."
+        #     else:
+        #         return "Whitelist failed to refresh."
 
     async def cmd_wlgone(self, _page: int = 0, **_):
         """Check the WL database for any users whose Discord ID is that of someone who has left the server.

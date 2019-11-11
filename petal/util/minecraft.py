@@ -32,7 +32,7 @@ from petal.types import PetalClientABC
 log = Peacock()
 
 
-type_entry_db: Type = Dict[str, Union[bool, int, List[str], str]]
+type_entry_db: Type = Dict[str, Union[bool, int, List[int], List[str], str]]
 type_db: Type = List[type_entry_db]
 
 
@@ -171,7 +171,7 @@ def new_entry(
         hist.raise_for_status()
 
     new["uuid"] = uuid_mc
-    new["discord"] = uuid_discord
+    new["discord"] = str(uuid_discord)
     new["submitted"] = dt.utcnow().strftime("%Y-%m-%d_%0H:%M")
 
     return new
@@ -181,6 +181,7 @@ def refresh_entry(old: type_entry_db) -> type_entry_db:
     try:
         new = new_entry(old["discord"], uuid_mc=old["uuid"])
         new["submitted"] = old["submitted"]
+        new["approved"] = old["approved"]
         return new
     except:
         return old
@@ -344,6 +345,7 @@ class Minecraft(object):
         self,
         profile: Dict[str, Union[int, str, List[int], List[str]]],
         verbose: bool = False,
+        title: str = "Minecraft User",
     ) -> Embed:
         suspended: int = profile.get("suspended", 0)
         approved: List[int] = profile.get("approved", [])
@@ -363,7 +365,7 @@ class Minecraft(object):
 
         em = (
             Embed(
-                title="Minecraft User",
+                title=title,
                 description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
                 f"\nMinecraft UUID: {profile.get('uuid')!r}"
                 f"\nDiscord Identity: {mono(escape(userline(user))) if user else 'Not in Guild'}"
@@ -395,7 +397,8 @@ class Minecraft(object):
 
     def rebuild(self):
         with self.db() as db:
-            ...
+            db[:] = [refresh_entry(e) for e in db]
+            # self.interface.db_write(self._db)
 
     @contextmanager
     def db(self, *params: str) -> type_db:
