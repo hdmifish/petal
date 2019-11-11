@@ -25,9 +25,15 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                 )
             )
 
-        submission = args[0]
-        entry = new_entry(src.author.id, name_mc=submission)
-        self.mc2.add_entries(entry)
+        submission: str = args[0]
+
+        with self.mc2.db() as db:
+            for entry in db:
+                if entry["name"].casefold() == submission.casefold():
+                    raise CommandInputError("Username already submitted :D")
+            else:
+                entry = new_entry(src.author.id, name_mc=submission)
+                db.append(entry)
 
         try:
             card = self.mc2.card(entry, True, title="New Whitelist Request")
