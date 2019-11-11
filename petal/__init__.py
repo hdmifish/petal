@@ -619,6 +619,13 @@ class Petal(PetalClientABC):
         if self.db.member_exists(member):
             # This User has been here before.
             card.set_author(name="Returning Member")
+            if self.db.useDB:
+                aliases = self.db.get_attribute(member, "aliases")
+                if aliases:
+                    first, last = aliases[0], aliases[1]
+                    card.add_field(name="Originally seen as", value=first)
+                    if first != last:
+                        card.add_field(name="Last seen as", value=last)
         else:
             # We have no previous record of this User.
             self.db.add_member(member)
