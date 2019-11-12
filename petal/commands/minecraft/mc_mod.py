@@ -6,7 +6,7 @@ from collections import defaultdict
 import discord
 
 from petal.commands.minecraft import auth
-from petal.exceptions import CommandInputError, CommandOperationError
+from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
 from petal.types import Src
 from petal.util.fmt import escape, userline
 from petal.util.grammar import sequence_words
@@ -18,7 +18,7 @@ wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that
 class CommandsMCMod(auth.CommandsMCAuth):
     op = 3
 
-    async def cmd_wlaccept(self, args, src, _nosend=False, **_):
+    async def cmd_wlaccept(self, args, src: Src, _nosend=False, **_):
         """Mark a PlayerDB entry as "approved", to be added to the whitelist.
 
         If this is the first time the user is being approved, unless `--nosend` is passed, a DM will be sent to the user, if possible, to notify them that their application has been accepted.
@@ -34,11 +34,11 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         send = defaultdict(list)
 
-        with self.mc2.db():
+        with self.minecraft.db():
             # Open the DB File. We do not use it directly, so it does not need
             #   to be assigned a Name; This is just to avoid excessive reads.
             for ident in args:
-                with self.mc2.db(ident) as db:
+                with self.minecraft.db(ident) as db:
                     for entry in db:
                         if str(src.author.id) not in entry["approved"]:
                             if not entry["approved"]:
@@ -48,9 +48,10 @@ class CommandsMCMod(auth.CommandsMCAuth):
                                 send[entry["discord"]].append(entry["name"])
 
                             entry["approved"].append(str(src.author.id))
-                            yield self.mc2.card(entry, title="Application Approved")
+                            yield self.minecraft.card(entry, title="Application Approved")
                         else:
                             yield f"You have already approved {escape(entry['name'])!r}."
+            self.minecraft.export()
 
         if send and not _nosend:
             # Send the Users DMs to inform them of their acceptance.
@@ -143,7 +144,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
         limit = False
         show = []
 
-        with self.mc2.db(
+        with self.minecraft.db(
             *(p for p in args if p != "pending" and p != "suspended")
         ) as db:
             if "pending" in submission:
@@ -170,7 +171,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                 show.extend(db)
 
             if show:
-                yield from (self.mc2.card(x, _verbose) for x in show)
+                yield from (self.minecraft.card(x, _verbose) for x in show)
             else:
                 raise CommandOperationError("No Users found.")
 
@@ -242,15 +243,29 @@ class CommandsMCMod(auth.CommandsMCAuth):
         #     await qout.edit(content=oput)
         #     # return oput
 
-    async def cmd_wlrefresh(self, src: Src, **_):
+    async def cmd_wlrefresh(self, **_):
         """Force an immediate rebuild of both the PlayerDB and the whitelist itself.
 
         Syntax: `{p}wlrefresh`
         """
         yield ("Rebuilding Database...", True)
 
-        async with src.channel.typing():
-            self.mc2.rebuild()
+        with self.minecraft.db() as db:
+            self.minecraft.rebuild()
+            for entry in db:
+                if self.client.main_guild.get_member(int(entry["discord"])):
+                    if entry["suspended"] == 104:
+                        # User is in the Guild, but is Suspended for not being
+                        #   in the Guild. Unset Suspension.
+                        entry["suspended"] = 0
+                        yield f"Unsuspending {entry['name']!r}."
+
+                elif not entry["suspended"]:
+                    # User is not Suspended, but is also not in the Guild. Set
+                    #   Suspension.
+                    entry["suspended"] = 104
+
+            self.minecraft.export()
 
         yield "Rebuild complete."
 
@@ -264,13 +279,13 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         Syntax: `{p}wlgone`
         """
-        _get = self.client.main_guild.get_member
 
-        gone_users = [
-            (entry["discord"], entry["name"])
-            for entry in self.minecraft.etc.WLDump()
-            if _get(int(entry.get("discord"))) is None
-        ]
+        with self.minecraft.db() as db:
+            gone_users = [
+                (entry["discord"], entry["name"])
+                for entry in db
+                if self.client.main_guild.get_member(int(entry.get("discord"))) is None
+            ]
 
         start = 20 * _page
         stop = 20 * (_page + 1)
@@ -281,59 +296,73 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         yield "----({}-{} of __{}__)----".format(start + 1, stop, len(gone_users))
 
-    async def cmd_wlsuspend(
-        self, args, src, _help: bool = False, _h: bool = False, **_
-    ):
+    async def cmd_wlsuspend(self, args, _help: bool = False, _h: bool = False, **_):
         """Flag a person to be removed from the whitelist.
 
-        Syntax: `{p}wlsuspend [OPTIONS] <profile_identifier> <code>`
+        Syntax: `{p}wlsuspend [OPTIONS] <code> <profile_identifier...>`
 
-        Options: `--help`, `-h` :: Return the list of Suspension Codes and stop
+        Options: `--help`, `-h` :: Return the list of Suspension Codes and stop.
         """
-        if True in [_help, _h]:
+        if _help or _h:
             # Command was invoked with --help or -h
-            return "Suspension codes:\n" + "\n".join(
-                ["{}: {}".format(k, v) for k, v in self.minecraft.suspend_table.items()]
+            yield "Suspension codes:\n" + "\n".join(
+                f"{k}: {v}"
+                for k, v in self.minecraft.suspend_table.items()
+                if isinstance(k, int)
             )
-
-        if len(args) != 2:
-            return "No Change: Provide one profile identifier and one code"
-
-        target, code = args
-
-        victim = self.minecraft.WLQuery(target)
-        if victim == -7:
-            return "No Change: Could not access database file"
-        if not victim:
-            return "No Change: Target not found in database"
-
-        if code.isnumeric():
-            interp = int(code)
-        else:
-            return "No Change: Suspension code must be numeric"
-
-        rep, wlwin = self.minecraft.WLSuspend(victim, interp)
-        codes = {
-            0: "Suspension successfully enabled",
-            -1: "Suspension successfully lifted",
-            -2: "No Change: Already suspended",
-            -3: "No Change: Not suspended",
-            -7: "No Change: Failed to write database",
-            -8: "No Change: Indexing failure",
-            -9: "Maybe no change? Something went horribly wrong D:",
-        }
-        wcode = {0: "Failed to update whitelist", 1: "Successfully updated whitelist"}
-
-        oput = "WLSuspend Results:\n"
-        for ln in rep:
-            oput += "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
-            self.log.f(
-                "wl+",
-                f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}",
+            return
+        elif len(args) < 2:
+            raise CommandInputError(
+                "Provide at least one Profile Identifier with a Suspension Code."
             )
-        oput += wcode[wlwin]
+        elif not args[0].isdigit():
+            raise CommandInputError("Suspension Code must be an Integer.")
 
-        return oput
+        code, *targets = args
+        code = int(code)
+
+        with self.minecraft.db(*targets) as db:
+            for entry in db:
+                yield "Changing Suspension of {name!r} from {suspended} to {after}.".format(
+                    **entry, after=code
+                )
+                entry["suspended"] = code
+
+            self.minecraft.export()
+
+        # victim = self.minecraft.WLQuery(target)
+        # if victim == -7:
+        #     return "No Change: Could not access database file"
+        # if not victim:
+        #     return "No Change: Target not found in database"
+        #
+        # if code.isnumeric():
+        #     interp = int(code)
+        # else:
+        #     return "No Change: Suspension code must be numeric"
+        #
+        # rep, wlwin = self.minecraft.WLSuspend(victim, interp)
+        # codes = {
+        #     0: "Suspension successfully enabled",
+        #     -1: "Suspension successfully lifted",
+        #     -2: "No Change: Already suspended",
+        #     -3: "No Change: Not suspended",
+        #     -7: "No Change: Failed to write database",
+        #     -8: "No Change: Indexing failure",
+        #     -9: "Maybe no change? Something went horribly wrong D:",
+        # }
+        # wcode = {0: "Failed to update whitelist", 1: "Successfully updated whitelist"}
+        #
+        # oput = "WLSuspend Results:\n"
+        # for ln in rep:
+        #     oput += "-- `" + ln["name"] + "`: " + codes[ln["change"]] + "\n"
+        #     self.log.f(
+        #         "wl+",
+        #         f"{src.author.name}#{src.author.discriminator} ({src.author.id}) sets SUSPENSION on {ln['name']}: {codes[ln['change']]}",
+        #     )
+        # oput += wcode[wlwin]
+        #
+        # return oput
 
     async def cmd_wlnote(self, args, **_):
         """Add a note to a user DB profile.
@@ -345,36 +374,41 @@ class CommandsMCMod(auth.CommandsMCAuth):
         Syntax: `{p}wlnote <profile_identifier> "<note>"`
         """
         if len(args) > 2:
-            return "Only one note can be added to a profile at a time."
+            raise CommandArgsError("Only one note can be added to a profile at a time.")
         elif len(args) < 2:
-            return "Provide one profile identifier and one (quoted) note."
+            raise CommandArgsError("Provide one profile identifier and one (quoted) note.")
 
         target, note = args
 
         if not note:
-            return
+            raise CommandArgsError("Note cannot be empty.")
 
-        victim = self.minecraft.WLQuery(target)
-        if victim == -7:
-            return "Could not access database file."
-        elif not victim:
-            return "No valid target found."
-        elif len(victim) > 1:
-            return "Ambiguous command: {} possible targets found.".format(len(victim))
+        with self.minecraft.db(target) as db:
+            for entry in db:
+                entry["notes"].append(note)
+                yield f"Note added to {entry['name']!r}."
 
-        rep = self.minecraft.WLNote(victim[0]["discord"], note)
-
-        errors = {
-            0: "Success",
-            -6: "Failed to write database",
-            -7: "Failed to read database",
-            -8: "Target not found in database",
-        }
-
-        if not rep:
-            return "{} has been noted: `{}`".format(victim[0]["name"], note)
-        else:
-            return errors.get(rep, "Unknown Error ('{}')".format(rep))
+        # victim = self.minecraft.WLQuery(target)
+        # if victim == -7:
+        #     return "Could not access database file."
+        # elif not victim:
+        #     return "No valid target found."
+        # elif len(victim) > 1:
+        #     return "Ambiguous command: {} possible targets found.".format(len(victim))
+        #
+        # rep = self.minecraft.WLNote(victim[0]["discord"], note)
+        #
+        # errors = {
+        #     0: "Success",
+        #     -6: "Failed to write database",
+        #     -7: "Failed to read database",
+        #     -8: "Target not found in database",
+        # }
+        #
+        # if not rep:
+        #     return "{} has been noted: `{}`".format(victim[0]["name"], note)
+        # else:
+        #     return errors.get(rep, "Unknown Error ('{}')".format(rep))
 
 
 # Keep the actual classname unique from this common identifier

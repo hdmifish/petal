@@ -223,12 +223,12 @@ class Commands:
                     return allow, denied
             if 0 <= self.op <= 4:
                 if hasattr(self, "minecraft"):
-                    return self.minecraft.WLAuthenticate(src, self.op)
+                    return self.minecraft.user_has_op(src.author, self.op), "bad op"
                 else:
                     return False, "bad op"
         except Exception as e:
             # For security, "fail closed".
-            return False, "Error: `{}`".format(e)
+            return False, f"Error: {e}"
         else:
             return True, None
 

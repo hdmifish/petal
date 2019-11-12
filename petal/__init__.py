@@ -37,6 +37,7 @@ from petal.util.cdn import get_avatar
 from petal.util.embeds import membership_card
 from petal.util.fmt import escape, mono, mono_block, userline
 from petal.util.grammar import pluralize
+from petal.util.minecraft import Minecraft
 from petal.util.numbers import word_number
 
 
@@ -62,7 +63,6 @@ class Petal(PetalClientABC):
     logLock = False
 
     def __init__(self, devmode=False):
-
         try:
             super().__init__()
         except Exception as e:
@@ -71,6 +71,7 @@ class Petal(PetalClientABC):
             log.info("Client object initialized")
 
         self.startup = datetime.utcnow()
+        self.minecraft = Minecraft(self)
 
         self.config = cfg
         self.db = DBHandler(self.config)

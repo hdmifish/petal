@@ -180,8 +180,11 @@ def new_entry(
 def refresh_entry(old: type_entry_db) -> type_entry_db:
     try:
         new = new_entry(old["discord"], uuid_mc=old["uuid"])
-        new["submitted"] = old["submitted"]
         new["approved"] = old["approved"]
+        new["submitted"] = old["submitted"]
+        new["suspended"] = old["suspended"]
+        new["operator"] = old["operator"]
+        new["notes"] = old["notes"]
         return new
     except:
         return old
@@ -226,7 +229,7 @@ class Interface:
             log.err(f"OSError on DB save: {e}")
             raise WhitelistError("Cannot write PlayerDB file.") from e
 
-    def rebuild(self, data: type_db):
+    def export(self, data: type_db):
         wl, op = make_lists(data)
 
         try:
@@ -367,8 +370,8 @@ class Minecraft(object):
             Embed(
                 title=title,
                 description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
-                f"\nMinecraft UUID: {profile.get('uuid')!r}"
-                f"\nDiscord Identity: {mono(escape(userline(user))) if user else 'Not in Guild'}"
+                f"\nMinecraft UUID: `{profile.get('uuid')}`"
+                f"\nDiscord Identity: `{escape(userline(user) if user else uuid_discord)}`"
                 f"\nDiscord Tag: <@{uuid_discord}>",
                 colour=col,
             )
@@ -395,10 +398,19 @@ class Minecraft(object):
         with self.db() as db:
             db.extend(entries)
 
+    def export(self):
+        with self.db() as db:
+            self.interface.export(db)
+
     def rebuild(self):
         with self.db() as db:
             db[:] = [refresh_entry(e) for e in db]
             # self.interface.db_write(self._db)
+
+    def user_has_op(self, user, op: int) -> bool:
+        with self.db(str(user.id)) as db:
+            allow = any(e["operator"] >= op for e in db)
+        return allow
 
     @contextmanager
     def db(self, *params: str) -> type_db:

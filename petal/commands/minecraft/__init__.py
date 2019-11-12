@@ -5,7 +5,7 @@ import importlib
 import sys
 
 from petal.commands import core
-from petal.mcutil import Minecraft
+from petal.util.minecraft import Minecraft
 
 
 LoadModules = [
@@ -33,7 +33,7 @@ class CommandsMinecraft(core.Commands):
 
             if mod:
                 # Instantiate its command engine.
-                cmod = mod.CommandModule(self.minecraft, *a, **kw)
+                cmod = mod.CommandModule(*a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
                 self.log.ready("{} commands loaded.".format(MODULE.title()))

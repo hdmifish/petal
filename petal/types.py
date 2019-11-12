@@ -74,6 +74,7 @@ class PetalClientABC(discord.Client):
         "dev_mode",
         "logLock",
         "loop_tasks",
+        "minecraft",
         "potential_typo",
         "session_id",
         "startup",

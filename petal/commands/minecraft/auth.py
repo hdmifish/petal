@@ -3,17 +3,15 @@ Access: Server Operators"""
 
 from petal.commands import core
 from petal.exceptions import CommandOperationError
-from petal.mcutil import Minecraft
-from petal.util.minecraft import Minecraft as Minecraft_
+from petal.util.minecraft import Minecraft
 
 
 class CommandsMCAuth(core.Commands):
     auth_fail = "This command requires Operator Level `{op}` on the Minecraft server."
 
-    def __init__(self, mc: Minecraft, *a, **kw):
+    def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        self.minecraft: Minecraft = mc
-        self.mc2 = Minecraft_(self.client)
+        self.minecraft: Minecraft = self.client.minecraft
 
     def check(self):
         """Check that the MC config is valid."""
