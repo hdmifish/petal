@@ -3,7 +3,7 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION="1.0.0-rc3"
+VERSION="1.0.0-rc4"
 
 #(optional) what the webhook message should say.
 UPDATE_TITLE="The Great Migration"
@@ -20,6 +20,7 @@ CHANGELOG=$(cat <<'EOF'
 + Implemented "saved" commands, allowing much greater flexibility in re-running using Exceptions.
 + Implemented module standardizing the process of waiting for user responses.
 + Implemented module standardizing creation of check predicates for passing to Discord Library.
++ Implemented new and far superior Minecraft Interface.
 + Additional Command returns: Dict, unpacked directly into send(); Embed, posted directly; Yield, iterated and sequentially appended to output before final return.
 + Added `--set` option to !osu, replacing functionality of !setosu.
 + Implemented !bytes command, for debugging the EXACT contents of a String.
