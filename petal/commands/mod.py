@@ -522,7 +522,8 @@ class CommandsMod(core.Commands):
 
                     em_send = discord.Embed(
                         title="User Unmute",
-                        description=f"You have been unmuted by {src.author.mention}.",
+                        description=f"You have been unmuted by `{userline(src.author)}`."
+                                    f"\n({src.author.mention})",
                         colour=0x00FF11,
                     )
                     em_send.set_author(
@@ -541,7 +542,8 @@ class CommandsMod(core.Commands):
 
                     em_send = discord.Embed(
                         title="User Mute",
-                        description=f"You have been muted by {src.author.mention}.",
+                        description=f"You have been muted by `{userline(src.author)}`."
+                                    f"\n({src.author.mention})",
                         colour=0xFF0000,
                     )
                     em_send.set_author(
