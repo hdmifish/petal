@@ -4,7 +4,9 @@ Access: Role-based"""
 import discord
 
 from petal.commands import core
+from petal.etc import unquote
 from petal.exceptions import CommandArgsError, CommandInputError, CommandOperationError
+from petal.menu import Menu
 from petal.util.fmt import userline
 
 
@@ -116,6 +118,41 @@ class CommandsMgr(core.Commands):
         await src.delete()
         if response is not None:
             return response
+
+    async def cmd_poll(
+        self, args, src, _question: str = "", _channel: int = None, _time: int = 0, **_
+    ):
+        if len(args) < 2:
+            return "Must provide at least two options."
+
+        duration = _time if _time > 0 else 3600
+        title = unquote(_question) if _question else "Public Poll"
+
+        if _channel:
+            targ = self.client.get_channel(_channel)
+        else:
+            targ = src.channel
+        if not targ:
+            raise CommandInputError("Invalid Channel")
+
+        poll = Menu(self.client, targ, title)
+        await poll.get_poll(args, duration, title="Options")
+
+    async def cmd_vote(
+        self, src, _question: str = None, _channel: int = None, _time: int = 0, **_
+    ):
+        duration = _time if _time > 0 else 3600
+        title = f"Vote: {unquote(_question)}" if _question else "Vote"
+
+        if _channel:
+            targ = self.client.get_channel(_channel)
+        else:
+            targ = src.channel
+        if not targ:
+            raise CommandInputError("Invalid Channel")
+
+        poll = Menu(self.client, targ, title)
+        await poll.get_vote(duration)
 
     async def cmd_tunnel(
         self,

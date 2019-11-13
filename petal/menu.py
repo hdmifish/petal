@@ -1,6 +1,8 @@
-from asyncio import create_task, Task  # , sleep
+from asyncio import create_task, sleep, Task
 from collections import Counter
-from typing import List, Optional, Sequence, Tuple, TypeVar
+from datetime import datetime as dt, timedelta as td
+from itertools import chain
+from typing import Dict, List, Optional, Sequence, Tuple, TypeVar
 
 from discord import abc, Embed, TextChannel, Message, Reaction, User
 
@@ -10,13 +12,17 @@ from petal.checks import all_checks, Reactions
 # Assemble all the emoji we need via hexadecimal values.
 # I have trust issues when it comes to eclectic characters in my source code, so
 #   this makes me feel slightly safer.
-letters: Tuple[str, ...] = tuple(chr(n) for n in range(0x1F1E6, 0x1F200))
-cancel: str = chr(0x274E)
-confirm: str = chr(0x2705)
+letters: Tuple[str, ...] = tuple(map(chr, range(0x1F1E6, 0x1F200)))
+cancel: str = chr(0x1F6AB)
+confirm: str = chr(0x2611)
+# Alternatives:
+#   Red X:          0x274C
+#   Green X:        0x274E
+#   Green Check:    0x2705
+#   "Do Not Enter": 0x26D4
 
-astro: Tuple[str, ...] = tuple(
-    chr(n) for n in range(0x2648, 0x2654)
-)  # Zodiac icons because why not
+# Zodiac icons because why not
+astro: Tuple[str, ...] = tuple(chr(n) for n in range(0x2648, 0x2654))
 info: str = chr(0x2139)  # [i]
 okay: str = chr(0x1F197)  # [OK]
 
@@ -30,7 +36,7 @@ live: List[Task] = []
 T_ = TypeVar("T_")
 
 
-def count_votes(allowed: list, votes: Sequence[Reaction]) -> Counter:
+def count_votes(allowed: Sequence[str], votes: Sequence[Reaction]) -> Counter:
     allowed: List[str] = [str(a) for a in allowed]
     result: Counter = Counter()
     for vote in votes:
@@ -46,7 +52,7 @@ class Menu:
         client,
         channel: TextChannel,
         title: str,
-        desc: str,
+        desc: str = None,
         user: User = None,
         colour: int = 0x_0A_CD_FF,
     ):
@@ -102,10 +108,10 @@ class Menu:
             return None
         selection = [cancel, *letters[:onum]]
         self.add_section(
-            "\n".join(f"{letters[i]}: `{opts[i]}`" for i in range(onum)), title
+            "\n".join(f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)), title
         )
-        buttons: Task = await self.add_buttons(selection)
         await self.post()
+        buttons: Task = await self.add_buttons(selection)
 
         choice = (
             await Reactions.waitfor(
@@ -130,8 +136,8 @@ class Menu:
         self,
         opts: Sequence[T_],
         time: int = 30,
-        prompt: str="Select One or More and Confirm:",
-        title: str="Multiple Choice",
+        prompt: str = "Select One or More and Confirm:",
+        title: str = "Multiple Choice",
     ) -> Tuple[T_, ...]:
         """Ask the user to select ONE OR MORE of a set of predefined options."""
         onum = len(opts)
@@ -139,11 +145,16 @@ class Menu:
             return ()
         selection = [cancel, *letters[:onum], confirm]
         self.add_section(
-            "\n".join([prompt] + [f"{letters[i]}: `{opts[i]}`" for i in range(onum)]),
+            "\n".join(
+                chain(
+                    [prompt],
+                    (f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)),
+                )
+            ),
             title,
         )
-        buttons: Task = await self.add_buttons(selection)
         await self.post()
+        buttons: Task = await self.add_buttons(selection)
 
         ok = (str(cancel), str(confirm))
         pre = all_checks(Reactions.by_user(self.master), Reactions.on_message(self.msg))
@@ -179,17 +190,20 @@ class Menu:
         return results
 
     async def get_bool(
-        self, time: int=30, prompt: str="Select Yes or No", title: str="Boolean Choice"
+        self,
+        time: int = 30,
+        # prompt: str = "Select Yes or No",
+        # title: str = "Boolean Choice",
     ) -> Optional[bool]:
         """Ask the user to click a simple YES or NO."""
-        selection = (cancel, confirm)
+        selection = (confirm, cancel)
 
         # self.em.description = prompt or "Select Yes or No"
         # await self.post()
         # adding = create_task(self.add_buttons(selection))
-        self.add_section(prompt, title)
+        # self.add_section(prompt, title)
+        # await self.post()
         adding: Task = await self.add_buttons(selection)
-        await self.post()
 
         choice = (
             await Reactions.waitfor(
@@ -215,75 +229,97 @@ class Menu:
 
     ### PUBLIC interfaces; ANYONE may respond.
 
-    # async def get_poll(self, opts: list, time=3600) -> dict:
-    #     """Run a MULTIPLE CHOICE open poll that anyone can answer."""
-    #     onum = len(opts)
-    #     if not 1 <= onum <= len(letters):
-    #         return {}
-    #     selection = letters[:onum]
-    #
-    #     buttons = await self.add_buttons(
-    #         "**Poll:** Multiple Choice:\n"
-    #         + "\n".join((f"{letters[i]}: `{opts[i]}`" for i in range(onum))),
-    #         selection,
-    #     )
-    #
-    #     await buttons
-    #     await sleep(time)
-    #
-    #     try:
-    #         vm = await self.channel.fetch_message(self.msg.id)
-    #     except:
-    #         return {}
-    #
-    #     outcome = count_votes(selection, vm.reactions)
-    #     await self.clear()
-    #
-    #     self.em.description += "\n\n**__RESULTS:__**"
-    #     for k, v in outcome.items():
-    #         self.em.description += "\n**`{}`**: __`{}`__".format(
-    #             opts[letters.index(k)], v
-    #         )
-    #     await self.post()
-    #
-    #     return outcome
+    async def get_poll(
+        self,
+        opts: Sequence[T_],
+        time: int = 3600,
+        prompt: str = "Select One or More:",
+        title: str = "Poll",
+    ) -> Dict[T_, int]:
+        """Run a MULTIPLE CHOICE open poll that anyone can answer."""
+        onum = len(opts)
+        if not 1 <= onum <= len(letters):
+            return {}
+        selection = letters[:onum]
+        do_footer = not self.em.footer and not self.em.timestamp
 
-    # async def get_vote(self, time=3600) -> dict:
-    #     """Run a YES OR NO open vote that anyone can answer."""
-    #     selection = [cancel, confirm]
-    #
-    #     buttons = await self.add_buttons("**Vote:** Yes or No", selection)
-    #
-    #     await buttons
-    #     await sleep(time)
-    #
-    #     try:
-    #         vm = await self.channel.fetch_message(self.msg.id)
-    #     except:
-    #         return {}
-    #
-    #     outcome = count_votes(selection, vm.reactions)
-    #     await self.clear()
-    #
-    #     self.em.description += "\n\n**__RESULTS:__**"
-    #     for k, v in outcome.items():
-    #         self.em.description += "\n**`{}`**: __`{}`__".format(k, v)
-    #     await self.post()
-    #
-    #     return outcome
+        self.add_section(
+            "\n".join(
+                chain(
+                    [prompt],
+                    (f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)),
+                )
+            ),
+            title,
+        )
+        if do_footer:
+            self.em.set_footer(text="Poll Ends").timestamp = dt.utcnow() + td(seconds=time)
+
+        await self.post()
+        await (await self.add_buttons(selection))
+        await sleep(time)
+
+        try:
+            vm = await self.channel.fetch_message(self.msg.id)
+        except:
+            return {}
+
+        outcome = count_votes(selection, vm.reactions)
+        await self.clear()
+
+        self.add_section(
+            "\n".join(
+                "{}: **{}**".format(opts[letters.index(k)], v)
+                for k, v in outcome.items()
+            )
+        )
+        if do_footer:
+            self.em.set_footer(text="").timestamp = Embed.Empty
+
+        await self.post()
+
+        return outcome
+
+    async def get_vote(self, time: int = 3600) -> Dict[bool, int]:
+        """Run a YES OR NO open vote that anyone can answer."""
+        selection = (confirm, cancel)
+        do_footer = not self.em.footer and not self.em.timestamp
+
+        if do_footer:
+            self.em.set_footer(text="Vote Ends").timestamp = dt.utcnow() + td(seconds=time)
+
+        await (await self.add_buttons(selection))
+        await sleep(time)
+
+        try:
+            vm = await self.channel.fetch_message(self.msg.id)
+        except:
+            return {}
+
+        outcome = count_votes(selection, vm.reactions)
+        await self.clear()
+
+        real = {True: outcome.get(confirm, 0), False: outcome.get(cancel, 0)}
+
+        self.add_section(
+            "\n".join(
+                "**{}**: **{}**".format("Yes" if k else "No", v)
+                for k, v in real.items()
+            )
+        )
+        if do_footer:
+            self.em.set_footer(text="").timestamp = Embed.Empty
+
+        await self.post()
+
+        return real
 
 
 async def confirm_action(
-    client,
-    src: Message,
-    title: str,
-    desc: str,
-    prompt: str = "Select Yes or No",
-    section_title: str = "Boolean Choice",
-    timeout: int = 30,
+    client, src: Message, title: str, desc: str, timeout: int = 30
 ) -> Optional[bool]:
     author: User = src.author
     channel: TextChannel = src.channel
 
     m = Menu(client, channel, title, desc, author)
-    return await m.get_bool(timeout, prompt, section_title)
+    return await m.get_bool(timeout)

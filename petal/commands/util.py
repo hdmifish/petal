@@ -686,7 +686,7 @@ class CommandsUtil(core.Commands):
     def cmd_bytes(
         self,
         args,
-        _encoding: str = "utf-8",
+        _encoding: str = "utf-16",
         _binary: bool = False,
         _hex: bool = False,
         **_,

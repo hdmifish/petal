@@ -168,8 +168,10 @@ class Petal(PetalClientABC):
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
+        await self.change_presence(activity=g_ses)
         while True:
             try:
+                await asyncio.sleep(interv)
                 await self.change_presence(activity=g_ses)
                 await asyncio.sleep(interv)
                 await self.change_presence(
@@ -181,7 +183,6 @@ class Petal(PetalClientABC):
                 await self.change_presence(
                     activity=discord.Game(name=self.config.prefix + "info")
                 )
-                await asyncio.sleep(interv)
 
             except asyncio.CancelledError:
                 raise

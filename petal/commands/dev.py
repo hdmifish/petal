@@ -203,44 +203,6 @@ class CommandsMaintenance(core.Commands):
         m.add_section(repr(await m.get_bool()))
         await m.post()
 
-    async def cmd_poll(
-        self, args, src, _question: str = "", _channel: int = None, _time: int = 0, **_
-    ):
-        if len(args) < 2:
-            return "Must provide at least two options."
-
-        duration = _time if _time > 0 else 3600
-
-        title = "Poll"
-        if _question:
-            title += ": " + _question
-
-        if _channel:
-            targ = self.client.get_channel(_channel)
-        else:
-            targ = src.channel
-        if not targ:
-            return "Invalid Channel"
-
-        poll = Menu(self.client, targ, title, "Test Function")
-        await poll.get_poll(args, duration)
-
-    async def cmd_vote(
-        self, src, _question: str = None, _channel: int = None, _time: int = 0, **_
-    ):
-        duration = _time if _time > 0 else 3600
-        title = "Vote: " + _question if _question else "Vote"
-
-        if _channel:
-            targ = self.client.get_channel(_channel)
-        else:
-            targ = src.channel
-        if not targ:
-            return "Invalid Channel"
-
-        poll = Menu(self.client, targ, title, "Test Function")
-        await poll.get_vote(duration)
-
     async def cmd_repeat(self, src, **_):
         return "You said:```{}```".format(
             (
