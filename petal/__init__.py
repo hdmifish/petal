@@ -168,7 +168,12 @@ class Petal(PetalClientABC):
             # timestamps=times,
             type=discord.ActivityType.playing,
         )
-        await self.change_presence(activity=g_ses)
+        await self.change_presence(
+            activity=discord.Activity(
+                name=f"Starting: {self.session_id[2:]}",
+                type=discord.ActivityType.playing,
+            )
+        )
         while True:
             try:
                 await asyncio.sleep(interv)
