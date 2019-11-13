@@ -144,7 +144,7 @@ class DBHandler(object):
 
             pid = self.members.insert_one(data).inserted_id
             if verbose:
-                log.f("DBhandler", "New member added to DB! (_id: " + str(pid) + ")")
+                log.f("DBhandler", f"New member added to DB! (_id: {pid})")
             return True
 
     def get_member(self, member):
@@ -173,14 +173,14 @@ class DBHandler(object):
         mem = self.get_member(member)
         if mem is None:
             if verbose:
-                log.f("DBHandler", member.name + m2id(member) + " not found in db")
+                log.f("DBHandler", f"{member.name} {m2id(member)} not found in db")
             return None
 
         if key in mem:
             return mem[key]
         else:
             if verbose:
-                log.f("DBHandler", m2id(member) + " has no field: " + key)
+                log.f("DBHandler", f"{m2id(member)} has no field: {key}")
             return None
 
     def update_member(self, member, data=None, type=0, subdict=""):
@@ -243,7 +243,7 @@ class DBHandler(object):
                         else:
                             if data[key] not in mem[key]:
                                 mem[key].append(data[key])
-                                log.f("DBHandler", "added " + data[key] + " to " + key)
+                                log.f("DBHandler", f"added { data[key]}  to {key}")
                                 count += 1
 
                     else:
@@ -264,7 +264,7 @@ class DBHandler(object):
             mem["commands_count"] += 1
 
         if count > 0:
-            log.f("DBHandler", "Added " + str(count) + " fields to " + mem["name"])
+            log.f("DBHandler", "Added {count} fields to {mem['name']}")
 
         self.members.replace_one({"uid": m2id(member)}, mem, upsert=False)
 

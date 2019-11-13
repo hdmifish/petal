@@ -5,7 +5,7 @@ Grasslands is a semi-public module for colored logging and misc APIs
 from datetime import datetime as dt
 from random import randint
 import requests
-
+import sys
 from colorama import init, Fore
 from wiktionaryparser import WiktionaryParser as WP
 
@@ -92,6 +92,8 @@ class Peacock(object):
         )
 
     def debug(self, message):
+        if "--dev-mode" not in sys.argv:
+            return
         print(
             Fore.MAGENTA
             + "[DEBUG] "
