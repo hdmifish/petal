@@ -34,7 +34,7 @@ from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
 from petal.util.cdn import get_avatar
-from petal.util.embeds import membership_card
+from petal.util.embeds import Color, membership_card
 from petal.util.fmt import escape, mono, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.minecraft import Minecraft
@@ -621,7 +621,7 @@ class Petal(PetalClientABC):
 
     async def on_member_join(self, member):
         """To be called When a new member joins the server"""
-        card = membership_card(member, colour=0x_00_FF_00)
+        card = membership_card(member, colour=Color.user_join)
 
         if self.db.member_exists(member):
             # This User has been here before.
@@ -668,7 +668,7 @@ class Petal(PetalClientABC):
 
     async def on_member_remove(self, member):
         """To be called when a member leaves"""
-        card = membership_card(member, colour=0x_FF_00_00)
+        card = membership_card(member, colour=Color.user_part)
         card.set_author(
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )
@@ -710,7 +710,7 @@ class Petal(PetalClientABC):
                 discord.Embed(
                     title="Message Deleted",
                     description=f"A Message by {message.author.mention} was deleted.",
-                    colour=0xFC00A2,
+                    colour=Color.message_delete,
                 )
                 .set_author(
                     name=message.author.display_name,
@@ -808,7 +808,7 @@ class Petal(PetalClientABC):
                 if executed
                 else "Message Edit",
                 description=f"{before.author.mention} edited their message.",
-                colour=0xAE00FE,
+                colour=Color.message_edit,
             )
             .add_field(
                 name="Original Content", value=escape(before.content), inline=False
@@ -861,7 +861,7 @@ class Petal(PetalClientABC):
                 discord.Embed(
                     title=f"({role.guild.name}) User Role {gained}",
                     description=f"{after.display_name} {gained} role",
-                    colour=0x0093C3,
+                    colour=Color.user_promote,
                 )
                 .set_author(
                     name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
@@ -879,7 +879,7 @@ class Petal(PetalClientABC):
                 discord.Embed(
                     title="Nickname Change",
                     description=f"{after.mention} changed their nickname.",
-                    colour=0x34F3AD,
+                    colour=Color.user_update,
                 )
                 .add_field(name="Before", value=escape(before.nick))
                 .add_field(name="After", value=escape(after.nick))
@@ -896,7 +896,7 @@ class Petal(PetalClientABC):
                 discord.Embed(
                     title="Username Change",
                     description=f"{after.mention} changed their username.",
-                    colour=0x34F3AD,
+                    colour=Color.user_update,
                 )
                 .add_field(name="Before", value=escape(before.name))
                 .add_field(name="After", value=escape(after.name))
@@ -912,7 +912,7 @@ class Petal(PetalClientABC):
                 discord.Embed(
                     title="Avatar Change",
                     description=f"{after.mention} changed their Avatar.",
-                    colour=0x34F3AD,
+                    colour=Color.user_update,
                 )
                 .add_field(name="Timestamp", value=timestr(), inline=False)
                 .set_thumbnail(url=get_avatar(before))
@@ -1025,7 +1025,7 @@ class Petal(PetalClientABC):
                 embed = discord.Embed(
                     title="Word Filter Hit",
                     description="At least one filtered word was detected",
-                    colour=0x9F00FF,
+                    colour=Color.alert,
                 )
 
                 embed.add_field(

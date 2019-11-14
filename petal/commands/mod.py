@@ -20,7 +20,7 @@ from petal.exceptions import (
 )
 from petal.menu import confirm_action, Menu
 from petal.types import Src
-from petal.util.embeds import membership_card
+from petal.util.embeds import Color, membership_card
 from petal.util.fmt import bold, escape, mono, underline, userline
 
 
@@ -138,7 +138,9 @@ class CommandsMod(core.Commands):
 
         else:
             logEmbed = (
-                discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
+                discord.Embed(
+                    title="User Kick", description=_reason, colour=Color.mod_kick
+                )
                 .set_author(
                     name=src.author.display_name, icon_url=src.author.avatar_url
                 )
@@ -238,7 +240,9 @@ class CommandsMod(core.Commands):
             return "It seems I don't have perms to ban this user."
         else:
             logEmbed = (
-                discord.Embed(title="User Ban", description=_reason, colour=0xFF0000)
+                discord.Embed(
+                    title="User Ban", description=_reason, colour=Color.user_part
+                )
                 .set_author(
                     name=self.client.user.name,
                     icon_url="https://" + "puu.sh/tACjX/fc14b56458.png",
@@ -369,7 +373,7 @@ class CommandsMod(core.Commands):
             return "It seems I don't have perms to ban this user"
         else:
             logEmbed = discord.Embed(
-                title="User Ban", description=_reason, colour=0xFF0000
+                title="User Ban", description=_reason, colour=Color.user_part
             )
 
             logEmbed.add_field(
@@ -433,7 +437,7 @@ class CommandsMod(core.Commands):
                 warnEmbed = discord.Embed(
                     title="Official Warning",
                     description="The guild has sent you an official warning",
-                    colour=0xFFF600,
+                    colour=Color.mod_warn,
                 )
 
                 warnEmbed.add_field(name="Reason", value=msg.content)
@@ -446,7 +450,7 @@ class CommandsMod(core.Commands):
                 return "It seems I don't have perms to warn this user"
             else:
                 logEmbed = discord.Embed(
-                    title="User Warn", description=msg.content, colour=0xFF600
+                    title="User Warn", description=msg.content, colour=Color.mod_warn
                 )
                 logEmbed.set_author(
                     name=self.client.user.name,
@@ -579,7 +583,7 @@ class CommandsMod(core.Commands):
                 em_log = discord.Embed(
                     title=f"User {muteswitch}",
                     description=reason.content,
-                    colour=0x1200FF,
+                    colour=Color.mod_mute,
                 )
 
                 em_log.add_field(
@@ -629,7 +633,7 @@ class CommandsMod(core.Commands):
                     description=f"{delete_num} messages were purged from "
                     f"`#{src.channel.name}` in {src.guild.name} by "
                     f"`{src.author.name}#{src.author.discriminator}`.",
-                    color=0x0ACDFF,
+                    color=Color.info,
                 )
                 await self.client.log_moderation(embed=logEmbed)
 
@@ -840,7 +844,7 @@ class CommandsMod(core.Commands):
             ) or self.client.main_guild.get_member(int(userid))
 
             if target is None:
-                raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+                raise CommandInputError(f"Could not get user with ID `{userid}`.")
             else:
                 yield membership_card(target)
 

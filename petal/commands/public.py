@@ -20,6 +20,7 @@ from petal.exceptions import (
 from petal.grasslands import Pidgeon, Define
 from petal.types import Args, Src
 from petal.util import dice
+from petal.util.embeds import Color
 
 
 link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
@@ -174,7 +175,7 @@ class CommandsPublic(core.Commands):
         em = discord.Embed(
             title=user.name,
             description="https://osu.ppy.sh/u/{}".format(user.id),
-            colour=0x0ACDFF,
+            colour=Color.info,
         )
 
         em.set_author(name="Osu Data", icon_url=self.client.user.avatar_url)
@@ -361,7 +362,7 @@ class CommandsPublic(core.Commands):
             em = discord.Embed(
                 title="Entry " + str(response["num"]),
                 description="New question from " + src.author.name,
-                colour=0x8738F,
+                colour=Color.question,
             )
             em.add_field(name="content", value=response["content"])
 
@@ -392,7 +393,7 @@ class CommandsPublic(core.Commands):
             return response[1]
         else:
             if "may refer to:" in response[1]["content"]:
-                em = discord.Embed(color=0xFFCC33)
+                em = discord.Embed(color=Color.wiki_vague)
                 em.add_field(
                     name="Developer Note",
                     value="It looks like this entry may have multiple results, "
@@ -400,7 +401,7 @@ class CommandsPublic(core.Commands):
                 )
 
             else:
-                em = discord.Embed(color=0xF8F9FA, description=response[1]["content"])
+                em = discord.Embed(color=Color.wiki, description=response[1]["content"])
                 em.set_author(
                     name="'{}' on Wikipedia".format(title),
                     url=url,
@@ -438,7 +439,7 @@ class CommandsPublic(core.Commands):
             ref = Define(word, _language or _l, which)
             url = "https://en.wiktionary.org/wiki/" + word
             if ref.valid:
-                em = discord.Embed(color=0xF8F9FA)
+                em = discord.Embed(color=Color.wiki)
                 em.set_author(
                     name="'{}' on Wiktionary ({} etymolog{} available)".format(
                         word, ref.alts, "y" if ref.alts == 1 else "ies"
@@ -536,7 +537,7 @@ class CommandsPublic(core.Commands):
 
         embed = (
             discord.Embed(
-                color=0x96A8C8,
+                color=Color.xkcd,
                 timestamp=dt(
                     int(resp["year"]), int(resp["month"]), int(resp["day"]), 12
                 ),
@@ -606,7 +607,7 @@ class CommandsPublic(core.Commands):
         rolls = [die.roll() for die in dice_ if die]
         if not rolls:
             raise CommandInputError("Sorry, no valid Roll Expressions provided.")
-        em = discord.Embed(title="Dice Output", colour=0x0ACDFF)
+        em = discord.Embed(title="Dice Output", colour=Color.info)
 
         cumulative: int = 0
         for roll in rolls:

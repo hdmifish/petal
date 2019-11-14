@@ -25,6 +25,19 @@ class Color(IntEnum):
     wiki_vague = 0x_FF_CC_33  # Wiki (Disambiguation)
     xkcd = 0x_96_A8_C8  # XKCD
 
+    message_delete = 0x_FC_00_A2
+    message_edit = 0x_AE_00_FE
+
+    alert = 0x_9F_00_FF
+    mod_kick = 0x_FF_79_00
+    mod_mute = 0x_12_00_FF
+    mod_warn = 0x_FF_F6_00
+
+    user_join = 0x_00_FF_00
+    user_part = 0x_FF_00_00
+    user_promote = 0x_00_93_C3
+    user_update = 0x_34_F3_AD
+
 
 def simple_activity(member: Muser) -> Tuple[str, Optional[str]]:
     a = member.activity

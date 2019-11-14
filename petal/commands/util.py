@@ -21,6 +21,7 @@ from petal.exceptions import (
 )
 from petal.util import cdn, fmt
 from petal.util.bits import bytes_to_braille, chunk
+from petal.util.embeds import Color
 from petal.util.messages import member_message_history
 
 
@@ -160,7 +161,7 @@ class CommandsUtil(core.Commands):
                 em = discord.Embed(
                     title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                     description=summary,
-                    colour=0x0ACDFF,
+                    colour=Color.info,
                 )
                 details: List[Tuple[str]] = []
                 syntax: str = ""
@@ -263,7 +264,7 @@ class CommandsUtil(core.Commands):
                 "For help with a specific command, invoke `{0}help <command>`.".format(
                     self.config.prefix
                 ),
-                colour=0x0ACDFF,
+                colour=Color.info,
                 timestamp=self.client.startup,
             )
             em.add_field(name="Version", value=self.router.version)
@@ -293,7 +294,7 @@ class CommandsUtil(core.Commands):
             em = discord.Embed(
                 title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                 description=summary or "Command summary unavailable.",
-                colour=0xFFCD0A,
+                colour=Color.tech,
             )
 
             em.add_field(
@@ -439,7 +440,7 @@ class CommandsUtil(core.Commands):
             raise CommandOperationError("Cannot find user.")
 
         em = discord.Embed(
-            colour=0x0ACDFF,
+            colour=Color.info,
             description=f"`{fmt.userline(user)}` / {user.mention}",
             title=f"Avatar of Member: {user.display_name}",
         ).set_image(url=cdn.get_avatar(user))
@@ -553,7 +554,7 @@ class CommandsUtil(core.Commands):
         """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
-        em = discord.Embed(title="Stats", colour=0x0ACDFF)
+        em = discord.Embed(title="Stats", colour=Color.info)
         em.add_field(name="Version", value=self.router.version, inline=False)
         em.add_field(name="Uptime", value=self.router.uptime, inline=False)
         # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
@@ -708,7 +709,7 @@ class CommandsUtil(core.Commands):
         em = discord.Embed(
             title="Detailed String Analysis",
             description=fmt.bold(fmt.escape(repr(raw)[2:-1])),
-            color=0xFFCD0A,
+            colour=Color.tech,
         )
 
         if _binary or not _hex:
