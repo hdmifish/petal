@@ -522,8 +522,8 @@ class CommandsMod(core.Commands):
 
                     em_send = discord.Embed(
                         title="User Unmute",
-                        description=f"You have been unmuted by `{userline(src.author)}`."
-                                    f"\n({src.author.mention})",
+                        description=f"You have been unmuted by"
+                        f" `{userline(src.author)}`.\n({src.author.mention})",
                         colour=0x00FF11,
                     )
                     em_send.set_author(
@@ -542,8 +542,8 @@ class CommandsMod(core.Commands):
 
                     em_send = discord.Embed(
                         title="User Mute",
-                        description=f"You have been muted by `{userline(src.author)}`."
-                                    f"\n({src.author.mention})",
+                        description=f"You have been muted by"
+                        f" `{userline(src.author)}`.\n({src.author.mention})",
                         colour=0xFF0000,
                     )
                     em_send.set_author(
@@ -585,9 +585,7 @@ class CommandsMod(core.Commands):
                 em_log.add_field(
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
-                em_log.add_field(
-                    name="Recipient", value=target.name + "\n" + target.id
-                )
+                em_log.add_field(name="Recipient", value=target.name + "\n" + target.id)
                 em_log.add_field(name="Server", value=target.guild.name)
                 em_log.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
                 em_log.set_thumbnail(url=target.avatar_url)
@@ -726,10 +724,7 @@ class CommandsMod(core.Commands):
                 e.add_field(
                     name=f"Rich Embeds ({len(message.embeds)})",
                     value="\n".join(
-                        [
-                            flat_embed(e, i)
-                            for i, e in enumerate(message.embeds, 1)
-                        ]
+                        flat_embed(e, i) for i, e in enumerate(message.embeds, 1)
                     ),
                     inline=False,
                 )
@@ -764,10 +759,12 @@ class CommandsMod(core.Commands):
             if not (_short or _s):
                 e.add_field(
                     name="Author",
-                    value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
+                    value="Nickname: {!r}\nTag: {}\nRole: {!r}\nType: {}".format(
                         member.nick or "",
                         member.mention,
-                        member.top_role if member.top_role != "@everyone" else None,
+                        escape(member.top_role.name)
+                        if member.top_role != "@everyone"
+                        else None,
                         "Bot" if member.bot else "User",
                     )
                     if _author or _a

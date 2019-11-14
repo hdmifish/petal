@@ -37,13 +37,14 @@ T_ = TypeVar("T_")
 
 
 def count_votes(allowed: Sequence[str], votes: Sequence[Reaction]) -> Counter:
-    allowed: List[str] = [str(a) for a in allowed]
-    result: Counter = Counter()
-    for vote in votes:
-        key: str = str(vote.emoji)
-        if key in allowed:
-            result[key] = (vote.count - 1) if vote.me else vote.count
-    return result
+    allowed: List[str] = [str(a).casefold() for a in allowed]
+    return Counter(
+        {
+            str(vote.emoji): (vote.count - 1) if vote.me else vote.count
+            for vote in votes
+            if str(vote.emoji).casefold() in allowed
+        }
+    )
 
 
 class Menu:
@@ -103,12 +104,13 @@ class Menu:
         self, opts: Sequence[T_], time: int = 30, title: str = "Select One"
     ) -> Optional[T_]:
         """Ask the user to select ONE of a set of predefined options."""
-        onum = len(opts)
-        if not 1 <= onum <= len(letters):
+        if not 1 <= len(opts) <= len(letters):
             return None
-        selection = [cancel, *letters[:onum]]
+
+        letopt = dict(zip(letters, opts))
+        selection = [cancel, *letopt]
         self.add_section(
-            "\n".join(f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)), title
+            "\n".join(f"{letter}: `{opt}`" for letter, opt in letopt.items()), title
         )
         await self.post()
         buttons: Task = await self.add_buttons(selection)
@@ -126,7 +128,7 @@ class Menu:
         if not choice or choice.emoji == cancel:
             result = None
         else:
-            result = opts[letters.index(choice.emoji)]
+            result = letopt.get(choice.emoji)
 
         await buttons
         await self.clear()
@@ -140,15 +142,15 @@ class Menu:
         title: str = "Multiple Choice",
     ) -> Tuple[T_, ...]:
         """Ask the user to select ONE OR MORE of a set of predefined options."""
-        onum = len(opts)
-        if not 1 <= onum <= len(letters):
+        if not 1 <= len(opts) <= len(letters):
             return ()
-        selection = [cancel, *letters[:onum], confirm]
+
+        letopt = dict(zip(letters, opts))
+        selection = [cancel, *letopt, confirm]
         self.add_section(
             "\n".join(
                 chain(
-                    [prompt],
-                    (f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)),
+                    [prompt], (f"{letter}: `{opt}`" for letter, opt in letopt.items())
                 )
             ),
             title,
@@ -176,7 +178,7 @@ class Menu:
 
         results: Tuple[T_, ...] = tuple(
             [
-                opts[letters.index(react.emoji)]
+                letopt.get(react.emoji)
                 for react in vm.reactions
                 if (
                     react.emoji in selection[1:-1]
@@ -237,23 +239,25 @@ class Menu:
         title: str = "Poll",
     ) -> Dict[T_, int]:
         """Run a MULTIPLE CHOICE open poll that anyone can answer."""
-        onum = len(opts)
-        if not 1 <= onum <= len(letters):
+        if not 1 <= len(opts) <= len(letters):
             return {}
-        selection = letters[:onum]
+
+        letopt = dict(zip(letters, opts))
+        selection = list(letopt)
         do_footer = not self.em.footer and not self.em.timestamp
 
         self.add_section(
             "\n".join(
                 chain(
-                    [prompt],
-                    (f"{letter}: `{opt}`" for letter, opt in zip(letters, opts)),
+                    [prompt], (f"{letter}: `{opt}`" for letter, opt in letopt.items())
                 )
             ),
             title,
         )
         if do_footer:
-            self.em.set_footer(text="Poll Ends").timestamp = dt.utcnow() + td(seconds=time)
+            self.em.set_footer(text="Poll Ends").timestamp = dt.utcnow() + td(
+                seconds=time
+            )
 
         await self.post()
         await (await self.add_buttons(selection))
@@ -268,10 +272,7 @@ class Menu:
         await self.clear()
 
         self.add_section(
-            "\n".join(
-                "{}: **{}**".format(opts[letters.index(k)], v)
-                for k, v in outcome.items()
-            )
+            "\n".join("{}: **{}**".format(letopt.get(k), v) for k, v in outcome.items())
         )
         if do_footer:
             self.em.set_footer(text="").timestamp = Embed.Empty
@@ -286,8 +287,11 @@ class Menu:
         do_footer = not self.em.footer and not self.em.timestamp
 
         if do_footer:
-            self.em.set_footer(text="Vote Ends").timestamp = dt.utcnow() + td(seconds=time)
+            self.em.set_footer(text="Vote Ends").timestamp = dt.utcnow() + td(
+                seconds=time
+            )
 
+        await self.post()
         await (await self.add_buttons(selection))
         await sleep(time)
 
