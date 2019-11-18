@@ -149,7 +149,7 @@ class CommandsMgr(core.Commands):
             Specify the duration of the Poll, in Seconds. Defaults to 3600, or one hour.
         """
         if len(args) < 2:
-            return "Must provide at least two options."
+            raise CommandArgsError("Must provide at least two options.")
 
         duration = _time if _time > 0 else 3600
         title = unquote(_question) if _question else "Public Poll"
