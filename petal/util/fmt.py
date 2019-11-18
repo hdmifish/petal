@@ -22,7 +22,7 @@ def mono_block(text: str, syntax: str = None) -> str:
     return f"```{syntax or ''}\n{text}```"
 
 
-def smallid(n: Any, seglen: int = 3, sep: str = ":") -> str:
+def smallid(n: Any, seglen: int = 3, sep: str = "...") -> str:
     ns = str(n)
     return f"{ns[:seglen]}{sep}{ns[-seglen:]}"
 

@@ -1,10 +1,11 @@
 """Miscellaneous functions which are not from external libraries/projects."""
 
+from datetime import datetime as dt
 from hashlib import sha256
 import shlex
 from typing import Any, Callable, Dict, List, Optional as Opt, Sequence, Tuple
 
-from discord import Role
+from discord import Embed, Role
 
 from petal.types import kwopt, T1, T2
 from petal.exceptions import CommandArgsError
@@ -74,6 +75,15 @@ def enforce_quoted_args(args: Sequence[str], wanted: int, text: str = None):
         )
 
 
+def flat_embed(embed: Embed, i: int = 0) -> str:
+    d = embed.to_dict()
+    return "#{}. ({} char) {}".format(
+        i,
+        len(d.get("description", "")),
+        repr(embed.title) if embed.title else "(No Title)",
+    ) + "".join("\n -  {name!r}".format(**field) for field in d.get("fields", []))
+
+
 def lambdall(values: Sequence[T1], func: Callable[[T1], T2], mustbe: T2 = True) -> bool:
     """Return True if ALL values, run through `func`, are equal to `mustbe`."""
     for v in values:
@@ -127,6 +137,11 @@ def split(line: str) -> Tuple[List[str], str]:
 
     # Return a list of all the tokens, and the first part of the "original".
     return list(tokens), original.read_token()
+
+
+def timestr(ts: dt = None) -> str:
+    # return str(ts or dt.utcnow())[:-7]
+    return f"UTC {ts or dt.utcnow():%Y-%m-%d %H:%M:%S}"
 
 
 def unquote(string: str) -> str:

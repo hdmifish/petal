@@ -2,6 +2,7 @@
 Access: Server Operators"""
 
 from petal.commands.minecraft import auth
+from petal.exceptions import CommandArgsError, CommandInputError
 
 
 class CommandsMCAdmin(auth.CommandsMCAuth):
@@ -23,28 +24,42 @@ class CommandsMCAdmin(auth.CommandsMCAuth):
         except:
             level = -1
         if not 0 <= level <= 4:
-            return "You need to specify an op level for {} between `0` and `4`.".format(
-                target
+            raise CommandArgsError(
+                f"You need to specify an Operator level for {target!r} between"
+                f" `0` and `4`."
             )
 
-        victim = self.minecraft.WLQuery(target)
-        if victim == -7:
-            return "Could not access database file."
-        elif not victim:
-            return "No valid target found."
-        elif len(victim) > 1:
-            return "Ambiguous command: {} possible targets found.".format(
-                str(len(victim))
-            )
-        elif str(src.author.id) == victim[0]["discord"]:
-            return "You cannot change your own Operator status."
+        with self.minecraft.db(target) as db:
+            db = list(db)
+            if len(db) != 1:
+                raise CommandInputError(
+                    f"Ambiguous Target: {len(db)} possible targets found."
+                )
+            elif str(src.author.id) == db[0]["discord"]:
+                raise CommandInputError("You cannot change your own Operator status.")
+            else:
+                db[0]["operator"] = level
+                self.minecraft.export()
+                return f"{db[0]['name']!r} has been assigned Operator Level {level}."
 
-        # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)
-        rep = self.minecraft.WLMod(victim[0]["discord"], level)
-
-        return "{} has been granted __Level {} Operator__ status. Return values: `{}`".format(
-            victim[0]["name"], level, "`, `".join([str(term) for term in rep])
-        )
+        # victim = self.minecraft.WLQuery(target)
+        # if victim == -7:
+        #     return "Could not access database file."
+        # elif not victim:
+        #     return "No valid target found."
+        # elif len(victim) > 1:
+        #     return "Ambiguous command: {} possible targets found.".format(
+        #         str(len(victim))
+        #     )
+        # elif str(src.author.id) == victim[0]["discord"]:
+        #     return "You cannot change your own Operator status."
+        #
+        # # rep, doSend, targetid, targetname, wlwin = self.minecraft.WLMod(victim[0], level)
+        # rep = self.minecraft.WLMod(victim[0]["discord"], level)
+        #
+        # return "{} has been granted __Level {} Operator__ status. Return values: `{}`".format(
+        #     victim[0]["name"], level, "`, `".join([str(term) for term in rep])
+        # )
 
 
 # Keep the actual classname unique from this common identifier

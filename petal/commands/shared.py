@@ -101,16 +101,7 @@ def factory_send(idents: Dict[str, Dict[str, Union[int, str]]], default: str):
             menu = Menu(self.client, src.channel, "", "", user=src.author)
             menu.em = preview
 
-            confirm = await menu.get_bool(
-                prompt="Send this message to {} on behalf of {}?\n"
-                "(This section will not be sent.)".format(destination.mention, identity)
-                + (
-                    "\n***NOTE: THIS MESSAGE WILL SEND A MASS PING!***"
-                    if _everyone or _here
-                    else ""
-                ),
-                title="Confirm",
-            )
+            confirm = await menu.get_bool()
 
             if confirm is True:
                 em = discord.Embed(**ident)

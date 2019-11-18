@@ -2,12 +2,13 @@
 
 from datetime import datetime as dt, timedelta as td
 from enum import IntEnum
-from typing import Dict, List, Union
+from typing import Optional, Tuple, Union
 
-from discord import Embed, Guild, Member, User
+from discord import Activity, Embed, Game, Guild, Member, Spotify, Streaming, User
 
 from .cdn import get_avatar
-from .fmt import bold, escape, italic, mono, smallid, underline, userline
+from .fmt import bold, escape, smallid
+from .grammar import sequence_words
 
 
 Muser = Union[Member, User]
@@ -24,6 +25,53 @@ class Color(IntEnum):
     wiki_vague = 0x_FF_CC_33  # Wiki (Disambiguation)
     xkcd = 0x_96_A8_C8  # XKCD
 
+    message_delete = 0x_FC_00_A2
+    message_edit = 0x_AE_00_FE
+
+    alert = 0x_9F_00_FF
+    mod_kick = 0x_FF_79_00
+    mod_mute = 0x_12_00_FF
+    mod_warn = 0x_FF_F6_00
+
+    user_join = 0x_00_FF_00
+    user_part = 0x_FF_00_00
+    user_promote = 0x_00_93_C3
+    user_update = 0x_34_F3_AD
+
+
+def simple_activity(member: Muser) -> Tuple[str, Optional[str]]:
+    a = member.activity
+
+    if not isinstance(a, Activity):
+        return "Activity", "None"
+
+    elif isinstance(a, Game) or a.to_dict().get("type", -1) == 0:
+        return "In-Game", escape(a.name)
+
+    elif isinstance(a, Streaming):
+        return (
+            "Streaming",
+            "{}\n{}\n\n{}".format(
+                escape(repr(a.twitch_name or a.name)), a.details, a.url
+            ),
+        )
+
+    elif isinstance(a, Spotify):
+        return (
+            "Spotify",
+            "{}\nby {}\non {}".format(
+                escape(repr(a.title)),
+                sequence_words([escape(repr(x)) for x in a.artists]),
+                escape(repr(a.album)),
+            ),
+        )
+
+    else:
+        try:
+            return a.name, escape(a.details or a.state or "None")
+        except:
+            return "Activity: UNKNOWN", f"```python\n{a.to_dict()!r}```"
+
 
 def membership_card(member: Muser, *, colour: int = None) -> Embed:
     """Create an Embed Object showing Member/User Details."""
@@ -35,6 +83,7 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
     since_joined: td = now - joined_at
 
     guild: Guild = member.guild
+    act_name, act_desc = simple_activity(member)
 
     em = (
         Embed(
@@ -42,73 +91,19 @@ def membership_card(member: Muser, *, colour: int = None) -> Embed:
             description=f"Member of {bold(guild.name)}"
             f"\n{member.mention}"
             f"\n{escape(ascii(member.display_name))}"
-            f"\n`[{smallid(member.id)}]`",
+            f"\n`{smallid(member.id)}`",
             colour=member.colour if colour is None else colour,
-            timestamp=now,
+            # timestamp=now,
         )
         .set_thumbnail(url=get_avatar(member))
         .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
+        .add_field(name=act_name, value=act_desc, inline=False)
+        .add_field(
+            name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
+        )
+        .add_field(
+            name="Joined Guild", value=f"{joined_at}\n({bold(since_joined)} ago)"
+        )
     )
-    em.add_field(
-        name="Account Created", value=f"{created_at}\n({bold(since_created)} ago)"
-    )
-    em.add_field(name="Joined Guild", value=f"{joined_at}\n({bold(since_joined)} ago)")
-
-    return em
-
-
-minecraft_suspension = {
-    True: "Nonspecific suspension",
-    False: "Not suspended",
-    000: "Not suspended",
-    # Trivial suspensions
-    101: "Joke suspension",
-    102: "Self-sequested suspension",
-    103: "Old account",
-    104: "User not in Discord",
-    # Minor suspensions
-    201: "Minor trolling",
-    203: "Compromised account",
-    # Moderate suspensions
-    301: "Major trolling",
-    302: "Stealing",
-    # Major suspensions
-    401: "Use of slurs",
-    402: "Griefing",
-    403: "Discord banned",
-}
-APPROVE: str = underline(mono("--- APPROVED ---"))
-PENDING: str = italic(mono("-#- PENDING -#-"))
-SUSPEND: str = bold(mono("#!# SUSPENDED #!#"))
-
-
-def minecraft_card(
-    profile: Dict[str, Union[int, str, List[int], List[str]]],
-    member: Muser = None,
-    verbose: bool = False,
-) -> Embed:
-    suspended: int = profile.get("suspended", 0)
-    approved: List[int] = profile.get("approved", [])
-
-    if suspended:
-        col = 0x_AA_22_00
-        status = f"{SUSPEND}\n{minecraft_suspension.get(suspended, 'Unknown Code')}"
-    elif approved:
-        col = 0x_00_CC_00
-        status = "\n".join((APPROVE, *(f"<@{i}>" for i in approved)))
-    else:
-        col = 0x_FF_FF_00
-        status = PENDING
-
-    em = Embed(
-        title="Minecraft User",
-        description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
-        f"\nMinecraft UUID: {repr(profile.get('uuid'))}"
-        f"\nDiscord Identity: {mono(escape(userline(member)))}"
-        f"\nDiscord Tag: {member.mention}",  # TODO: Handle missing Member
-        colour=col,
-    ).add_field(name="Application Status", value=status)
-
-    # TODO: Add fields for Date, Operator Status, Name History, and Notes
 
     return em

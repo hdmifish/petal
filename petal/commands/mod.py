@@ -11,7 +11,7 @@ import discord
 
 from petal import checks
 from petal.commands import core, shared
-from petal.etc import lambdall, mash
+from petal.etc import flat_embed, lambdall, mash, timestr
 from petal.exceptions import (
     CommandArgsError,
     CommandExit,
@@ -20,7 +20,7 @@ from petal.exceptions import (
 )
 from petal.menu import confirm_action, Menu
 from petal.types import Src
-from petal.util.embeds import membership_card
+from petal.util.embeds import Color, membership_card
 from petal.util.fmt import bold, escape, mono, underline, userline
 
 
@@ -138,7 +138,9 @@ class CommandsMod(core.Commands):
 
         else:
             logEmbed = (
-                discord.Embed(title="User Kick", description=_reason, colour=0xFF7900)
+                discord.Embed(
+                    title="User Kick", description=_reason, colour=Color.mod_kick
+                )
                 .set_author(
                     name=src.author.display_name, icon_url=src.author.avatar_url
                 )
@@ -238,7 +240,9 @@ class CommandsMod(core.Commands):
             return "It seems I don't have perms to ban this user."
         else:
             logEmbed = (
-                discord.Embed(title="User Ban", description=_reason, colour=0xFF0000)
+                discord.Embed(
+                    title="User Ban", description=_reason, colour=Color.user_part
+                )
                 .set_author(
                     name=self.client.user.name,
                     icon_url="https://" + "puu.sh/tACjX/fc14b56458.png",
@@ -369,7 +373,7 @@ class CommandsMod(core.Commands):
             return "It seems I don't have perms to ban this user"
         else:
             logEmbed = discord.Embed(
-                title="User Ban", description=_reason, colour=0xFF0000
+                title="User Ban", description=_reason, colour=Color.user_part
             )
 
             logEmbed.add_field(
@@ -433,7 +437,7 @@ class CommandsMod(core.Commands):
                 warnEmbed = discord.Embed(
                     title="Official Warning",
                     description="The guild has sent you an official warning",
-                    colour=0xFFF600,
+                    colour=Color.mod_warn,
                 )
 
                 warnEmbed.add_field(name="Reason", value=msg.content)
@@ -446,7 +450,7 @@ class CommandsMod(core.Commands):
                 return "It seems I don't have perms to warn this user"
             else:
                 logEmbed = discord.Embed(
-                    title="User Warn", description=msg.content, colour=0xFF600
+                    title="User Warn", description=msg.content, colour=Color.mod_warn
                 )
                 logEmbed.set_author(
                     name=self.client.user.name,
@@ -520,17 +524,18 @@ class CommandsMod(core.Commands):
                     await target.remove_roles(role_mute, reason)
                     # await self.client.guild_voice_state(target, mute=False)
 
-                    warnEmbed = discord.Embed(
+                    em_send = discord.Embed(
                         title="User Unmute",
-                        description=f"You have been unmuted by {src.author.name}.",
+                        description=f"You have been unmuted by"
+                        f" `{userline(src.author)}`.\n({src.author.mention})",
                         colour=0x00FF11,
                     )
-                    warnEmbed.set_author(
+                    em_send.set_author(
                         name=self.client.user.name,
                         icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
                     )
-                    # warnEmbed.add_field(name="Reason", value=reason.content)
-                    warnEmbed.add_field(
+                    # em_send.add_field(name="Reason", value=reason.content)
+                    em_send.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Unmute"
@@ -539,17 +544,18 @@ class CommandsMod(core.Commands):
                     await target.add_roles(role_mute, reason)
                     # await self.client.guild_voice_state(target, mute=True)
 
-                    warnEmbed = discord.Embed(
+                    em_send = discord.Embed(
                         title="User Mute",
-                        description=f"You have been muted by {src.author.name}.",
+                        description=f"You have been muted by"
+                        f" `{userline(src.author)}`.\n({src.author.mention})",
                         colour=0xFF0000,
                     )
-                    warnEmbed.set_author(
+                    em_send.set_author(
                         name=self.client.user.name,
                         icon_url="https://puu.sh/tB2KH/cea152d8f5.png",
                     )
-                    warnEmbed.add_field(name="Reason", value=reason.content)
-                    warnEmbed.add_field(
+                    em_send.add_field(name="Reason", value=reason.content)
+                    em_send.add_field(
                         name="Issuing Server", value=src.guild.name, inline=False
                     )
                     muteswitch = "Mute"
@@ -562,7 +568,7 @@ class CommandsMod(core.Commands):
                 yield f"{target.name}  (ID: {target.id}) was successfully {muteswitch}d"
 
                 try:
-                    await target.send(embed=warnEmbed)
+                    await target.send(embed=em_send)
                 except discord.errors.Forbidden:
                     yield (
                         f"  (FAILED to send a DM notification to user `{target.id}`.)",
@@ -574,23 +580,21 @@ class CommandsMod(core.Commands):
                         True,
                     )
 
-                logEmbed = discord.Embed(
+                em_log = discord.Embed(
                     title=f"User {muteswitch}",
                     description=reason.content,
-                    colour=0x1200FF,
+                    colour=Color.mod_mute,
                 )
 
-                logEmbed.add_field(
+                em_log.add_field(
                     name="Issuer", value=src.author.name + "\n" + src.author.id
                 )
-                logEmbed.add_field(
-                    name="Recipient", value=target.name + "\n" + target.id
-                )
-                logEmbed.add_field(name="Server", value=target.guild.name)
-                logEmbed.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
-                logEmbed.set_thumbnail(url=target.avatar_url)
+                em_log.add_field(name="Recipient", value=target.name + "\n" + target.id)
+                em_log.add_field(name="Server", value=target.guild.name)
+                em_log.add_field(name="Timestamp", value=str(dt.utcnow())[:-7])
+                em_log.set_thumbnail(url=target.avatar_url)
 
-                await self.client.log_moderation(embed=logEmbed)
+                await self.client.log_moderation(embed=em_log)
 
     async def cmd_purge(self, args, src: Src, **_):
         """Purge up to 200 messages in the current channel.
@@ -629,7 +633,7 @@ class CommandsMod(core.Commands):
                     description=f"{delete_num} messages were purged from "
                     f"`#{src.channel.name}` in {src.guild.name} by "
                     f"`{src.author.name}#{src.author.discriminator}`.",
-                    color=0x0ACDFF,
+                    color=Color.info,
                 )
                 await self.client.log_moderation(embed=logEmbed)
 
@@ -674,7 +678,7 @@ class CommandsMod(core.Commands):
         `--short`, `-s` :: Display less detail, for a more compact embed. Overrides `--author`, `-a`.
         """
         if not args:
-            return "Must provide at least one URL or ID pair."
+            raise CommandInputError("Must provide at least one URL or ID pair.")
 
         for arg in args:
             id_c = _channel or _c or src.channel.id
@@ -685,21 +689,15 @@ class CommandsMod(core.Commands):
 
             channel: discord.TextChannel = self.client.get_channel(id_c)
             if not channel:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Cannot find Channel with id `{}`.".format(id_c),
-                )
+                yield f"Cannot find Channel with id `{id_c}`."
                 continue
+
             try:
                 message: discord.Message = await channel.fetch_message(id_m)
             except discord.NotFound:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Cannot find Message with id `{}` in channel `{}`.".format(
-                        id_m, id_c
-                    ),
-                )
+                yield f"Cannot find Message with id `{id_m}` in channel `{id_c}`."
                 continue
+
             member: discord.Member = message.author
 
             ct = escape(message.content if _preserve or _p else message.clean_content)
@@ -728,18 +726,9 @@ class CommandsMod(core.Commands):
             # Add a field for EMBEDS (mostly for bots).
             if message.embeds:
                 e.add_field(
-                    name=f"Embed Titles ({len(message.embeds)})",
+                    name=f"Rich Embeds ({len(message.embeds)})",
                     value="\n".join(
-                        [
-                            (
-                                '#{}. ({} char) "{}"'.format(
-                                    i + 1,
-                                    len(e.get("description", "")),
-                                    e.get("title", "(No Title)"),
-                                )
-                            )
-                            for i, e in enumerate(message.embeds)
-                        ]
+                        flat_embed(e, i) for i, e in enumerate(message.embeds, 1)
                     ),
                     inline=False,
                 )
@@ -774,10 +763,12 @@ class CommandsMod(core.Commands):
             if not (_short or _s):
                 e.add_field(
                     name="Author",
-                    value="Nickname: {}\nTag: {}\nRole: {}\nType: {}".format(
+                    value="Nickname: {!r}\nTag: {}\nRole: {!r}\nType: {}".format(
                         member.nick or "",
                         member.mention,
-                        member.top_role if member.top_role != "@everyone" else None,
+                        escape(member.top_role.name)
+                        if member.top_role != "@everyone"
+                        else None,
                         "Bot" if member.bot else "User",
                     )
                     if _author or _a
@@ -821,16 +812,11 @@ class CommandsMod(core.Commands):
                     inline=False,
                 )
 
+            e.add_field(name="Time of Creation", value=timestr(message.created_at))
             if message.edited_at:
-                e.add_field(name="Last Edited", value=message.edited_at)
+                e.add_field(name="Time of Edit", value=timestr(message.edited_at))
 
-            try:  # Post it.
-                await self.client.embed(src.channel, e)
-            except discord.HTTPException:
-                await self.client.send_message(
-                    channel=src.channel,
-                    message="Failed to post embed. Message may have been too long.",
-                )
+            yield e
 
     cmd_send = shared.factory_send(
         {
@@ -858,9 +844,8 @@ class CommandsMod(core.Commands):
             ) or self.client.main_guild.get_member(int(userid))
 
             if target is None:
-                raise CommandInputError(f"Could not get user with ID `{int(args[0])}`.")
+                raise CommandInputError(f"Could not get user with ID `{userid}`.")
             else:
-                await src.channel.trigger_typing()
                 yield membership_card(target)
 
 

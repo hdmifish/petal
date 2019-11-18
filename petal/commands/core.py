@@ -1,4 +1,4 @@
-from asyncio import ensure_future as create_task, Future, sleep
+from asyncio import CancelledError, create_task, sleep, Task
 from traceback import print_exc
 from typing import Optional
 from urllib.parse import urlencode, quote_plus
@@ -16,6 +16,15 @@ from petal.exceptions import (
 from petal.types import Src, PetalClientABC, Printer
 
 
+view_icon = b"\xf0\x9f\x91\x81\xe2\x80\x8d\xf0\x9f\x97\xa8".decode("utf-8")
+# Pencil on paper:  F0 9F 93 9D
+# Eye:              F0 9F 91 81
+# Ear:              F0 9F 91 82
+# Writing hand:     E2 9C 8D
+# Speech Eye:       F0 9F 91 81 E2 80 8D F0 9F 97 A8
+# ?:                E2 9D 93
+
+
 class CommandPending:
     """Class for storing a Command while it is executed. If it cannot be
         executed, it will be saved for a set time limit. During that timeout
@@ -31,8 +40,9 @@ class CommandPending:
         self.invoker = self.src.author
 
         self.active = False
+        self.react = None
         self.reply: Optional[discord.Message] = None
-        self.waiting: Future = create_task(self.wait())
+        self.waiting: Task = create_task(self.wait())
 
     async def run(self):
         """Try to execute this command. Return True if execution is carried out
@@ -69,12 +79,12 @@ class CommandPending:
 
         except CommandAuthError as e:
             # Access denied. Cease and desist.
-            self.unlink()
+            await self.unlink()
             await self.post_or_edit(f"Sorry, not permitted; {str(e) or d}")
 
         except CommandExit as e:
             # Command cancelled itself. Cease and desist.
-            self.unlink()
+            await self.unlink()
             await self.post_or_edit(f"Command exited; {str(e) or d}")
             executed = True  # This Exit was intentional. Count it as Executed.
 
@@ -84,19 +94,29 @@ class CommandPending:
 
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
-            self.unlink()
+            await self.unlink()
             await self.post_or_edit(f"Command failed; {str(e) or d}")
 
         except NotImplementedError as e:
             # Command ran into something that is not done. Cease and desist.
-            self.unlink()
+            await self.unlink()
             await self.post_or_edit(
                 f"Sorry, this Command is not completely done; {str(e) or d}"
             )
 
+        except discord.errors.HTTPException:
+            # Discord prevented posting a Response. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(
+                f"Sorry, could not post Command Response; The Response was"
+                f" probably too long."
+                # f"\n({type(e).__name__}: `{e}`)"
+            )
+            raise  # Raise the Exception anyway, so that it is logged.
+
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
-            self.unlink()
+            await self.unlink()
             await self.post_or_edit(
                 "Sorry, something went wrong, but I do not know what"
                 + (
@@ -109,12 +129,14 @@ class CommandPending:
             raise e
 
         else:
-            self.unlink()
+            await self.unlink()
             executed = True
 
         finally:
             if executed:
                 self.router.config.get("stats")["comCount"] += 1
+            if self.active and self.waiting:
+                await self.src.add_reaction(view_icon)
 
         return executed
 
@@ -125,16 +147,30 @@ class CommandPending:
             self.reply = await self.channel.send(content)
 
     async def wait(self):
-        self.active = True
-        self.dict_[self.src.id] = self
-        await sleep(60)
-        self.unlink()
+        try:
+            self.active = True
+            self.dict_[self.src.id] = self
+            await sleep(60)
+        except:
+            pass
+        finally:
+            await self.unlink()
 
-    def unlink(self):
+    async def unlink(self):
         """Prevent self from being executed."""
         self.active = False
         if self.src.id in self.dict_:
             del self.dict_[self.src.id]
+
+        if self.waiting and not self.waiting.done():
+            self.waiting.cancel()
+
+        try:
+            await self.src.remove_reaction(view_icon, self.router.client.user)
+        except CancelledError:
+            pass
+        except:
+            print_exc()
 
 
 class Commands:
@@ -187,12 +223,12 @@ class Commands:
                     return allow, denied
             if 0 <= self.op <= 4:
                 if hasattr(self, "minecraft"):
-                    return self.minecraft.WLAuthenticate(src, self.op)
+                    return self.minecraft.user_has_op(src.author, self.op), "bad op"
                 else:
                     return False, "bad op"
         except Exception as e:
             # For security, "fail closed".
-            return False, "Error: `{}`".format(e)
+            return False, f"Error: {e}"
         else:
             return True, None
 

@@ -21,6 +21,7 @@ from petal.exceptions import (
 )
 from petal.util import cdn, fmt
 from petal.util.bits import bytes_to_braille, chunk
+from petal.util.embeds import Color
 from petal.util.messages import member_message_history
 
 
@@ -160,7 +161,7 @@ class CommandsUtil(core.Commands):
                 em = discord.Embed(
                     title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                     description=summary,
-                    colour=0x0ACDFF,
+                    colour=Color.info,
                 )
                 details: List[Tuple[str]] = []
                 syntax: str = ""
@@ -230,11 +231,12 @@ class CommandsUtil(core.Commands):
                     em.add_field(
                         name="Details:",
                         value="\n\n".join("\n".join(p) for p in details)[:1024],
+                        inline=False,
                     )
                 if syntax:
-                    em.add_field(name="Syntax:", value=syntax[:1024])
+                    em.add_field(name="Syntax:", value=syntax[:1024], inline=False)
                 if opts:
-                    em.add_field(name="Options:", value=opts[:1024])
+                    em.add_field(name="Options:", value=opts[:1024], inline=False)
 
                 em.set_author(name="Petal Help", icon_url=self.client.user.avatar_url)
                 self.help_cache[cmd.__name__] = em
@@ -262,7 +264,7 @@ class CommandsUtil(core.Commands):
                 "For help with a specific command, invoke `{0}help <command>`.".format(
                     self.config.prefix
                 ),
-                colour=0x0ACDFF,
+                colour=Color.info,
                 timestamp=self.client.startup,
             )
             em.add_field(name="Version", value=self.router.version)
@@ -292,7 +294,7 @@ class CommandsUtil(core.Commands):
             em = discord.Embed(
                 title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
                 description=summary or "Command summary unavailable.",
-                colour=0xFFCD0A,
+                colour=Color.tech,
             )
 
             em.add_field(
@@ -438,7 +440,7 @@ class CommandsUtil(core.Commands):
             raise CommandOperationError("Cannot find user.")
 
         em = discord.Embed(
-            colour=0x0ACDFF,
+            colour=Color.info,
             description=f"`{fmt.userline(user)}` / {user.mention}",
             title=f"Avatar of Member: {user.display_name}",
         ).set_image(url=cdn.get_avatar(user))
@@ -552,7 +554,7 @@ class CommandsUtil(core.Commands):
         """Display detailed technical statistics."""
         truedelta = int(self.config.stats["pingScore"] / self.config.stats["pingCount"])
 
-        em = discord.Embed(title="Stats", colour=0x0ACDFF)
+        em = discord.Embed(title="Stats", colour=Color.info)
         em.add_field(name="Version", value=self.router.version, inline=False)
         em.add_field(name="Uptime", value=self.router.uptime, inline=False)
         # em.add_field(name="Void Count", value=str(self.db.void.count()), inline=False)
@@ -682,41 +684,74 @@ class CommandsUtil(core.Commands):
 
         yield f"Showing last __{s}__ Messages."
 
-    async def cmd_bytes(self, src, **_):
+    def cmd_bytes(
+        self,
+        args,
+        _encoding: str = "utf-16",
+        _binary: bool = False,
+        _hex: bool = False,
+        **_,
+    ):
         """Encode the message provided into a Bytes object. Then, print it.
 
         Debug utility to sanity check **__exactly__** what is received over Discord.
 
         Syntax: `{p}bytes <literally anything>...`
         """
-        raw: bytes = src.content[7:].encode("utf-8")
+        # raw: bytes = src.content[7:].encode(_encoding)
+        txt: str = " ".join(args)
+        raw: bytes = txt.encode(_encoding)
 
-        _bin: List[str] = [format(b, "0>8b") for b in raw]
-        _hex: List[str] = [format(b, "0>2X") for b in raw]
+        __bin: List[str] = [format(b, "0>8b") for b in raw]
+        __hex: List[str] = [format(b, "0>2X") for b in raw]
 
-        return (
-            discord.Embed(
-                title="Detailed String Analysis",
-                description=fmt.bold(fmt.escape(repr(raw)[2:-1])),
-                color=0xFFCD0A,
-            )
-            .add_field(
+        txt_ = txt + "                "
+        em = discord.Embed(
+            title="Detailed String Analysis",
+            description=fmt.bold(fmt.escape(repr(raw)[2:-1])),
+            colour=Color.tech,
+        )
+
+        if _binary or not _hex:
+            em.add_field(
                 name="Binary",
                 value="\n".join(
-                    f"`{i * 4:0>2}`-`{min((i * 4 + 3, len(_bin) - 1)):0>2}` :: "
-                    + " ".join(f"__`{c}`__" for c in ch if c is not None)
-                    for i, ch in enumerate(chunk(_bin, 4))
+                    fmt.mono(
+                        " :: ".join(
+                            (
+                                # f"{i*4:0>2}-{min((i*4+3,len(__bin)-1)):0>2}",
+                                f"{txt_[i * 4 : i * 4 + 4]}",
+                                " ".join(c for c in ch if c is not None),
+                            )
+                        )
+                    )
+                    for i, ch in enumerate(chunk(__bin, 4))
                 ),
+                inline=False,
             )
-            .add_field(
+
+        if _hex:
+            em.add_field(
                 name="Hexadecimal",
                 value="\n".join(
-                    f"`{i * 16:0>2}`-`{min((i * 16 + 15, len(_hex) - 1)):0>2}` :: "
-                    + " ".join(f"__`{c}`__" for c in ch if c is not None)
-                    for i, ch in enumerate(chunk(_hex, 16))
+                    fmt.mono(
+                        " :: ".join(
+                            (
+                                f"{i*16:0>2}-{min((i*16+15,len(__hex)-1)):0>2}",
+                                # f"'`{txt[i*16:i*16+16]}`'",
+                                " ".join(c for c in ch if c is not None),
+                            )
+                        )
+                    )
+                    for i, ch in enumerate(chunk(__hex, 16))
                 ),
+                inline=False,
             )
-            .add_field(name="Raw Bits", value=fmt.bold(fmt.mono(bytes_to_braille(raw))))
+
+        return em.add_field(
+            name="Raw Bits",
+            value=fmt.bold(fmt.mono(bytes_to_braille(raw))),
+            inline=False,
         )
 
 
