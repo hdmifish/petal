@@ -630,9 +630,17 @@ class Petal(PetalClientABC):
                 aliases = self.db.get_attribute(member, "aliases")
                 if aliases:
                     first, last = aliases[0], aliases[1]
-                    card.insert_field_at(0, name="Originally seen as", value=first)
+                    card.insert_field_at(
+                        0,
+                        name="Originally seen as",
+                        value=f"{escape(first)}\n{escape(ascii(first))}",
+                    )
                     if first != last:
-                        card.insert_field_at(1, name="Last seen as", value=last)
+                        card.insert_field_at(
+                            1,
+                            name="Last seen as",
+                            value=f"{escape(last)}\n{escape(ascii(last))}",
+                        )
         else:
             # We have no previous record of this User.
             self.db.add_member(member)
