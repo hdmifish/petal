@@ -6,6 +6,7 @@ from petal.commands import core
 from petal.checks import all_checks, Messages
 from petal.exceptions import CommandInputError
 from petal.menu import Menu
+from petal.util import questions
 from petal.util.grammar import pluralize, sequence_words
 
 
@@ -216,6 +217,11 @@ class CommandsMaintenance(core.Commands):
                 )
             ).content
         )
+
+    async def cmd_bool2(self, **_):
+        title = yield questions.ChatReply("Enter text for boolean:")
+        conf = yield questions.ConfirmMenu("Boolean", title)
+        yield str(conf)
 
 
 # Keep the actual classname unique from this common identifier

@@ -169,7 +169,7 @@ class CommandsEvent(core.Commands):
             # confirmer = Menu(self.client, src.channel, "Confirm Post", user=src.author)
             menu.add_section(msgstr, "Message Preview")
             proceed = await menu.get_bool(
-                prompt="Send this Event Announcement?", title="Confirmation"
+                # prompt="Send this Event Announcement?", title="Confirmation"
             )
             if proceed is None:
                 # menu.em.description = "[ Closed ]"

@@ -33,6 +33,7 @@ from petal.etc import mash, filter_members_with_role, timestr
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
+from petal.util import questions
 from petal.util.cdn import get_avatar
 from petal.util.embeds import Color, membership_card
 from petal.util.fmt import escape, mono, mono_block, userline
@@ -365,7 +366,7 @@ class Petal(PetalClientABC):
         Return Types of Command Methods:
         def, return         ->  Any             - send(value)
         def, yield          ->  Generator       - for x in value: send(x)
-        async def, return   ->  Coroutine       - recurse(await value)
+        async def, return   ->  Coroutine       - send(await value)
         async def, yield    ->  AsyncGenerator  - async for x in value: send(x)
         """
         # print("Outputting Response:", repr(response))
@@ -414,7 +415,16 @@ class Petal(PetalClientABC):
                     # print("    Discarding Buffer:", repr(buffer))
                     buffer.clear()
 
-                elif isinstance(line, (dict, discord.Embed, BaseException)):
+                elif isinstance(line, questions.Question):
+                    res2 = await line.ask(self, src.channel, src.author)
+
+                    if isinstance(response, AsyncGenerator):
+                        await push(await response.asend(res2))
+
+                    elif isinstance(response, Generator):
+                        await push(response.send(res2))
+
+                elif isinstance(line, (BaseException, dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
                     await self.print_response(src, line)
