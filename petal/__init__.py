@@ -419,10 +419,16 @@ class Petal(PetalClientABC):
                     res2 = await line.ask(self, src.channel, src.author)
 
                     if isinstance(response, AsyncGenerator):
-                        await push(await response.asend(res2))
+                        try:
+                            await push(await response.asend(res2))
+                        except StopAsyncIteration:
+                            pass
 
                     elif isinstance(response, Generator):
-                        await push(response.send(res2))
+                        try:
+                            await push(response.send(res2))
+                        except StopIteration:
+                            pass
 
                 elif isinstance(line, (BaseException, dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
