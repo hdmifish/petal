@@ -3,7 +3,7 @@ Access: Public"""
 
 from datetime import datetime as dt
 import json
-from random import randint
+from random import choice, randint
 from bs4 import BeautifulSoup
 import re
 
@@ -673,23 +673,21 @@ class CommandsPublic(core.Commands):
         """
         gal = self.config.get("calmGallery")
         if gal is None:
-            return "Sadly, calm hasn't been set up correctly"
+            raise CommandOperationError("Sadly, calm hasn't been set up correctly")
         if args:
-            await self.client.send_message(
-                src.author,
-                src.channel,
-                "You will be held accountable for whatever you post in here."
-                " Just a heads up ^_^",
+            yield (
+                "You will be held accountable for whatever is posted in here."
+                " Just a heads up ^_^"
             )
             gal.append(
                 {
-                    "author": src.author.name + " " + src.author.id,
+                    "author": f"{src.author.name} {src.author.id}",
                     "content": args[0].strip(),
                 }
             )
             self.config.save()
         else:
-            return gal[randint(0, len(gal) - 1)]["content"]
+            yield choice(gal)["content"]
 
     async def cmd_comfypixel(self, args: Args, src: Src, **_):
         """Bring up a random image from the "comfypixel" gallery, or add one.
@@ -698,23 +696,23 @@ class CommandsPublic(core.Commands):
         """
         gal = self.config.get("comfyGallery")
         if gal is None:
-            return "Sadly, comfypixel hasn't been set up correctly"
+            raise CommandOperationError(
+                "Sadly, comfypixel hasn't been set up correctly"
+            )
         if args:
-            await self.client.send_message(
-                src.author,
-                src.channel,
+            yield (
                 "You will be held accountable for whatever is posted in here."
-                " Just a heads up ^_^",
+                " Just a heads up ^_^"
             )
             gal.append(
                 {
-                    "author": src.author.name + " " + src.author.id,
+                    "author": f"{src.author.name} {src.author.id}",
                     "content": args[0].strip(),
                 }
             )
             self.config.save()
         else:
-            return gal[randint(0, len(gal) - 1)]["content"]
+            yield choice(gal)["content"]
 
     async def cmd_aww(self, args: Args, src: Src, **_):
         """Bring up a random image from the "cute" gallery, or add one.
@@ -723,23 +721,21 @@ class CommandsPublic(core.Commands):
         """
         gal = self.config.get("cuteGallery")
         if gal is None:
-            return "Sadly, aww hasn't been set up correctly"
+            raise CommandOperationError("Sadly, aww hasn't been set up correctly")
         if args:
-            await self.client.send_message(
-                src.author,
-                src.channel,
+            yield (
                 "You will be held accountable for whatever is posted in here."
-                " Just a heads up ^_^",
+                " Just a heads up ^_^"
             )
             gal.append(
                 {
-                    "author": src.author.name + " " + src.author.id,
+                    "author": f"{src.author.name} {src.author.id}",
                     "content": args[0].strip(),
                 }
             )
             self.config.save()
         else:
-            return gal[randint(0, len(gal) - 1)]["content"]
+            yield choice(gal)["content"]
 
     async def cmd_void(self, args: Args, src: Src, **_):
         """Reach into the Void, a bottomless pit of various links and strings.
@@ -785,7 +781,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_spookyclock(self, **_):
         """Be careful, Skeletons are closer than you think..."""
-        td = (dt(2019, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
+        td = (dt(2020, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return ":ghost: Beware! The skeletons are already here! :ghost:"
         d = divmod(td, 86400)
