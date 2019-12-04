@@ -142,6 +142,14 @@ class CommandsEvent(core.Commands):
             # Likely tried to get `None.content`.
             raise CommandOperationError("Text Input timed out.")
 
+        except ValueError:
+            # Likely given a bad Format tag.
+            raise CommandOperationError(
+                "Could not perform `format()`. Make sure you did the braces"
+                " around any `{e}`s or `{h}`s correctly. (Any other braces in"
+                " the message should be {{doubled}}.)"
+            )
+
         if _nomenu:
             embed = discord.Embed(
                 title="Message to post", description=msgstr, colour=0x0ACDFF
