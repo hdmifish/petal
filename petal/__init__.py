@@ -633,10 +633,10 @@ class Petal(PetalClientABC):
         """To be called When a new member joins the server"""
         card = membership_card(member, colour=Color.user_join)
 
-        if self.db.member_exists(member):
-            # This User has been here before.
-            card.set_author(name="Returning Member")
-            if self.db.useDB:
+        if self.db.useDB:
+            if self.db.member_exists(member):
+                # This User has been here before.
+                card.set_author(name="Returning Member")
                 aliases = self.db.get_attribute(member, "aliases")
                 if aliases:
                     first, last = aliases[0], aliases[1]
@@ -651,14 +651,16 @@ class Petal(PetalClientABC):
                             name="Last seen as",
                             value=f"{escape(last)}\n{escape(ascii(last))}",
                         )
-        else:
-            # We have no previous record of this User.
-            self.db.add_member(member)
-            card.set_author(name="New Member")
+            else:
+                # We have no previous record of this User.
+                self.db.add_member(member)
+                card.set_author(name="New Member")
 
-        self.db.update_member(
-            member, {"aliases": [member.name], "guilds": [member.guild.id]}
-        )
+            self.db.update_member(
+                member, {"aliases": [member.name], "guilds": [member.guild.id]}
+            )
+        else:
+            card.set_author(name="Joining Member")
 
         welcome = self.config.get("welcomeMessage", None)
         if welcome and welcome != "null":
