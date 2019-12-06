@@ -18,6 +18,15 @@ strike = "~~{}~~".format
 underline = "__{}__".format
 
 
+def mask(url: str, text: str) -> str:
+    """Mask a Hyperlink with clickable text.
+
+    NOTE: In Discord, this only works on text in Descriptions and Field Values
+        of Embeds. Titles and Field Names will NOT have it.
+    """
+    return f"[{text}]({url})"
+
+
 def mono_block(text: str, syntax: str = None) -> str:
     return f"```{syntax or ''}\n{text}```"
 
@@ -34,7 +43,7 @@ def userline(user: Union[discord.Member, discord.User], idf: Callable = None) ->
     )
 
 
-_spec = compile(r"(?=[\\*>~_|`])")
+_spec = compile(r"(?=[\\\[\]*>~_|`])")
 
 
 def escape(text: str) -> str:

@@ -36,7 +36,7 @@ from petal.types import PetalClientABC, Src
 from petal.util import questions
 from petal.util.cdn import get_avatar
 from petal.util.embeds import Color, membership_card
-from petal.util.fmt import escape, mono, mono_block, userline
+from petal.util.fmt import escape, mask, mono, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.minecraft import Minecraft
 from petal.util.numbers import word_number
@@ -805,7 +805,11 @@ class Petal(PetalClientABC):
                 value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
             em.add_field(name="Guild", value=guild.name)
-            em.add_field(name="Message URL", value=message.jump_url, inline=False)
+            em.add_field(
+                name="────────────",
+                value=mask(message.jump_url, "Jump to Message"),
+                inline=False,
+            )
 
             em.add_field(name="Time of Creation", value=timestr(message.created_at))
 
@@ -854,7 +858,11 @@ class Petal(PetalClientABC):
                 value=f"`#{before.channel.name}`\n{before.channel.mention}",
             )
             .add_field(name="Guild", value=before.guild.name)
-            .add_field(name="Message URL", value=after.jump_url, inline=False)
+            .add_field(
+                name="────────────",
+                value=mask(after.jump_url, "Jump to Message"),
+                inline=False,
+            )
             .set_author(
                 name=before.author.display_name, icon_url=get_avatar(before.author)
             )
