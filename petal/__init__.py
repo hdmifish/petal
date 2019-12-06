@@ -416,6 +416,9 @@ class Petal(PetalClientABC):
                     buffer.clear()
 
                 elif isinstance(line, questions.Question):
+                    # Upon reception of a Question, ask() the Question in the
+                    #   original Channel. Then, [a]send() the Response to the
+                    #   Command Generator.
                     res2 = await line.ask(self, src.channel, src.author)
 
                     if isinstance(response, AsyncGenerator):
@@ -429,6 +432,12 @@ class Petal(PetalClientABC):
                             await push(response.send(res2))
                         except StopIteration:
                             pass
+
+                    # Do not Raise anything if the Command is not a Generator,
+                    #   because the Question Class is purposefully open-ended.
+                    #   While it is unlikely anyone would go to the effort, it
+                    #   is possible that ask()ing the Question handles its own
+                    #   Response.
 
                 elif isinstance(line, (BaseException, dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
