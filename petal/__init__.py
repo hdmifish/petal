@@ -6,8 +6,9 @@ written by isometricramen
 
 import asyncio
 from datetime import datetime, timedelta
+from difflib import unified_diff
+from itertools import dropwhile
 import random
-from requests import post
 import re
 import time
 from traceback import format_exc
@@ -23,6 +24,7 @@ from typing import (
 )
 
 import discord
+from requests import post
 
 from petal import grasslands
 from petal.commands import CommandRouter as Commands
@@ -853,22 +855,34 @@ class Petal(PetalClientABC):
                 name="Original Content", value=escape(before.content), inline=False
             )
             .add_field(name="Edited Content", value=escape(after.content), inline=False)
-            .add_field(
-                name="Channel",
-                value=f"`#{before.channel.name}`\n{before.channel.mention}",
+        )
+
+        if max(before.content.count("\n"), after.content.count("\n")) >= 3:
+            diff = dropwhile(
+                (lambda s: not s.startswith("@")),
+                unified_diff(
+                    before.content.splitlines(), after.content.splitlines(), n=2
+                ),
             )
-            .add_field(name="Guild", value=before.guild.name)
-            .add_field(
-                name="────────────",
-                value=mask(after.jump_url, "Jump to Message"),
+            em.add_field(
+                name="Unified Diff",
+                value="```diff\n{}```".format("\n".join(diff)),
                 inline=False,
             )
-            .set_author(
-                name=before.author.display_name, icon_url=get_avatar(before.author)
-            )
-            .set_footer(text=userline(before.author))
+
+        em.add_field(
+            name="Channel", value=f"`#{before.channel.name}`\n{before.channel.mention}",
+        ).add_field(name="Guild", value=before.guild.name).add_field(
+            name="────────────",
+            value=mask(after.jump_url, "Jump to Message"),
+            inline=False,
+        ).set_author(
+            name=before.author.display_name, icon_url=get_avatar(before.author)
+        ).set_footer(
+            text=userline(before.author)
+        ).add_field(
+            name="Time of Creation", value=timestr(before.created_at)
         )
-        em.add_field(name="Time of Creation", value=timestr(before.created_at))
 
         last = before.edited_at
         if last is not None:
