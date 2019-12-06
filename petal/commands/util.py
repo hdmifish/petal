@@ -407,7 +407,9 @@ class CommandsUtil(core.Commands):
 
             if mod:
                 cl2.append(
-                    f"{self.config.prefix}{cmd} - {mod.__module__.split('.')[-1]}"
+                    f"{self.config.prefix}{cmd}"
+                    f" :: {mod.__module__.split('.')[-1].replace('_', ' ')}"
+                    + ("  *[!]*" if not func.__doc__ else "")
                 )
 
         if not cl2:
@@ -423,7 +425,7 @@ class CommandsUtil(core.Commands):
         else:
             line_1 = "List of commands you can access"
 
-        return (f"{line_1}{line_2}:```\n" + "\n".join(cl2))[:1997] + "```"
+        return (f"{line_1}{line_2}:```asciidoc\n" + "\n".join(cl2))[:1997] + "```"
 
     async def cmd_avatar(self, args, src, **_):
         """Given a User ID, post their Avatar."""
