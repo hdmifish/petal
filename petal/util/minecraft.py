@@ -190,7 +190,9 @@ def new_entry(
         uuid_mc = IDMC.from_name(name_mc)
 
     new = PLAYERDEFAULT.copy()
-    hist = requests.get(f"https://api.mojang.com/user/profiles/{uuid_mc.replace('-', '')}/names")
+    hist = requests.get(
+        f"https://api.mojang.com/user/profiles/{uuid_mc.replace('-', '')}/names"
+    )
 
     if hist.status_code == 200:
         new["altname"] = [e["name"] for e in hist.json()]
