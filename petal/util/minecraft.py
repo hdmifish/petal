@@ -12,12 +12,12 @@ ERROR CODES:
 -8: Malign error: User supplied invalid name
 -9: Malign error: Incomplete function (fault of developer)
 """
-
+from asyncio import sleep
 from contextlib import contextmanager
 from datetime import datetime as dt
 import json
 from pathlib import Path
-from typing import Dict, Iterator, List, Type, Union, Tuple
+from typing import Dict, Iterable, Iterator, List, Tuple, Type, Union
 from uuid import UUID
 
 from discord import Embed
@@ -76,12 +76,6 @@ PENDING: str = italic(mono("-#- PENDING -#-"))
 SUSPEND: str = bold(mono("#!# SUSPENDED #!#"))
 
 
-def break_uid(uuid: str) -> str:
-    """Given an undashed UUID, break it into five fields."""
-    f = [hex(c)[2:] for c in UUID(uuid).fields]
-    return "-".join(f[:3] + [f[3] + f[4], f[5]])
-
-
 # TODO: Implement
 # if (  # Yield each Entry if looking for something specific.
 #     (pending is None or pending is bool(entry.get("approved", [])))
@@ -114,17 +108,52 @@ def find(data: type_db, *params: str) -> Iterator[type_entry_db]:
     )
 
 
-def id_from_name(name: str):
-    """Given a Minecraft Username, get its UUID."""
-    response = requests.get(
-        f"https://api.mojang.com/users/profiles/minecraft/{name.lower()}"
-    )
-    log.f("WLME_RESP", str(response))
+class IDMC(object):
+    def __init__(*_):
+        raise NotImplementedError
 
-    if response.ok:
-        return response.json()
-    else:
-        response.raise_for_status()
+    @staticmethod
+    def as_seq(uuid: str) -> Tuple[int, int, int, int, int]:
+        if uuid.count("-") == 4:
+            # noinspection PyTypeChecker
+            return tuple(int(i, base=16) for i in uuid.split("-"))
+        else:
+            raise ValueError("Improper number of Fields")
+
+    @staticmethod
+    def as_str(uuid: Iterable[int], sep: str = "-") -> str:
+        return sep.join(format(i, "x") for i in uuid)
+
+    @classmethod
+    def from_name(cls, name: str):
+        """Given a Minecraft Username, get its UUID."""
+        response = requests.get(
+            f"https://api.mojang.com/users/profiles/minecraft/{name.lower()}"
+        )
+        log.f("WLME_RESP", str(response))
+
+        if response.status_code == 200:
+            return cls.untrim(response.json().get("id"))
+        else:
+            print(name)
+            response.raise_for_status()
+
+    @staticmethod
+    def untrim(uuid: str) -> str:
+        """Given an undashed UUID, break it into five fields."""
+        # f = [hex(c)[2:] for c in UUID(uuid).fields]
+        # return "-".join(f[:3] + [f[3] + f[4], f[5]])
+
+        if "-" in uuid:
+            return uuid
+        else:
+            return (
+                "{:0>8x}-"
+                "{:0>4x}-"
+                "{:0>4x}-"
+                "{:0>2x}{:0>2x}-"
+                "{:0>12x}".format(*UUID(uuid).fields)
+            )
 
 
 def make_lists(data: type_db, refresh: bool = False) -> Tuple[type_db, type_db]:
@@ -158,13 +187,12 @@ def new_entry(
         raise TypeError("Entry requires either Username or UUID.")
     elif uuid_mc is None:
         # print(id_from_name(name_mc))
-        _d = id_from_name(name_mc)
-        uuid_mc = _d["id"]
+        uuid_mc = IDMC.from_name(name_mc)
 
     new = PLAYERDEFAULT.copy()
-    hist = requests.get(f"https://api.mojang.com/user/profiles/{uuid_mc}/names")
+    hist = requests.get(f"https://api.mojang.com/user/profiles/{uuid_mc.replace('-', '')}/names")
 
-    if hist.ok:
+    if hist.status_code == 200:
         new["altname"] = [e["name"] for e in hist.json()]
         new["name"] = new["altname"][-1]
     else:
@@ -177,12 +205,13 @@ def new_entry(
     return new
 
 
-def refresh_entry(old: type_entry_db) -> type_entry_db:
+async def refresh_entry(old: type_entry_db) -> type_entry_db:
+    await sleep(1)
     try:
         new = new_entry(old["discord"], uuid_mc=old["uuid"])
         new["approved"] = old["approved"]
         new["submitted"] = old["submitted"]
-        new["suspended"] = old["suspended"]
+        new["suspended"] = old["suspended"] or 0
         new["operator"] = old["operator"]
         new["notes"] = old["notes"]
         return new
@@ -190,7 +219,7 @@ def refresh_entry(old: type_entry_db) -> type_entry_db:
         return old
 
 
-class Interface:
+class Interface(object):
     def __init__(self, client: PetalClientABC):
         self.client: PetalClientABC = client
 
@@ -402,9 +431,9 @@ class Minecraft(object):
         with self.db() as db:
             self.interface.export(db)
 
-    def rebuild(self):
+    async def rebuild(self):
         with self.db() as db:
-            db[:] = [refresh_entry(e) for e in db]
+            db[:] = [await refresh_entry(e) for e in db]
             # self.interface.db_write(self._db)
 
     def user_has_op(self, user, op: int) -> bool:
