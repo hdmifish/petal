@@ -120,10 +120,36 @@ class CommandsMgr(core.Commands):
             return response
 
     async def cmd_poll(
-        self, args, src, _question: str = "", _channel: int = None, _time: int = 0, **_
+        self,
+        args,
+        src,
+        _question: str = "",
+        _channel: int = None,
+        _time: float = 0,
+        **_,
     ):
+        """Run a Public Poll, with multiple choices. Anyone can vote for one or
+            more of the options provided.
+
+        Syntax: `{p}poll [OPTIONS] <CHOICE>...`
+
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        args : List[str]
+            List of Positional Arguments supplied after Command.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _question : str
+            Specify a Question to be asked.
+        _channel : int
+            Specify a different Channel ID for the Poll to be posted to.
+        _time : float
+            Specify the duration of the Poll, in Seconds. Defaults to 3600, or one hour.
+        """
         if len(args) < 2:
-            return "Must provide at least two options."
+            raise CommandArgsError("Must provide at least two options.")
 
         duration = _time if _time > 0 else 3600
         title = unquote(_question) if _question else "Public Poll"
@@ -139,8 +165,25 @@ class CommandsMgr(core.Commands):
         await poll.get_poll(args, duration, title="Options")
 
     async def cmd_vote(
-        self, src, _question: str = None, _channel: int = None, _time: int = 0, **_
+        self, src, _question: str = None, _channel: int = None, _time: float = 0, **_
     ):
+        """Run a Public Vote, with choices of Yes or No. Anyone can vote.
+
+        Syntax: `{p}vote [OPTIONS]`
+
+        Parameters
+        ----------
+        _ : dict
+            Dict of additional Keyword Args.
+        src : discord.Message
+            The Discord Message that invoked this Command.
+        _question : str
+            Specify a Question to be asked.
+        _channel : int
+            Specify a different Channel ID for the Poll to be posted to.
+        _time : float
+            Specify the duration of the Poll, in Seconds. Defaults to 3600, or one hour.
+        """
         duration = _time if _time > 0 else 3600
         title = f"Vote: {unquote(_question)}" if _question else "Vote"
 

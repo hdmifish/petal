@@ -248,10 +248,10 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         Syntax: `{p}wlrefresh`
         """
-        yield ("Rebuilding Database...", True)
+        yield "Rebuilding Database...", True
 
         with self.minecraft.db() as db:
-            self.minecraft.rebuild()
+            await self.minecraft.rebuild()
             for entry in db:
                 if self.client.main_guild.get_member(int(entry["discord"])):
                     if entry["suspended"] == 104:

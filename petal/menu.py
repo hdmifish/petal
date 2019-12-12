@@ -6,7 +6,8 @@ from typing import Dict, List, Optional, Sequence, Tuple, TypeVar
 
 from discord import abc, Embed, TextChannel, Message, Reaction, User
 
-from petal.checks import all_checks, Reactions
+from .util.cdn import get_avatar
+from .checks import all_checks, Reactions
 
 
 # Assemble all the emoji we need via hexadecimal values.
@@ -60,6 +61,7 @@ class Menu:
         self.client = client
         self.channel: abc.Messageable = channel
         self.em: Embed = Embed(title=title, description=desc, colour=colour)
+        self.em.set_author(name=user.display_name, icon_url=get_avatar(user))
         self.msg: Optional[Message] = None
         self.master: User = user
 
@@ -101,7 +103,7 @@ class Menu:
     ### PRIVATE interfaces; Only one person may respond.
 
     async def get_one(
-        self, opts: Sequence[T_], time: int = 30, title: str = "Select One"
+        self, opts: Sequence[T_], time: float = 30, title: str = "Select One"
     ) -> Optional[T_]:
         """Ask the user to select ONE of a set of predefined options."""
         if not 1 <= len(opts) <= len(letters):
@@ -137,7 +139,7 @@ class Menu:
     async def get_multi(
         self,
         opts: Sequence[T_],
-        time: int = 30,
+        time: float = 30,
         prompt: str = "Select One or More and Confirm:",
         title: str = "Multiple Choice",
     ) -> Tuple[T_, ...]:
@@ -193,7 +195,7 @@ class Menu:
 
     async def get_bool(
         self,
-        time: int = 30,
+        time: float = 30,
         # prompt: str = "Select Yes or No",
         # title: str = "Boolean Choice",
     ) -> Optional[bool]:

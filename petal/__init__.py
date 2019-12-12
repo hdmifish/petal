@@ -6,8 +6,9 @@ written by isometricramen
 
 import asyncio
 from datetime import datetime, timedelta
+from difflib import unified_diff
+from itertools import dropwhile
 import random
-from requests import post
 import re
 import time
 from traceback import format_exc
@@ -23,6 +24,7 @@ from typing import (
 )
 
 import discord
+from requests import post
 
 from petal import grasslands
 from petal.commands import CommandRouter as Commands
@@ -33,9 +35,10 @@ from petal.etc import mash, filter_members_with_role, timestr
 from petal.exceptions import TunnelHobbled, TunnelSetupError
 from petal.tunnel import Tunnel
 from petal.types import PetalClientABC, Src
+from petal.util import questions
 from petal.util.cdn import get_avatar
 from petal.util.embeds import Color, membership_card
-from petal.util.fmt import escape, mono, mono_block, userline
+from petal.util.fmt import escape, mask, mono, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.minecraft import Minecraft
 from petal.util.numbers import word_number
@@ -365,7 +368,7 @@ class Petal(PetalClientABC):
         Return Types of Command Methods:
         def, return         ->  Any             - send(value)
         def, yield          ->  Generator       - for x in value: send(x)
-        async def, return   ->  Coroutine       - recurse(await value)
+        async def, return   ->  Coroutine       - send(await value)
         async def, yield    ->  AsyncGenerator  - async for x in value: send(x)
         """
         # print("Outputting Response:", repr(response))
@@ -414,7 +417,31 @@ class Petal(PetalClientABC):
                     # print("    Discarding Buffer:", repr(buffer))
                     buffer.clear()
 
-                elif isinstance(line, (dict, discord.Embed, BaseException)):
+                elif isinstance(line, questions.Question):
+                    # Upon reception of a Question, ask() the Question in the
+                    #   original Channel. Then, [a]send() the Response to the
+                    #   Command Generator.
+                    res2 = await line.ask(self, src.channel, src.author)
+
+                    if isinstance(response, AsyncGenerator):
+                        try:
+                            await push(await response.asend(res2))
+                        except StopAsyncIteration:
+                            pass
+
+                    elif isinstance(response, Generator):
+                        try:
+                            await push(response.send(res2))
+                        except StopIteration:
+                            pass
+
+                    # Do not Raise anything if the Command is not a Generator,
+                    #   because the Question Class is purposefully open-ended.
+                    #   While it is unlikely anyone would go to the effort, it
+                    #   is possible that ask()ing the Question handles its own
+                    #   Response.
+
+                elif isinstance(line, (BaseException, dict, discord.Embed)):
                     # Upon reception of a Dict or an Embed, send it in a Message
                     #   immediately.
                     await self.print_response(src, line)
@@ -623,24 +650,34 @@ class Petal(PetalClientABC):
         """To be called When a new member joins the server"""
         card = membership_card(member, colour=Color.user_join)
 
-        if self.db.member_exists(member):
-            # This User has been here before.
-            card.set_author(name="Returning Member")
-            if self.db.useDB:
+        if self.db.useDB:
+            if self.db.member_exists(member):
+                # This User has been here before.
+                card.set_author(name="Returning Member")
                 aliases = self.db.get_attribute(member, "aliases")
                 if aliases:
                     first, last = aliases[0], aliases[1]
-                    card.add_field(name="Originally seen as", value=first)
+                    card.insert_field_at(
+                        0,
+                        name="Originally seen as",
+                        value=f"{escape(first)}\n{escape(ascii(first))}",
+                    )
                     if first != last:
-                        card.add_field(name="Last seen as", value=last)
-        else:
-            # We have no previous record of this User.
-            self.db.add_member(member)
-            card.set_author(name="New Member")
+                        card.insert_field_at(
+                            1,
+                            name="Last seen as",
+                            value=f"{escape(last)}\n{escape(ascii(last))}",
+                        )
+            else:
+                # We have no previous record of this User.
+                self.db.add_member(member)
+                card.set_author(name="New Member")
 
-        self.db.update_member(
-            member, {"aliases": [member.name], "guilds": [member.guild.id]}
-        )
+            self.db.update_member(
+                member, {"aliases": [member.name], "guilds": [member.guild.id]}
+            )
+        else:
+            card.set_author(name="Joining Member")
 
         welcome = self.config.get("welcomeMessage", None)
         if welcome and welcome != "null":
@@ -770,7 +807,11 @@ class Petal(PetalClientABC):
                 value=f"`#{message.channel.name}`\n{message.channel.mention}",
             )
             em.add_field(name="Guild", value=guild.name)
-            em.add_field(name="Message URL", value=message.jump_url, inline=False)
+            em.add_field(
+                name="────────────",
+                value=mask(message.jump_url, "Jump to Message"),
+                inline=False,
+            )
 
             em.add_field(name="Time of Creation", value=timestr(message.created_at))
 
@@ -814,18 +855,34 @@ class Petal(PetalClientABC):
                 name="Original Content", value=escape(before.content), inline=False
             )
             .add_field(name="Edited Content", value=escape(after.content), inline=False)
-            .add_field(
-                name="Channel",
-                value=f"`#{before.channel.name}`\n{before.channel.mention}",
-            )
-            .add_field(name="Guild", value=before.guild.name)
-            .add_field(name="Message URL", value=after.jump_url, inline=False)
-            .set_author(
-                name=before.author.display_name, icon_url=get_avatar(before.author)
-            )
-            .set_footer(text=userline(before.author))
         )
-        em.add_field(name="Time of Creation", value=timestr(before.created_at))
+
+        if max(before.content.count("\n"), after.content.count("\n")) >= 3:
+            diff = dropwhile(
+                (lambda s: not s.startswith("@")),
+                unified_diff(
+                    before.content.splitlines(), after.content.splitlines(), n=2
+                ),
+            )
+            em.add_field(
+                name="Unified Diff",
+                value="```diff\n{}```".format("\n".join(diff)),
+                inline=False,
+            )
+
+        em.add_field(
+            name="Channel", value=f"`#{before.channel.name}`\n{before.channel.mention}",
+        ).add_field(name="Guild", value=before.guild.name).add_field(
+            name="────────────",
+            value=mask(after.jump_url, "Jump to Message"),
+            inline=False,
+        ).set_author(
+            name=before.author.display_name, icon_url=get_avatar(before.author)
+        ).set_footer(
+            text=userline(before.author)
+        ).add_field(
+            name="Time of Creation", value=timestr(before.created_at)
+        )
 
         last = before.edited_at
         if last is not None:

@@ -95,7 +95,7 @@ class Reactions:
         client,
         check,
         default=(None, None),
-        timeout: int = 30,
+        timeout: float = 30,
         channel: discord.abc.Messageable = None,
         prompt: str = "",
     ) -> Union[Tuple[discord.Reaction, discord.User], Tuple[None, None]]:

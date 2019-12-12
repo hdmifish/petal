@@ -21,7 +21,7 @@ from petal.exceptions import (
 from petal.menu import confirm_action, Menu
 from petal.types import Src
 from petal.util.embeds import Color, membership_card
-from petal.util.fmt import bold, escape, mono, underline, userline
+from petal.util.fmt import bold, escape, mask, mono, underline, userline
 
 
 class CommandsMod(core.Commands):
@@ -715,23 +715,11 @@ class CommandsMod(core.Commands):
                         member.nick or member.name,
                         len(message.clean_content),
                     )
-                    # + (" ({})".format(member.nick) if member.nick else "")
-                    + (" (__EDITED__)" if message.edited_at else ""),
                 )
                 .set_author(icon_url=channel.guild.icon_url, name="#" + channel.name)
                 .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")
                 .set_thumbnail(url=member.avatar_url or member.default_avatar_url)
             )
-
-            # Add a field for EMBEDS (mostly for bots).
-            if message.embeds:
-                e.add_field(
-                    name=f"Rich Embeds ({len(message.embeds)})",
-                    value="\n".join(
-                        flat_embed(e, i) for i, e in enumerate(message.embeds, 1)
-                    ),
-                    inline=False,
-                )
 
             # Add a field for ATTACHED FILES (if any).
             if isinstance(message.attachments, discord.Attachment):
@@ -753,8 +741,38 @@ class CommandsMod(core.Commands):
                 e.add_field(
                     name="Attached Files",
                     value="\n".join(
-                        f"**`{x.filename}`:** ({x.size} bytes)\n{x.url}\n"
+                        f"[**`{x.filename}`**]({x.url}) :: __{x.size:,}__ bytes"
                         for x in attachments
+                    ),
+                    inline=False,
+                )
+
+            # Add a field for EMBEDS (mostly for bots).
+            if message.embeds:
+                e.add_field(
+                    name=f"Rich Embeds ({len(message.embeds)})",
+                    value="\n".join(
+                        flat_embed(e, i) for i, e in enumerate(message.embeds, 1)
+                    ),
+                    inline=False,
+                )
+            if message.mentions:
+                e.add_field(
+                    name=f"User Tags ({len(message.mentions)})",
+                    value="\n".join(
+                        "{} (`{}`)".format(u.mention, userline(u))
+                        for u in sorted(message.mentions, key=attrgetter("name"))
+                    ),
+                    inline=False,
+                )
+            if message.reactions and not (_short or _s):
+                e.add_field(
+                    name=f"Reactions ({len(message.reactions)})",
+                    value="\n".join(
+                        "{} x{} (+1)".format(r.emoji, r.count - 1)
+                        if r.me
+                        else "{} x{}".format(r.emoji, r.count)
+                        for r in message.reactions
                     ),
                     inline=False,
                 )
@@ -785,36 +803,14 @@ class CommandsMod(core.Commands):
                     + ("\n**(Pinned)**" if message.pinned else ""),
                     inline=True,
                 ).add_field(
-                    name="Link to original",
-                    value="https://discordapp.com/channels/{}/{}/{}".format(
-                        message.guild.id, message.channel.id, message.id
-                    ),
-                    inline=False,
-                )
-            if message.mentions:
-                e.add_field(
-                    name=f"User Tags ({len(message.mentions)})",
-                    value="\n".join(
-                        u.mention
-                        for u in sorted(message.mentions, key=attrgetter("name"))
-                    ),
-                    inline=False,
-                )
-            if message.reactions and not (_short or _s):
-                e.add_field(
-                    name=f"Reactions ({len(message.reactions)})",
-                    value="\n".join(
-                        "{} x{} (+1)".format(r.emoji, r.count - 1)
-                        if r.me
-                        else "{} x{}".format(r.emoji, r.count)
-                        for r in message.reactions
-                    ),
+                    name="────────────",
+                    value=mask(message.jump_url, "Jump to Message"),
                     inline=False,
                 )
 
             e.add_field(name="Time of Creation", value=timestr(message.created_at))
             if message.edited_at:
-                e.add_field(name="Time of Edit", value=timestr(message.edited_at))
+                e.add_field(name="Time of Last Edit", value=timestr(message.edited_at))
 
             yield e
 
