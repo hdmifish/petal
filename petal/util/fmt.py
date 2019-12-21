@@ -27,16 +27,31 @@ def mask(url: str, text: str) -> str:
     return f"[{text}]({url})"
 
 
-def mono_block(text: str, syntax: str = None) -> str:
-    return f"```{syntax or ''}\n{text}```"
+def mono_block(text: str, syntax: str = "") -> str:
+    """Wrap a String in a Multi-Line block of Monospace text, optionally with
+        Syntax Highlighting.
+    """
+    return f"```{syntax}\n{text}```"
 
 
 def smallid(n: Any, seglen: int = 3, sep: str = "...") -> str:
+    """Reduce a String into the first and last `seglen` characters, on either
+        side of `sep`.
+
+        smallid(1234567890, 3, "...") -> "123...890"
+    """
     ns = str(n)
     return f"{ns[:seglen]}{sep}{ns[-seglen:]}"
 
 
 def unwrap(text: str) -> List[str]:
+    """Undo text-wrapping in things like Docstrings.
+
+    Split a long String into Paragraphs by double-newlines. Then, for each
+        Paragraph, split it into lines, strip Whitespace from each line and
+        rejoin it with single Spaces. Return a List of all the Paragraphs as
+        Strings, with no newlines.
+    """
     return [
         " ".join((line.strip() for line in paragraph.splitlines()))
         for paragraph in text.split("\n\n")
@@ -44,6 +59,7 @@ def unwrap(text: str) -> List[str]:
 
 
 def userline(user: Union[discord.Member, discord.User], idf: Callable = None) -> str:
+    """Given a Discord User, return "Name#Discrim / ID"."""
     return (
         f"{user.name}#{user.discriminator} /"
         f" {idf(user.id) if callable(idf) else user.id}"
