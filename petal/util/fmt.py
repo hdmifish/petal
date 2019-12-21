@@ -1,6 +1,6 @@
 """Small utility module for wrapping text in Discord Markdown Formatting."""
 
-from re import compile
+# from re import compile
 from typing import Any, Callable, List, Union
 
 import discord
@@ -16,6 +16,14 @@ quote_block = ">>> {}".format
 spoiler = "||{}||".format
 strike = "~~{}~~".format
 underline = "__{}__".format
+
+escape = discord.utils.escape_markdown
+
+# _spec = compile(r"(?=[\\\[\]*>~_|`])")
+#
+#
+# def escape(text: str) -> str:
+#     return _spec.sub(r"\\", str(text))
 
 
 def mask(url: str, text: str) -> str:
@@ -64,10 +72,3 @@ def userline(user: Union[discord.Member, discord.User], idf: Callable = None) ->
         f"{user.name}#{user.discriminator} /"
         f" {idf(user.id) if callable(idf) else user.id}"
     )
-
-
-_spec = compile(r"(?=[\\\[\]*>~_|`])")
-
-
-def escape(text: str) -> str:
-    return _spec.sub(r"\\", str(text))
