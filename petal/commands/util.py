@@ -381,18 +381,18 @@ class CommandsUtil(core.Commands):
         if _sort or _s:
             cmd_list.sort()
 
-        if args:
-            line_2 = " matching your search" + line_2
-            cmd_list = [
-                cmd
-                for cmd in cmd_list
-                if any(
-                    cmd.lower() in term.lower() or term.lower() in cmd.lower()
-                    for term in args
-                )
-            ]
-            if not cmd_list:
-                return "Sorry, I could not find any commands that match your search."
+        # if args:
+        #     line_2 = " matching your search" + line_2
+        #     cmd_list = [
+        #         cmd
+        #         for cmd in cmd_list
+        #         if any(
+        #             cmd.lower() in term.lower() or term.lower() in cmd.lower()
+        #             for term in args
+        #         )
+        #     ]
+        #     if not cmd_list:
+        #         return "Sorry, I could not find any commands that match your search."
 
         cl2 = []
         for cmd in cmd_list:
@@ -407,10 +407,22 @@ class CommandsUtil(core.Commands):
 
             if mod:
                 cl2.append(
+                    f"{mod.__module__.split('.')[-1].replace('_', ' ')}"
+                    f" :: "
                     f"{self.config.prefix}{cmd}"
-                    f" :: {mod.__module__.split('.')[-1].replace('_', ' ')}"
                     + ("  *[!]*" if not func.__doc__ else "")
                 )
+
+        if args:
+            line_2 = " matching your search" + line_2
+            cl2 = [
+                cmd
+                for cmd in cl2
+                if any(
+                    cmd.lower() in term.lower() or term.lower() in cmd.lower()
+                    for term in args
+                )
+            ]
 
         if not cl2:
             raise CommandOperationError(
@@ -425,7 +437,12 @@ class CommandsUtil(core.Commands):
         else:
             line_1 = "List of commands you can access"
 
-        return (f"{line_1}{line_2}:```asciidoc\n" + "\n".join(cl2))[:1997] + "```"
+        out = (f"{line_1}{line_2}:```asciidoc\n" + "\n".join(cl2))
+
+        if len(out) > 1997:
+            out = out[:1994] + "..."
+
+        return out + "```"
 
     async def cmd_avatar(self, args, src, **_):
         """Given a User ID, post their Avatar."""
