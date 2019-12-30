@@ -21,6 +21,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Set,
 )
 
 import discord
@@ -903,35 +904,48 @@ class Petal(PetalClientABC):
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if Petal.logLock:
             return
-        gained = None
-        role = None
 
-        for r in before.roles:
-            if r not in after.roles:
-                gained = "Lost"
-                role = r
-        for r in after.roles:
-            if r not in before.roles:
-                gained = "Gained"
-                role = r
+        r_aft: Set[discord.Role] = set(after.roles)
+        r_bef: Set[discord.Role] = set(before.roles)
 
-        if gained is not None:
+        if r_aft ^ r_bef:
             em = (
                 discord.Embed(
-                    title=f"({role.guild.name}) User Role {gained}",
-                    description=f"{after.display_name} {gained} role",
+                    title=f"User Roles on {after.guild.name!r} updated",
                     colour=Color.user_promote,
                 )
                 .set_author(
                     name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
                 )
-                .add_field(name="Role", value=role.name)
-                .add_field(name="Timestamp", value=timestr(), inline=False)
                 .set_thumbnail(url=get_avatar(after))
                 .set_footer(text=userline(after))
             )
 
-            await self.log_moderation(embed=em)
+            gain = r_aft - r_bef
+            if gain:
+                em.add_field(
+                    name="Gained",
+                    value="\n".join(
+                        "{} (`{}`#{})".format(role.mention, escape(role.name), role.id)
+                        for role in gain
+                    ),
+                    inline=False,
+                )
+
+            lost = r_bef - r_aft
+            if lost:
+                em.add_field(
+                    name="Lost",
+                    value="\n".join(
+                        "{} (`{}`#{})".format(role.mention, escape(role.name), role.id)
+                        for role in lost
+                    ),
+                    inline=False,
+                )
+
+            await self.log_moderation(
+                embed=em.add_field(name="Timestamp", value=timestr(), inline=False)
+            )
 
         if before.nick != after.nick:
             em = (
