@@ -232,12 +232,15 @@ class CommandRouter(Integrated):
 
     @property
     def uptime(self):
-        delta = dt.utcnow() - self.client.startup
-        delta = delta.total_seconds()
+        _d: float = dt.utcnow().timestamp() - self.client.startup_unix
 
-        d = divmod(delta, 86400)  # days
-        h = divmod(d[1], 3600)  # hours
-        m = divmod(h[1], 60)  # minutes
-        s = m[1]  # seconds
+        days, _d = divmod(_d, 86_400)  # days
+        hour, _d = divmod(_d, 3_600)  # hours
+        mins, secs = divmod(_d, 60)  # minutes, seconds
 
-        return f"{d[0]:.0f} days, {h[0]:.0f} hours, {m[0]:.0f} minutes, {s:.2F} seconds"
+        return (
+            f"{days:.0f} days, "
+            f"{hour:.0f} hours, "
+            f"{mins:.0f} minutes, "
+            f"{secs:.2F} seconds"
+        )

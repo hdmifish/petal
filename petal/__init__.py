@@ -69,18 +69,20 @@ class Petal(PetalClientABC):
         try:
             super().__init__()
         except Exception as e:
-            log.err(f"Could not initialize client object: {str(e)}")
+            log.err(f"Could not initialize client object: {e}")
         else:
             log.info("Client object initialized")
 
-        self.startup = datetime.utcnow()
-        self.minecraft = Minecraft(self)
-
         self.config = cfg
-        self.db = DBHandler(self.config)
         self.startup = datetime.utcnow()
+        self.startup_unix = self.startup.timestamp()
+
+        self.db = DBHandler(self.config)
+
+        self.minecraft = Minecraft(self)
         self.commands = Commands(self)
         self.commands.version = version
+
         self.loop_tasks: List[asyncio.Future] = []
         self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
@@ -94,12 +96,12 @@ class Petal(PetalClientABC):
         try:
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
-            log.err(f"Could not connect using the token provided: {str(e)}")
+            log.err(f"Could not connect using the token provided: {e}")
             return 1
 
         except discord.errors.LoginFailure as e:
             log.err(
-                f"Authenication Failure. Your auth: \n{self.config.token}"
+                f"Authenication Failure. Your auth:\n{self.config.token}"
                 f"\nis invalid: {e}"
             )
             return 401
