@@ -61,7 +61,10 @@ class Menu:
         self.client = client
         self.channel: abc.Messageable = channel
         self.em: Embed = Embed(title=title, description=desc, colour=colour)
-        self.em.set_author(name=user.display_name, icon_url=get_avatar(user))
+
+        if user:
+            self.em.set_author(name=user.display_name, icon_url=get_avatar(user))
+
         self.msg: Optional[Message] = None
         self.master: User = user
 
