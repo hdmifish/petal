@@ -556,15 +556,20 @@ class Petal(PetalClientABC):
                 )
 
     async def send_message(
-        self, author=None, channel=None, message=None, *, embed=None, **_
-    ):
+        self,
+        author: discord.Member = None,
+        channel: discord.abc.Messageable = None,
+        message: str = None,
+        *,
+        embed: discord.Embed = None,
+        **_,
+    ) -> Optional[discord.Message]:
         """
         Overload on the send_message function
         """
-        if (not message or not str(message)) and not embed:
+        if not message and not embed:
             # Without a message to send, dont even try; it would just error
             return None
-        message = str(message)
 
         if (
             author is not None
@@ -582,10 +587,10 @@ class Petal(PetalClientABC):
             except:
                 pass
             else:
-                message = msg + ", " + ac + end
+                message = f"{msg}, {ac}{end}"
 
         if self.dev_mode:
-            message = "[DEV]  " + str(message) + "  [DEV]"
+            message = f"[DEV]  {message}  [DEV]"
         try:
             return await channel.send(content=message, embed=embed)
         except (discord.errors.Forbidden, discord.errors.InvalidArgument) as e:
