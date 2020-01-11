@@ -41,7 +41,7 @@ auth_fail_dict = {
 }
 
 
-_uquote_1 = compile(r"[‹›‘’]")
+_uquote_1 = compile(r"[‹›‘’‚]")
 _uquote_2 = compile(r"[«»“”„]")
 
 _unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub('"', s))
