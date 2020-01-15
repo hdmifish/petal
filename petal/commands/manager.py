@@ -160,6 +160,8 @@ class CommandsMgr(core.Commands):
         poll = Menu(self.client, targ, title)
         await poll.get_poll(args, duration, title="Options")
 
+        return "The Poll has concluded.\n{}".format(src.author.mention)
+
     async def cmd_vote(
         self, src, _question: str = None, _channel: int = None, _time: float = 0, **_
     ):
@@ -192,6 +194,8 @@ class CommandsMgr(core.Commands):
 
         poll = Menu(self.client, targ, title)
         await poll.get_vote(duration)
+
+        return "The Vote has concluded.\n{}".format(src.author.mention)
 
     async def cmd_tunnel(
         self,
