@@ -1062,28 +1062,31 @@ class Petal(PetalClientABC):
     async def on_message(self, message: Src):
         await self.wait_until_ready()
         content = message.content.strip()
-        if isinstance(message.channel, discord.TextChannel):
-            self.db.update_member(
-                message.author,
-                {
-                    "aliases": message.author.name,
-                    "guilds": message.guild.id,
-                    "last_message_channel": message.channel.id,
-                    "last_active": message.created_at,
-                    "last_message": message.created_at,
-                },
-                type=1,
-            )
+        try:
+            if isinstance(message.channel, discord.TextChannel):
+                self.db.update_member(
+                    message.author,
+                    {
+                        "aliases": message.author.name,
+                        "guilds": message.guild.id,
+                        "last_message_channel": message.channel.id,
+                        "last_active": message.created_at,
+                        "last_message": message.created_at,
+                    },
+                    type=1,
+                )
 
-            self.db.update_member(
-                message.author,
-                {
-                    "message_count": self.db.get_attribute(
-                        message.author, "message_count"
-                    )
-                    + 1
-                },
-            )
+                self.db.update_member(
+                    message.author,
+                    {
+                        "message_count": self.db.get_attribute(
+                            message.author, "message_count"
+                        )
+                        + 1
+                    },
+                )
+        except Exception as e:
+            log.err("{} on Message: {}".format(type(e).__name__, str(e)))
 
         if (
             message.author == self.user
