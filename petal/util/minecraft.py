@@ -134,6 +134,8 @@ class IDMC(object):
 
         if response.status_code == 200:
             return cls.untrim(response.json().get("id"))
+        elif response.ok:
+            raise RuntimeError("Expected code 200, got code {}".format(response.status_code))
         else:
             print(name)
             response.raise_for_status()
