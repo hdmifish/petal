@@ -89,6 +89,7 @@ class CommandsSocial(core.Commands):
             ui = Menu(
                 self.client,
                 src.channel,
+                "Platform",
                 "Select platform(s) to publish on.",
                 user=src.author,
             )
@@ -168,7 +169,7 @@ class CommandsSocial(core.Commands):
         # return str([flagged, sendto, platform, title, content])
 
         # Post to Reddit
-        if "0" in sendto.content:
+        if "0" in sendto:
             sub1 = self.router.reddit.subreddit(self.config.get("reddit")["targetSR"])
             try:
                 response = sub1.submit(

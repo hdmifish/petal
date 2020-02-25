@@ -2,11 +2,16 @@
 Access: Role-based"""
 
 import asyncio
+from typing import List
 
 import discord
 
-from petal.commands import core
+from petal.checks import all_checks, Messages
+from petal.commands import core, shared
+from petal.exceptions import CommandOperationError
 from petal.menu import Menu
+from petal.util.embeds import Color
+from petal.util.questions import ChatReply
 
 
 class CommandsEvent(core.Commands):
@@ -14,7 +19,7 @@ class CommandsEvent(core.Commands):
     role = "xPostRole"
 
     async def cmd_event(
-        self, src, _message: str = "", _channels: str = "", _nomenu: bool = False, **_
+        self, src, _image: str = None, _message: str = None, _nomenu: bool = False, **_
     ):
         """Post a message announcing the start of an event.
 
@@ -32,22 +37,19 @@ class CommandsEvent(core.Commands):
             channel = self.client.get_channel(chan)
             if channel is not None:
                 msg += (
-                    str(len(channels_list))
-                    + ". ("
-                    + channel.name
-                    + " [{}]".format(channel.server.name)
-                    + ")\n"
+                    f"{len(channels_list)}. ({channel.name} [{channel.guild.name}])\n"
                 )
                 channels_list.append(channel)
-                channels_dict[channel.server.name + "/#" + channel.name] = channel
+                channels_dict[channel.guild.name + "/#" + channel.name] = channel
             else:
                 self.log.warn(
-                    chan + " is not a valid channel. I'd remove it if I were you."
+                    f"{chan} is not a valid channel. I'd remove it if I were you."
                 )
 
         # Get channels to send to.
         if _nomenu:
             # Do it only conversationally.
+            menu = None
             while True:
                 await self.client.send_message(
                     src.author,
@@ -55,20 +57,24 @@ class CommandsEvent(core.Commands):
                     "Hi there, "
                     + src.author.name
                     + "! Please select the number of "
-                    + "each server you want to post "
+                    + "each guild you want to post "
                     + "to. (dont separate the numbers)",
                 )
 
                 await self.client.send_message(src.author, src.channel, msg)
 
-                chans = await self.client.wait_for_message(
-                    channel=src.channel, author=src.author, timeout=20
+                chans = await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    timeout=20,
                 )
 
                 if chans is None:
-                    return (
+                    raise CommandOperationError(
                         "Sorry, the request timed out. Please make sure you"
-                        + " type a valid sequence of numbers."
+                        " type a valid sequence of numbers."
                     )
                 if self.validate_channel(channels_list, chans.content):
                     break
@@ -83,101 +89,135 @@ class CommandsEvent(core.Commands):
                 print(channels_list[int(i)])
                 post_to.append(channels_list[int(i)])
         else:
-            # Use the ReactionUI.
-            menu = Menu(
+            # Use the Reaction-based GUI.
+            menu = Menu(self.client, src.channel, "Event Announcement", user=src.author)
+            if _image:
+                menu.em.set_thumbnail(url=_image)
+            selection = await menu.get_multi(
+                list(channels_dict), title="Available Channels"
+            )
+            post_to = [channels_dict[c] for c in selection if c in channels_dict]
+            if not post_to:
+                menu.add_section("No Channels selected; Cancelled.", "Target Channels")
+                await menu.post()
+                return
+            menu.add_section("\n".join(c.mention for c in post_to), "Target Channels")
+            await menu.post()
+
+        msgstr = yield ChatReply(
+            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)", 120,
+        )
+        if not msgstr:
+            # No reply.
+            raise CommandOperationError("Text Input timed out.")
+
+        try:
+            msgstr = msgstr.format(e="@everyone", h="@here")
+        except Exception as e:
+            # Given a bad Format tag.
+            raise CommandOperationError(
+                "Could not perform `format()`. Make sure you did the braces"
+                " around any `{e}`s or `{h}`s correctly."
+                "\n(Any other braces in the message should be {{doubled}}.)"
+            ) from e
+
+        if _nomenu:
+            embed = discord.Embed(
+                title="Message to post", description=msgstr, colour=Color.info
+            )
+            embed.add_field(
+                name="Channels", value="\n".join(c.mention for c in post_to)
+            )
+            await self.client.embed(src.channel, embed)
+
+            msg2 = await Messages.waitfor(
                 self.client,
-                src.channel,
-                "Where shall the message be posted?",
-                user=src.author,
+                all_checks(
+                    Messages.by_user(src.author), Messages.in_channel(src.channel)
+                ),
+                timeout=20,
+                channel=src.channel,
+                prompt="If this is correct, type `confirm`.",
             )
-            selection = await menu.get_multi(list(channels_dict))
-            if not selection:
-                return "No target channels selected; Post canceled."
-            post_to = [channels_dict[c] for c in selection]
 
-        await self.client.send_message(
-            src.author,
-            src.channel,
-            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
-        )
-
-        msgstr = (
-            _message
-            or (
-                await self.client.wait_for_message(
-                    channel=src.channel, author=src.author, timeout=120
-                )
-            ).content
-        ).format(e="@everyone", h="@here")
-
-        embed = discord.Embed(
-            title="Message to post", description=msgstr, colour=0x0ACDFF
-        )
-
-        embed.add_field(name="Channels", value="\n".join([c.mention for c in post_to]))
-
-        await self.client.embed(src.channel, embed)
-        await self.client.send_message(
-            src.author,
-            src.channel,
-            "If this is ok, type confirm. "
-            + " Otherwise, wait for it to timeout "
-            + " and try again",
-        )
-
-        msg2 = await self.client.wait_for_message(
-            channel=src.channel, author=src.author, content="confirm", timeout=10
-        )
-        if msg2 is None:
-            return "Event post timed out"
-
-        posted = []
-        for i in post_to:
-            posted.append(await self.client.send_message(src.author, i, msgstr))
-            await asyncio.sleep(2)
-
-        await self.client.send_message(
-            src.author, src.channel, "Messages have been posted"
-        )
-
-        subkey, subname = self.get_event_subscription(msgstr)
-
-        if subkey is None:
-            await self.client.send_message(
-                src.author,
-                src.channel,
-                "I was unable to auto-detect any game titles in your post. "
-                + "No subscribers will be notified for this event.",
-            )
+            if msg2 is None:
+                raise CommandOperationError("Event post timed out.")
+            elif msg2.content.lower() != "confirm":
+                raise CommandOperationError("Event post cancelled.")
         else:
-            tempm = await self.client.send_message(
-                src.author,
-                src.channel,
-                "I auto-detected a possible game in your announcement: **"
-                + subname
-                + "**. Would you like to notify subscribers? [y/N]",
-            )
-            n = await self.client.wait_for_message(
-                channel=tempm.channel, author=src.author, timeout=20
-            )
-            if not n:
-                return "Timed out."
-            elif n.content.lower() not in ("y", "yes"):
-                return "Subscribers will not be notified."
-            else:
-                response = await self.notify_subscribers(src.channel, posted[0], subkey)
-                todelete = "[{}]".format(subkey)
-                for post in posted:
-                    content = post.content
-                    #    print(content)
-                    #    print(todelete)
-                    if todelete in content:
-                        # print("replacing")
-                        content = content.replace(todelete, "")
-                        # print("replaced: " + content)
-                        await self.client.edit_message(post, content)
+            menu.add_section(msgstr, "Confirm Message")
+            await menu.post()
+            proceed = await menu.get_bool()
+            if proceed is None:
+                menu.add_section("Posting timed out.", "Confirmation")
+                await menu.post()
+                return
+            elif proceed is not True:
+                menu.add_section("Posting cancelled.", "Confirmation")
+                await menu.post()
+                return
 
-                return response
+        posted: List[discord.Message] = []
+        # TODO
+        # em = discord.Embed()
+        # if _image:
+        #     em.set_image(url=_image)
+        for i in post_to:
+            posted.append(await i.send(msgstr))
+            await asyncio.sleep(1)
+
+        if menu:
+            menu.add_section("Messages have been posted.", "Confirmation")
+            await menu.post()
+        else:
+            yield "Messages have been posted."
+
+        try:
+            subkey, subname = self.get_event_subscription(msgstr)
+        except AttributeError:
+            pass
+        else:
+            if subkey is None:
+                yield (
+                    "I was unable to auto-detect any game titles in your post."
+                    " No subscribers will be notified for this event."
+                )
+            else:
+                n = await Messages.waitfor(
+                    self.client,
+                    all_checks(
+                        Messages.by_user(src.author), Messages.in_channel(src.channel)
+                    ),
+                    timeout=20,
+                    channel=src.channel,
+                    prompt=f"I auto-detected a possible game in your announcement:"
+                    f" **{subname}**. Would you like to notify subscribers? [y/N]",
+                )
+
+                if not n:
+                    yield "Timed out."
+                elif n.content.lower() not in ("y", "yes"):
+                    yield "Subscribers will not be notified."
+                else:
+                    response = await self.notify_subscribers(
+                        src.channel, posted[0], subkey
+                    )
+                    todelete = f"[{subkey}]"
+                    for post in posted:
+                        content = post.content
+                        if todelete in content:
+                            content = content.replace(todelete, "")
+                            await post.edit(content=content)
+
+                    yield response
+
+    cmd_send = shared.factory_send(
+        {
+            "events": {"colour": 0x1B6649, "title": "Event Announcement"},
+            "staff": {"colour": 0x4CCDDF, "title": "Staff Signal"},
+        },
+        "events",
+    )
 
 
 # Keep the actual classname unique from this common identifier

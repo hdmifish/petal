@@ -5,7 +5,7 @@ import importlib
 import sys
 
 from petal.commands import core
-from petal.mcutil import Minecraft
+from petal.util.minecraft import Minecraft
 
 
 LoadModules = [
@@ -22,22 +22,24 @@ for module in LoadModules:
 class CommandsMinecraft(core.Commands):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        self.minecraft = Minecraft(self.client)
+        self.minecraft: Minecraft = Minecraft(self.client)
         self.engines = []
 
         # Load all command engines.
         for MODULE in LoadModules:
             # Get the module.
-            self.log.info("Loading {} commands...".format(MODULE.capitalize()))
+            self.log.info("Loading {} commands...".format(MODULE.title()))
             mod = sys.modules.get(__name__ + "." + MODULE, None)
+
             if mod:
                 # Instantiate its command engine.
-                cmod = mod.CommandModule(self.minecraft, *a, **kw)
+                cmod = mod.CommandModule(*a, **kw)
                 self.engines.append(cmod)
                 setattr(self, MODULE, cmod)
-                self.log.ready("{} commands loaded.".format(MODULE.capitalize()))
+                self.log.ready("{} commands loaded.".format(MODULE.title()))
+
             else:
-                self.log.warn("FAILED to load {} commands.".format(MODULE.capitalize()))
+                self.log.warn("FAILED to load {} commands.".format(MODULE.title()))
 
     def get_command(self, kword: str):
         for mod in self.engines:
@@ -53,34 +55,6 @@ class CommandsMinecraft(core.Commands):
         for mod in self.engines:
             full += mod.get_all()
         return full
-
-    def check(self, src, level):
-        """
-        Check that the MC config is valid, and that the user has clearance.
-        """
-        mclists = (
-            self.config.get("minecraftDB"),
-            self.config.get("minecraftWL"),
-            self.config.get("minecraftOP"),
-        )
-        if None in mclists:
-            return (
-                "Looks like the bot owner doesn't have the whitelist configured. Sorry."
-            )
-        mcchan = self.config.get("mc_channel")
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        mcchan = self.client.get_channel(mcchan)
-        if mcchan is None:
-            return (
-                "Looks like the bot owner doesn't have an mc_channel configured. Sorry."
-            )
-        if level != -1 and not self.minecraft.WLAuthenticate(src, level):
-            return "Authentication failure: This command requires Minecraft Operator level {}.".format(
-                level
-            )
 
 
 # Keep the actual classname unique from this common identifier

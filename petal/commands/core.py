@@ -1,9 +1,176 @@
-import asyncio
+from asyncio import CancelledError, create_task, sleep, Task
+from traceback import print_exc
+from typing import Optional
 from urllib.parse import urlencode, quote_plus
 
 import discord
 
 from petal.dbhandler import m2id
+from petal.exceptions import (
+    CommandArgsError,
+    CommandAuthError,
+    CommandExit,
+    CommandInputError,
+    CommandOperationError,
+)
+from petal.types import Src, PetalClientABC, Printer
+
+
+view_icon = b"\xf0\x9f\x91\x81\xe2\x80\x8d\xf0\x9f\x97\xa8".decode("utf-8")
+# Pencil on paper:  F0 9F 93 9D
+# Eye:              F0 9F 91 81
+# Ear:              F0 9F 91 82
+# Writing hand:     E2 9C 8D
+# Speech Eye:       F0 9F 91 81 E2 80 8D F0 9F 97 A8
+# ?:                E2 9D 93
+
+
+class CommandPending:
+    """Class for storing a Command while it is executed. If it cannot be
+        executed, it will be saved for a set time limit. During that timeout
+        period, if the message is edited, the Command will attempt to rerun.
+    """
+
+    def __init__(self, dict_, output, router, src: Src):
+        self.dict_ = dict_
+        self.output: Printer = output
+        self.router = router
+        self.src: Src = src
+        self.channel: discord.abc.Messageable = self.src.channel
+        self.invoker = self.src.author
+
+        self.active = False
+        self.react = None
+        self.reply: Optional[discord.Message] = None
+        self.waiting: Task = create_task(self.wait())
+
+    async def run(self):
+        """Try to execute this command. Return True if execution is carried out
+            successfully, False otherwise. Potentially, remove self.
+        """
+        if not self.active:
+            # Command is not valid for execution. Cease.
+            return False
+
+        d = "No details specified."
+        executed = False
+
+        try:
+            # Run the Command through the Router.
+            response = await self.router.run(self.src)
+
+            # If we are still in the Try, the Command routed without errors.
+            if response is not None:
+                # Command returned something. It could be a Coroutine, a
+                #   possibly-Async Generator, or a Primitive, like a String or
+                #   Sequence.
+                await self.output(self.src, response, self.reply)
+
+                # NOTE: This is still within the Try Block because, if the
+                #   Response is a Coroutine or Generator, it is NOT DONE RUNNING
+                #   and may still error out. Generators, especially Async, have
+                #   their Yielded values output as they come in, which may take
+                #   a while, and may involve raising an Exception. Therefore we
+                #   must still be ready to catch it.
+
+        except CommandArgsError as e:
+            # Arguments not valid. Cease, but do not necessarily desist.
+            await self.post_or_edit(f"Problem with Arguments: {str(e) or d}")
+
+        except CommandAuthError as e:
+            # Access denied. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(f"Sorry, not permitted; {str(e) or d}")
+
+        except CommandExit as e:
+            # Command cancelled itself. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(f"Command exited; {str(e) or d}")
+            executed = True  # This Exit was intentional. Count it as Executed.
+
+        except CommandInputError as e:
+            # Input not valid. Cease, but do not necessarily desist.
+            await self.post_or_edit(f"Bad input: {str(e) or d}")
+
+        except CommandOperationError as e:
+            # Command could not finish, but was accepted. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(f"Command failed; {str(e) or d}")
+
+        except NotImplementedError as e:
+            # Command ran into something that is not done. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(
+                f"Sorry, this Command is not completely done; {str(e) or d}"
+            )
+
+        except discord.errors.HTTPException:
+            # Discord prevented posting a Response. Cease and desist.
+            await self.unlink()
+            await self.post_or_edit(
+                f"Sorry, could not post Command Response; The Response was"
+                f" probably too long."
+                # f"\n({type(e).__name__}: `{e}`)"
+            )
+            raise  # Raise the Exception anyway, so that it is logged.
+
+        except Exception as e:
+            # Command could not finish. We do not know why, so play it safe.
+            await self.unlink()
+            await self.post_or_edit(
+                "Sorry, something went wrong, but I do not know what"
+                + (
+                    f": `{type(e).__name__} / {e}`"
+                    if str(e)
+                    else f" ({type(e).__name__})."
+                )
+            )
+            print_exc()
+            raise e
+
+        else:
+            await self.unlink()
+            executed = True
+
+        finally:
+            if executed:
+                self.router.config.get("stats")["comCount"] += 1
+            if self.active and self.waiting:
+                await self.src.add_reaction(view_icon)
+
+        return executed
+
+    async def post_or_edit(self, content: str):
+        if self.reply:
+            await self.reply.edit(content=content)
+        else:
+            self.reply = await self.channel.send(content)
+
+    async def wait(self):
+        try:
+            self.active = True
+            self.dict_[self.src.id] = self
+            await sleep(60)
+        except:
+            pass
+        finally:
+            await self.unlink()
+
+    async def unlink(self):
+        """Prevent self from being executed."""
+        self.active = False
+        if self.src.id in self.dict_:
+            del self.dict_[self.src.id]
+
+        if self.waiting and not self.waiting.done():
+            self.waiting.cancel()
+
+        try:
+            await self.src.remove_reaction(view_icon, self.router.client.user)
+        except CancelledError:
+            pass
+        except:
+            print_exc()
 
 
 class Commands:
@@ -13,7 +180,7 @@ class Commands:
     whitelist = ""  # Name of the list of permitted IDs in the config file
 
     def __init__(self, client, router, *a, **kw):
-        self.client = client
+        self.client: PetalClientABC = client
         self.config = client.config
         self.db = client.db
 
@@ -34,9 +201,10 @@ class Commands:
             for attr in dir(self)
             if "__" not in attr and attr.startswith("cmd_")
         ]
+        full.sort(key=lambda f: f.__name__)
         return full
 
-    def authenticate(self, src):
+    def authenticate(self, src: Src):
         """
         Take a Discord message and return True if:
           1. The author of the message is allowed to access this package.
@@ -55,28 +223,14 @@ class Commands:
                     return allow, denied
             if 0 <= self.op <= 4:
                 if hasattr(self, "minecraft"):
-                    return self.minecraft.WLAuthenticate(src, self.op)
+                    return self.minecraft.user_has_op(src.author, self.op), "bad op"
                 else:
                     return False, "bad op"
         except Exception as e:
             # For security, "fail closed".
-            return False, "Error: `{}`".format(e)
+            return False, f"Error: {e}"
         else:
             return True, None
-
-    def any(self, sample: dict, *allowed: str):
-        """Try to find any specifically non-None (rather than simple logically
-            True) value in a dict.
-        """
-        if not allowed:
-            # If no values are supplied, search all.
-            allowed = list(sample)
-
-        for key in allowed:
-            if sample.get(key, None) is not None:
-                return sample[key]
-
-        return None
 
     # # # UTILS IMPORTED FROM LEGACY COMMANDS # # #
 
@@ -86,14 +240,14 @@ class Commands:
         if type(user) != discord.Member:
             user = self.member_on_main(user.id)
         if user:
-            server = self.client.get_server(self.config.get("mainServer"))
-            target = discord.utils.get(server.roles, name=role)
+            guild = self.client.get_guild(self.config.get("mainServer"))
+            target = discord.utils.get(guild.roles, name=role)
             # TODO: Make this block a bit more...compact.
             if target is None:
-                # Role is not found on Main Server? Check this one.
-                target = discord.utils.get(user.server.roles, name=role)
+                # Role is not found on Main Guild? Check this one.
+                target = discord.utils.get(user.guild.roles, name=role)
                 if target is None:
-                    # Role is not found on this server? Fail.
+                    # Role is not found on this guild? Fail.
                     self.log.err("Role '" + role + "' does not exist.")
                     return False, "bad role"
                 elif target in user.roles:
@@ -103,8 +257,8 @@ class Commands:
                     # Role is found, but does not include member? Fail.
                     return False, "denied"
             else:
-                # Role is found on Main Server. Find the member there and check.
-                user_there = server.get_member(user.id)
+                # Role is found on Main Guild. Find the member there and check.
+                user_there = guild.get_member(user.id)
                 if user_there:
                     # User is there? Check roles.
                     if target in user_there.roles:
@@ -117,21 +271,19 @@ class Commands:
         else:
             return False, "private"
 
-    def get_member(self, src, uuid):
+    def get_member(self, src: Src, uuid):
+        """Get a Discord Member object from an ID. First argument MUST be either
+            a Guild or a Message.
         """
-        Get a Discord Member object from an ID.
-        """
-        if isinstance(src, discord.Server):
+        if isinstance(src, discord.Guild):
             return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                src.server.members, id=uuid.lstrip("<@!").rstrip(">")
+                src.guild.members, id=int(uuid.lstrip("<@!").rstrip(">"))
             )
 
     def member_on_main(self, uuid):
-        return self.get_member(
-            self.client.get_server(self.client.get_main_server()), uuid
-        )
+        return self.get_member(self.client.main_guild, uuid)
 
     @staticmethod
     def validate_channel(chanlist: list, msg: str) -> bool:
@@ -142,7 +294,9 @@ class Commands:
                 return False
         return True
 
-    async def notify_subscribers(self, source_channel, target_message, key):
+    async def notify_subscribers(
+        self, source_channel: discord.TextChannel, target_message, key
+    ):
         await self.client.send_message(None, source_channel, "Notifying subscribers...")
         sub = self.db.subs.find_one({"code": key})
         if sub is None:
@@ -164,7 +318,7 @@ class Commands:
                         "Hello! Hope your day/evening/night/morning is going well\n\nI was just popping in here to let you know that an event for `{}` has been announced.".format(
                             sub["name"]
                         )
-                        + "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same server in which you subscribed originally.".format(
+                        + "\n\nIf you wish to stop receiving these messages, just do `{}unsubscribe {}` in the same guild in which you subscribed originally.".format(
                             self.config.prefix, sub["code"]
                         ),
                     )
@@ -175,7 +329,7 @@ class Commands:
                     count += 1
             if len(status) > 1900:
                 await self.client.send_message(None, source_channel, status + "```")
-                await asyncio.sleep(0.5)
+                await sleep(0.5)
                 status = "```\n"
         if len(status) > 0:
             await self.client.send_message(None, source_channel, status + "```")
