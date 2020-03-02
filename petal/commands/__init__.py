@@ -47,6 +47,9 @@ _uquote_2 = compile(r"[«»“”„]")
 _unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub('"', s))
 
 
+SOFT_HYPHEN: str = chr(173)
+
+
 class CommandRouter(Integrated):
     version = ""
 
@@ -174,7 +177,7 @@ class CommandRouter(Integrated):
         args, opts = self.parse(cline, shorts, longs)
 
         # Args: Remove any outermost quotes.
-        args: Args = Args([unquote(arg) for arg in args])
+        args: Args = Args([unquote(arg.replace(SOFT_HYPHEN, "")) for arg in args])
         # Opts: Enforce the typing, and if it all passes, send our results back up.
         opts = check_types(opts, hints)
 
