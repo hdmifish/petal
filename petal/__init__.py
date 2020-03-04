@@ -21,6 +21,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Set,
 )
 
 import discord
@@ -69,18 +70,20 @@ class Petal(PetalClientABC):
         try:
             super().__init__()
         except Exception as e:
-            log.err(f"Could not initialize client object: {str(e)}")
+            log.err(f"Could not initialize client object: {e}")
         else:
             log.info("Client object initialized")
 
-        self.startup = datetime.utcnow()
-        self.minecraft = Minecraft(self)
-
         self.config = cfg
-        self.db = DBHandler(self.config)
         self.startup = datetime.utcnow()
+        self.startup_unix = self.startup.timestamp()
+
+        self.db = DBHandler(self.config)
+
+        self.minecraft = Minecraft(self)
         self.commands = Commands(self)
         self.commands.version = version
+
         self.loop_tasks: List[asyncio.Future] = []
         self.potential_typo = {}
         self.session_id = hex(mash(datetime.utcnow(), digits=5, base=16)).upper()
@@ -94,12 +97,12 @@ class Petal(PetalClientABC):
         try:
             super().run(self.config.token, bot=not self.config.get("selfbot"))
         except AttributeError as e:
-            log.err(f"Could not connect using the token provided: {str(e)}")
+            log.err(f"Could not connect using the token provided: {e}")
             return 1
 
         except discord.errors.LoginFailure as e:
             log.err(
-                f"Authenication Failure. Your auth: \n{self.config.token}"
+                f"Authenication Failure. Your auth:\n{self.config.token}"
                 f"\nis invalid: {e}"
             )
             return 401
@@ -553,15 +556,20 @@ class Petal(PetalClientABC):
                 )
 
     async def send_message(
-        self, author=None, channel=None, message=None, *, embed=None, **_
-    ):
+        self,
+        author: discord.Member = None,
+        channel: discord.abc.Messageable = None,
+        message: str = None,
+        *,
+        embed: discord.Embed = None,
+        **_,
+    ) -> Optional[discord.Message]:
         """
         Overload on the send_message function
         """
-        if (not message or not str(message)) and not embed:
+        if not message and not embed:
             # Without a message to send, dont even try; it would just error
             return None
-        message = str(message)
 
         if (
             author is not None
@@ -579,10 +587,10 @@ class Petal(PetalClientABC):
             except:
                 pass
             else:
-                message = msg + ", " + ac + end
+                message = f"{msg}, {ac}{end}"
 
         if self.dev_mode:
-            message = "[DEV]  " + str(message) + "  [DEV]"
+            message = f"[DEV]  {message}  [DEV]"
         try:
             return await channel.send(content=message, embed=embed)
         except (discord.errors.Forbidden, discord.errors.InvalidArgument) as e:
@@ -901,35 +909,48 @@ class Petal(PetalClientABC):
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if Petal.logLock:
             return
-        gained = None
-        role = None
 
-        for r in before.roles:
-            if r not in after.roles:
-                gained = "Lost"
-                role = r
-        for r in after.roles:
-            if r not in before.roles:
-                gained = "Gained"
-                role = r
+        r_aft: Set[discord.Role] = set(after.roles)
+        r_bef: Set[discord.Role] = set(before.roles)
 
-        if gained is not None:
+        if r_aft ^ r_bef:
             em = (
                 discord.Embed(
-                    title=f"({role.guild.name}) User Role {gained}",
-                    description=f"{after.display_name} {gained} role",
+                    title=f"User Roles on {after.guild.name!r} updated",
                     colour=Color.user_promote,
                 )
                 .set_author(
                     name=self.user.name, icon_url="https://puu.sh/tBpXd/ffba5169b2.png"
                 )
-                .add_field(name="Role", value=role.name)
-                .add_field(name="Timestamp", value=timestr(), inline=False)
                 .set_thumbnail(url=get_avatar(after))
                 .set_footer(text=userline(after))
             )
 
-            await self.log_moderation(embed=em)
+            gain = r_aft - r_bef
+            if gain:
+                em.add_field(
+                    name="Gained",
+                    value="\n".join(
+                        "{} (`{}`#{})".format(role.mention, escape(role.name), role.id)
+                        for role in gain
+                    ),
+                    inline=False,
+                )
+
+            lost = r_bef - r_aft
+            if lost:
+                em.add_field(
+                    name="Lost",
+                    value="\n".join(
+                        "{} (`{}`#{})".format(role.mention, escape(role.name), role.id)
+                        for role in lost
+                    ),
+                    inline=False,
+                )
+
+            await self.log_moderation(
+                embed=em.add_field(name="Timestamp", value=timestr(), inline=False)
+            )
 
         if before.nick != after.nick:
             em = (
@@ -1041,28 +1062,31 @@ class Petal(PetalClientABC):
     async def on_message(self, message: Src):
         await self.wait_until_ready()
         content = message.content.strip()
-        if isinstance(message.channel, discord.TextChannel):
-            self.db.update_member(
-                message.author,
-                {
-                    "aliases": message.author.name,
-                    "guilds": message.guild.id,
-                    "last_message_channel": message.channel.id,
-                    "last_active": message.created_at,
-                    "last_message": message.created_at,
-                },
-                type=1,
-            )
+        try:
+            if isinstance(message.channel, discord.TextChannel):
+                self.db.update_member(
+                    message.author,
+                    {
+                        "aliases": message.author.name,
+                        "guilds": message.guild.id,
+                        "last_message_channel": message.channel.id,
+                        "last_active": message.created_at,
+                        "last_message": message.created_at,
+                    },
+                    type=1,
+                )
 
-            self.db.update_member(
-                message.author,
-                {
-                    "message_count": self.db.get_attribute(
-                        message.author, "message_count"
-                    )
-                    + 1
-                },
-            )
+                self.db.update_member(
+                    message.author,
+                    {
+                        "message_count": self.db.get_attribute(
+                            message.author, "message_count"
+                        )
+                        + 1
+                    },
+                )
+        except Exception as e:
+            log.err("{} on Message: {}".format(type(e).__name__, str(e)))
 
         if (
             message.author == self.user

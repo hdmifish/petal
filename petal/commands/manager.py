@@ -52,7 +52,7 @@ class CommandsMgr(core.Commands):
             chan = self.client.get_channel(self.config.get("motdModChannel"))
             await self.client.embed(chan, embedded=em)
 
-            return "Question added to database."
+            yield "Question added to database."
 
         elif subcom == "approve":
             if src.channel.id != self.config.get("motdModChannel"):
@@ -69,13 +69,11 @@ class CommandsMgr(core.Commands):
                         f"No entries exist with id number: {targ}"
                     )
 
-                em = discord.Embed(
+                yield discord.Embed(
                     title=f"Approved {result['num']}",
                     description=result["content"],
                     colour=0x00FF00,
                 ).add_field(name="Submitted by", value=f"<@{result['author']}>")
-
-                return em
 
         elif subcom == "reject":
             if src.channel.id != self.config.get("motdModChannel"):
@@ -92,17 +90,15 @@ class CommandsMgr(core.Commands):
                         f"No entries exist with id number: {targ}"
                     )
 
-                em = discord.Embed(
+                yield discord.Embed(
                     title=f"Rejected {result['num']}",
                     description=result["content"],
                     colour=0xFFA500,
                 ).add_field(name="Submitted by", value=f"<@{result['author']}>")
 
-                return em
-
         elif subcom == "count":
             count = self.db.motd.count({"approved": True, "used": False})
-            return f"Question queue currently contains `{count}` entries."
+            yield f"Question queue currently contains `{count}` entries."
 
         else:
             raise CommandInputError("Unrecognized subcommand.")
@@ -164,6 +160,8 @@ class CommandsMgr(core.Commands):
         poll = Menu(self.client, targ, title)
         await poll.get_poll(args, duration, title="Options")
 
+        return "The Poll has concluded.\n{}".format(src.author.mention)
+
     async def cmd_vote(
         self, src, _question: str = None, _channel: int = None, _time: float = 0, **_
     ):
@@ -196,6 +194,8 @@ class CommandsMgr(core.Commands):
 
         poll = Menu(self.client, targ, title)
         await poll.get_vote(duration)
+
+        return "The Vote has concluded.\n{}".format(src.author.mention)
 
     async def cmd_tunnel(
         self,

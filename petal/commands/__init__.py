@@ -41,10 +41,13 @@ auth_fail_dict = {
 }
 
 
-_uquote_1 = compile(r"[‹›‘’]")
+_uquote_1 = compile(r"[‹›‘’‚]")
 _uquote_2 = compile(r"[«»“”„]")
 
 _unquote = lambda s: _uquote_1.sub("'", _uquote_2.sub('"', s))
+
+
+SOFT_HYPHEN: str = chr(173)
 
 
 class CommandRouter(Integrated):
@@ -174,7 +177,7 @@ class CommandRouter(Integrated):
         args, opts = self.parse(cline, shorts, longs)
 
         # Args: Remove any outermost quotes.
-        args: Args = Args([unquote(arg) for arg in args])
+        args: Args = Args([unquote(arg.replace(SOFT_HYPHEN, "")) for arg in args])
         # Opts: Enforce the typing, and if it all passes, send our results back up.
         opts = check_types(opts, hints)
 
@@ -232,12 +235,15 @@ class CommandRouter(Integrated):
 
     @property
     def uptime(self):
-        delta = dt.utcnow() - self.client.startup
-        delta = delta.total_seconds()
+        _d: float = dt.utcnow().timestamp() - self.client.startup_unix
 
-        d = divmod(delta, 86400)  # days
-        h = divmod(d[1], 3600)  # hours
-        m = divmod(h[1], 60)  # minutes
-        s = m[1]  # seconds
+        days, _d = divmod(_d, 86_400)  # days
+        hour, _d = divmod(_d, 3_600)  # hours
+        mins, secs = divmod(_d, 60)  # minutes, seconds
 
-        return f"{d[0]:.0f} days, {h[0]:.0f} hours, {m[0]:.0f} minutes, {s:.2F} seconds"
+        return (
+            f"{days:.0f} days, "
+            f"{hour:.0f} hours, "
+            f"{mins:.0f} minutes, "
+            f"{secs:.2F} seconds"
+        )

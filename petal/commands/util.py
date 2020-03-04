@@ -276,51 +276,50 @@ class CommandsUtil(core.Commands):
             )
             em.set_footer(text="Startup Time")
 
-            await self.client.embed(src.channel, em)
-            return
+            return em
 
         mod, cmd = self.router.find_command(args[0], src)
         if cmd:
             if cmd.__doc__:
-                # Grab the docstring and insert the correct prefix wherever needed
-                doc0 = cmd.__doc__.format(p=self.config.prefix)
-                # Split the docstring up by double-newlines
-                doc = [doc1.strip() for doc1 in doc0.split("\n\n")]
-
-                summary = doc.pop(0)
+                # Take the first "Paragraph" of the Docstring.
+                summary = cmd.__doc__.split("\n\n")[0].strip()
             else:
                 summary = "Command summary unavailable."
 
             em = discord.Embed(
                 title=f"`{self.config.prefix}{cmd.__name__[4:]}`",
-                description=summary or "Command summary unavailable.",
+                description=summary.format(p=self.config.prefix),
                 colour=Color.tech,
             )
 
             em.add_field(
-                name="Restriction:",
+                name="Restriction",
                 value=f"Role: `{self.config.get(mod.role)}`"
                 f"\nOperator Level: `{mod.op if 0 <= mod.op <= 4 else None}`"
                 f"\nWhitelist: `{mod.whitelist or None}`",
             )
-            em.add_field(name="Auth Module:", value=f"`{mod.__module__}`")
+            em.add_field(name="Auth Module", value=f"`{mod.__module__}`")
 
             hints = get_type_hints(cmd)
             if hints:
                 params: str = "\n".join(
-                    [f"`{k}`: `{v}`" for k, v in hints.items() if k.startswith("_")]
+                    [
+                        "`{}` :: `{}`".format(
+                            k, v.__name__ if isinstance(v, type) else v
+                        )
+                        for k, v in hints.items()
+                        if k.startswith("_")
+                    ]
                 )
                 if params:
                     em.add_field(
-                        name="Typed Parameters:",
-                        # value=str(hints) + str(cmd.__annotations__)
-                        value=params,
+                        name="Typed Parameters", value=params, inline=False,
                     )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)
             return em
         else:
-            return "Command not found."
+            raise CommandInputError("Command not found.")
 
     async def cmd_commands(
         self,
@@ -381,18 +380,18 @@ class CommandsUtil(core.Commands):
         if _sort or _s:
             cmd_list.sort()
 
-        if args:
-            line_2 = " matching your search" + line_2
-            cmd_list = [
-                cmd
-                for cmd in cmd_list
-                if any(
-                    cmd.lower() in term.lower() or term.lower() in cmd.lower()
-                    for term in args
-                )
-            ]
-            if not cmd_list:
-                return "Sorry, I could not find any commands that match your search."
+        # if args:
+        #     line_2 = " matching your search" + line_2
+        #     cmd_list = [
+        #         cmd
+        #         for cmd in cmd_list
+        #         if any(
+        #             cmd.lower() in term.lower() or term.lower() in cmd.lower()
+        #             for term in args
+        #         )
+        #     ]
+        #     if not cmd_list:
+        #         return "Sorry, I could not find any commands that match your search."
 
         cl2 = []
         for cmd in cmd_list:
@@ -407,10 +406,22 @@ class CommandsUtil(core.Commands):
 
             if mod:
                 cl2.append(
+                    f"{mod.__module__.split('.')[-1].replace('_', ' ')}"
+                    f" :: "
                     f"{self.config.prefix}{cmd}"
-                    f" :: {mod.__module__.split('.')[-1].replace('_', ' ')}"
                     + ("  *[!]*" if not func.__doc__ else "")
                 )
+
+        if args:
+            line_2 = " matching your search" + line_2
+            cl2 = [
+                cmd
+                for cmd in cl2
+                if any(
+                    cmd.lower() in term.lower() or term.lower() in cmd.lower()
+                    for term in args
+                )
+            ]
 
         if not cl2:
             raise CommandOperationError(
@@ -425,7 +436,12 @@ class CommandsUtil(core.Commands):
         else:
             line_1 = "List of commands you can access"
 
-        return (f"{line_1}{line_2}:```asciidoc\n" + "\n".join(cl2))[:1997] + "```"
+        out = f"{line_1}{line_2}:```asciidoc\n" + "\n".join(cl2)
+
+        if len(out) > 1997:
+            out = out[:1994] + "..."
+
+        return out + "```"
 
     async def cmd_avatar(self, args, src, **_):
         """Given a User ID, post their Avatar."""
