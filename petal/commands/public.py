@@ -20,7 +20,7 @@ from petal.exceptions import (
 from petal.grasslands import Pidgeon, Define
 from petal.types import Args, Src
 from petal.util import dice
-from petal.util.embeds import Color
+from petal.util.embeds import Color, membership_card
 
 
 link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
@@ -827,6 +827,30 @@ class CommandsPublic(core.Commands):
                 int((float(tag.attrs["data-count"]) / 20000000.00) * 100.00),
             )
         )
+
+    async def cmd_userinfo(self, args, src: Src, **_):
+        """Display information about yourself.
+
+        Syntax: `{p}userinfo`
+        """
+        if not args:
+            args = [src.author.id]
+
+        if args != [src.author.id]:
+            raise CommandAuthError("Only a Moderator can view the info of another User.")
+
+        if not all(map(lambda x: isinstance(x, int) or x.isdigit(), args)):
+            raise CommandArgsError("All IDs must be positive Integers.")
+
+        for userid in args:
+            target: discord.Member = src.guild.get_member(
+                int(userid)
+            ) or self.client.main_guild.get_member(int(userid))
+
+            if target is None:
+                raise CommandInputError(f"Could not get user with ID `{userid}`.")
+            else:
+                yield membership_card(target)
 
 
 # Keep the actual classname unique from this common identifier

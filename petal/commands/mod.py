@@ -823,12 +823,11 @@ class CommandsMod(core.Commands):
     )
 
     async def cmd_userinfo(self, args, src: Src, **_):
-        """Toggle the mute tag on a user if your guild supports that role.
+        """Display information about a Member.
 
-        Syntax: `{p}mute <user tag/id>`
+        Syntax: `{p}userinfo [<user id>]`
         """
         if not args:
-            # raise CommandArgsError("Must provide User ID.")
             args = [src.author.id]
 
         if not all(map(lambda x: isinstance(x, int) or x.isdigit(), args)):
