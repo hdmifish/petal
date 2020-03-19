@@ -277,7 +277,7 @@ class CommandsPublic(core.Commands):
                     + " but unfortunately they were unable to be contacted"
                 )
             else:
-                self.config.hugDonors[pick.id]["donations"] += 1
+                self.config.hugDonors[str(pick.id)]["donations"] += 1
                 self.config.save()
                 return "A hug has been requested of: " + pick.name
 
@@ -311,26 +311,26 @@ class CommandsPublic(core.Commands):
         #     return "{} was removed from the donor list".format(user.name)
 
         elif args[0].lower() == "status":
-            if src.author.id not in self.config.hugDonors:
+            if str(src.author.id) not in self.config.hugDonors:
                 return (
                     "You are not a hug donor, use `{}freehug donate` "
                     "to add yourself.".format(self.config.prefix)
                 )
 
             return "You have received {} requests since you became a donor".format(
-                self.config.hugDonors[src.author.id]["donations"]
+                self.config.hugDonors[str(src.author.id)]["donations"]
             )
 
         elif args[0].lower() == "donate":
-            if src.author.id not in self.config.hugDonors:
-                self.config.hugDonors[src.author.id] = {
+            if str(src.author.id) not in self.config.hugDonors:
+                self.config.hugDonors[str(src.author.id)] = {
                     "name": src.author.name,
                     "donations": 0,
                 }
                 self.config.save()
                 return "Thanks! You have been added to the donor list <3"
             else:
-                del self.config.hugDonors[src.author.id]
+                del self.config.hugDonors[str(src.author.id)]
                 self.config.save()
                 return "You have been removed from the donor list."
 
