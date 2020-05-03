@@ -150,7 +150,8 @@ class Petal(PetalClientABC):
                     log.err(f"{name} coroutine FAILED: {type(e).__name__}: {e}")
 
                     if restart:
-                        log.ready(f"{name} coroutine RESTARTING...")
+                        log.ready(f"{name} coroutine RESTARTING in 10 seconds...")
+                        await asyncio.sleep(10)
                         continue
                     else:
                         break
