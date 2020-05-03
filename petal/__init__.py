@@ -520,7 +520,6 @@ class Petal(PetalClientABC):
         command = self.potential_typo.get(message.id) or CommandPending(
             self.potential_typo, self.print_response, self.commands, message
         )
-        await asyncio.sleep(0.1)
         try:
             return await command.run()
 

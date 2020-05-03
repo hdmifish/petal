@@ -1,4 +1,4 @@
-from asyncio import CancelledError, create_task, sleep, Task
+from asyncio import create_task, sleep, Task
 from traceback import print_exc
 from typing import Optional
 from urllib.parse import urlencode, quote_plus
@@ -39,10 +39,9 @@ class CommandPending:
         self.channel: discord.abc.Messageable = self.src.channel
         self.invoker = self.src.author
 
-        self.active = False
-        self.react = None
+        self.active = True
         self.reply: Optional[discord.Message] = None
-        self.waiting: Task = create_task(self.wait())
+        self._waiting: Optional[Task] = None
 
     async def run(self):
         """Try to execute this command. Return True if execution is carried out
@@ -67,7 +66,7 @@ class CommandPending:
                 await self.output(self.src, response, self.reply)
 
                 # NOTE: This is still within the Try Block because, if the
-                #   Response is a Coroutine or Generator, it is NOT DONE RUNNING
+                #   Response is a Coroutine or Generator, it is NOT done running
                 #   and may still error out. Generators, especially Async, have
                 #   their Yielded values output as they come in, which may take
                 #   a while, and may involve raising an Exception. Therefore we
@@ -79,44 +78,49 @@ class CommandPending:
 
         except CommandAuthError as e:
             # Access denied. Cease and desist.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(f"Sorry, not permitted; {str(e) or d}")
 
         except CommandExit as e:
             # Command cancelled itself. Cease and desist.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(f"Command exited; {str(e) or d}")
             executed = True  # This Exit was intentional. Count it as Executed.
 
         except CommandInputError as e:
             # Input not valid. Cease, but do not necessarily desist.
-            await self.post_or_edit(f"Bad input: {str(e) or d}")
+            await self.post_or_edit(f"Bad input; {str(e) or d}")
 
         except CommandOperationError as e:
             # Command could not finish, but was accepted. Cease and desist.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(f"Command failed; {str(e) or d}")
 
         except NotImplementedError as e:
             # Command ran into something that is not done. Cease and desist.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(
                 f"Sorry, this Command is not completely done; {str(e) or d}"
             )
 
-        except discord.errors.HTTPException:
+        except discord.errors.HTTPException as e:
             # Discord prevented posting a Response. Cease and desist.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(
                 f"Sorry, could not post Command Response; The Response was"
                 f" probably too long."
+                + (
+                    f"\n: `{type(e).__name__} / {e}`"
+                    if str(e)
+                    else f"\n ({type(e).__name__})."
+                )
                 # f"\n({type(e).__name__}: `{e}`)"
             )
             raise  # Raise the Exception anyway, so that it is logged.
 
         except Exception as e:
             # Command could not finish. We do not know why, so play it safe.
-            await self.unlink()
+            self.stop_waiting()
             await self.post_or_edit(
                 "Sorry, something went wrong, but I do not know what"
                 + (
@@ -129,14 +133,14 @@ class CommandPending:
             raise e
 
         else:
-            await self.unlink()
+            self.stop_waiting()
             executed = True
 
         finally:
             if executed:
                 self.router.config.get("stats")["comCount"] += 1
-            if self.active and self.waiting:
-                await self.src.add_reaction(view_icon)
+            elif self.active:
+                self.start_waiting()
 
         return executed
 
@@ -146,31 +150,41 @@ class CommandPending:
         else:
             self.reply = await self.channel.send(content)
 
-    async def wait(self):
+    def start_waiting(self) -> bool:
+        if self.active and self._waiting is None:
+            self._waiting = create_task(self._wait())
+            return True
+        else:
+            return False
+
+    def stop_waiting(self):
+        """Stop waiting for a rerun. This should not be called from anything
+            inside the Waiting Task, because it cancels it.
+        """
+        self.active = False
+        if self._waiting and not self._waiting.done():
+            self._waiting.cancel()
+
+    async def _wait(self):
         try:
-            self.active = True
+            await self.src.add_reaction(view_icon)
             self.dict_[self.src.id] = self
-            await sleep(60)
+            await sleep(180)
         except:
             pass
         finally:
-            await self.unlink()
+            self.active = False
+            if self.src.id in self.dict_:
+                del self.dict_[self.src.id]
 
-    async def unlink(self):
-        """Prevent self from being executed."""
-        self.active = False
-        if self.src.id in self.dict_:
-            del self.dict_[self.src.id]
+            try:
+                await self.src.remove_reaction(view_icon, self.router.client.user)
+            except:
+                print_exc()
 
-        if self.waiting and not self.waiting.done():
-            self.waiting.cancel()
-
-        try:
-            await self.src.remove_reaction(view_icon, self.router.client.user)
-        except CancelledError:
-            pass
-        except:
-            print_exc()
+    @property
+    def is_waiting(self) -> bool:
+        return self._waiting is not None and not self._waiting.done()
 
 
 class Commands:
