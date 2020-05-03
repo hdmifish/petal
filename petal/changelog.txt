@@ -170,3 +170,6 @@ Since the last documented update:
 - Removed !setosu.
 - Trimmed many imports.
 = Fixed "issue" with !time reversing offsets relative to GMT because of the PyTZ developer not understanding how standards are meant to work.
+
+[v1.0.1] (2020-05-02)
+= Minor stability/usability fixes.
