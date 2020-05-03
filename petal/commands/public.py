@@ -58,7 +58,7 @@ class CommandsPublic(core.Commands):
                 "key": self.config.get("trello/app_key"),
                 "token": self.config.get("trello/token"),
             }
-            response = requests.request("GET", url, params=params)
+            response = requests.get(url, params=params)
 
         except KeyError:
             raise CommandOperationError(
@@ -104,9 +104,7 @@ class CommandsPublic(core.Commands):
             }
         )
 
-        response = requests.request(
-            "POST", "https://api.trello.com/1/cards", params=params
-        )
+        response = requests.post("https://api.trello.com/1/cards", params=params)
 
         if not response:
             raise CommandOperationError(

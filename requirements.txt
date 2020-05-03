@@ -1,6 +1,7 @@
+bs4
 colorama
 dateparser
-discord.py
+discord
 facebook-sdk
 praw
 pymongo
