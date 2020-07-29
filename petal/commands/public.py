@@ -4,11 +4,12 @@ Access: Public"""
 from datetime import datetime as dt
 import json
 from random import choice, randint
-from bs4 import BeautifulSoup
 import re
+from subprocess import PIPE, run
 
-import requests
+from bs4 import BeautifulSoup
 import discord
+import requests
 
 from petal.commands import core
 from petal.exceptions import (
@@ -835,7 +836,9 @@ class CommandsPublic(core.Commands):
             args = [src.author.id]
 
         if args != [src.author.id]:
-            raise CommandAuthError("Only a Moderator can view the info of another User.")
+            raise CommandAuthError(
+                "Only a Moderator can view the info of another User."
+            )
 
         if not all(map(lambda x: isinstance(x, int) or x.isdigit(), args)):
             raise CommandArgsError("All IDs must be positive Integers.")
@@ -849,6 +852,27 @@ class CommandsPublic(core.Commands):
                 raise CommandInputError(f"Could not get user with ID `{userid}`.")
             else:
                 yield membership_card(target)
+
+    async def cmd_souls(self, **_):
+        """Randomly generate a message that you might find in the Dark Souls
+            series.
+
+        The message may be in the format used by any of the three games. Also
+            requires that a path to an executable is set in the bot config.
+        """
+        binary = self.config.get("dsmsg_executable")
+        if not binary:
+            raise CommandOperationError(
+                "Sorry, I have not been set up with a path to dsmsg."
+            )
+
+        proc = run(binary, stdout=PIPE)
+        if proc.returncode != 0:
+            raise CommandOperationError("Sorry, something went wrong with dsmsg.")
+
+        return "You seek out guidance from another world...```\n{}```".format(
+            proc.stdout.decode()
+        )
 
 
 # Keep the actual classname unique from this common identifier

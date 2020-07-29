@@ -318,3 +318,8 @@ calmGallery:
 comfyGallery:
 - author: isometricramen
   content: https://cdn.discordapp.com/attachments/131577709917765632/286262467015868416/034-VSSH0Uz.gif
+
+
+# A file path to an executable program that outputs a Dark Souls message. Used
+#   by the `souls` command.
+dsmsg_executable:
