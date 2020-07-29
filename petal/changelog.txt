@@ -173,3 +173,6 @@ Since the last documented update:
 
 [v1.0.1] (2020-05-02)
 = Minor stability/usability fixes.
+
+[v1.1.0] (2020-07-29)
++ Added !souls command, for randomly generating Messages from the Dark Souls series.

@@ -3,12 +3,12 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION="1.0.1"
+VERSION="1.1.0"
 
 #(optional) what the webhook message should say.
-UPDATE_TITLE="The Great Migration"
+UPDATE_TITLE="Scholar of the First STDIN"
 
 CHANGELOG=$(cat <<'EOF'
-= Minor stability/usability fixes.
++ Added !souls command, for randomly generating Messages from the Dark Souls series.
 EOF
 )
