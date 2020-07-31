@@ -1,6 +1,6 @@
 from asyncio import create_task, sleep, Task
 from traceback import print_exc
-from typing import Optional
+from typing import Optional, Union
 from urllib.parse import urlencode, quote_plus
 
 import discord
@@ -285,7 +285,7 @@ class Commands:
         else:
             return False, "private"
 
-    def get_member(self, src: Src, uuid):
+    def get_member(self, src: Union[discord.Guild, Src], uuid):
         """Get a Discord Member object from an ID. First argument MUST be either
             a Guild or a Message.
         """
@@ -293,7 +293,7 @@ class Commands:
             return src.get_member(m2id(uuid))
         else:
             return discord.utils.get(
-                src.guild.members, id=int(uuid.lstrip("<@!").rstrip(">"))
+                src.guild.members, id=int(str(uuid).lstrip("<@!").rstrip(">"))
             )
 
     def member_on_main(self, uuid):
