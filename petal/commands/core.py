@@ -394,8 +394,8 @@ class Commands:
         self.log.f("event", "could not find subscription key in your announcement")
         return None, None
 
-    def generate_post_process_URI(self, mod, reason, message, target):
+    def generate_post_process_URI(self, mod, reason, message, target, targetId):
         if self.config.get("modURI") is None:
             return "*no modURI in config, so post processing will be skipped*"
-        req = {"mod": mod, "off": reason, "msg": message, "uid": target}
+        req = {"mod": mod, "off": reason, "msg": message, "uid": target, "id": targetId}
         return self.config.get("modURI") + "?" + urlencode(req, quote_via=quote_plus)
