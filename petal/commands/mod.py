@@ -278,6 +278,7 @@ class CommandsMod(core.Commands):
                     _reason,
                     response.content,
                     userToBan.name + userToBan.discriminator,
+                    str(userToBan.id)
                 )
             except Exception as e:
                 self.log.err(
