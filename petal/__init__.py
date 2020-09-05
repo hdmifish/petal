@@ -234,12 +234,14 @@ class Petal(PetalClientABC):
             log.f("BANS", "Now Timestamp: " + str(epoch))
 
             for entry in await mainguild.bans():
-                user = entry["user"]
+                user = entry.user
                 # log.f("UNBANS", m.name + "({})".format(m.id))
-                ban_expiry = self.db.get_attribute(user, "banExpires", verbose=False)
-                if ban_expiry is None or not self.db.get_attribute(user, "tempBanned"):
+                ban_expiry: int = int(self.db.get_attribute(user, "banExpires", verbose=False) or 0)
+
+                if not ban_expiry or not self.db.get_attribute(user, "tempBanned"):
                     continue
-                elif int(ban_expiry) <= int(epoch):
+
+                if ban_expiry <= int(epoch):
                     log.f(f"{ban_expiry} compared to {epoch}")
                     print(flush=True)
                     try:
@@ -254,8 +256,7 @@ class Petal(PetalClientABC):
                 else:
                     log.f(
                         "BANS",
-                        user.name
-                        + f" ({user.id}) has {int(ban_expiry) - int(epoch)} seconds left",
+                        f"{user.name} ({user.id}) has {int(ban_expiry) - epoch} seconds left",
                     )
                 await asyncio.sleep(0.5)
 

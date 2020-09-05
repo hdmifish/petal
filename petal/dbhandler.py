@@ -325,18 +325,19 @@ class DBHandler(object):
         num = self.get_motd_max()
 
         if num is None:
-            num = 2000
+            idx: int = 2000
         else:
-            num = num["num"] + 1
-        object = {
+            idx: int = num["num"] + 1
+
+        entry = {
             "author": author,
-            "num": num,
+            "num": idx,
             "content": content,
             "approved": False,
             "used": False,
         }
-        # print(str(object))
-        return self.motd.find_one({"_id": self.motd.insert_one(object).inserted_id})
+        # print(str(entry))
+        return self.motd.find_one({"_id": self.motd.insert_one(entry).inserted_id})
 
     def update_motd(self, num, approve=True):
         if approve:
