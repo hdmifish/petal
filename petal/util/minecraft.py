@@ -1,4 +1,4 @@
-"""FIXME: INCOMPLETE MODULE FOR MINECRAFT UTILITY REWRITE; DO NOT USE YET
+"""Minecraft Utility Module
 
 ERROR CODES:
  0: Cmnd success: User added or approved, or request sent
@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from datetime import datetime as dt
 import json
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Tuple, Type, Union
+from typing import Dict, Iterable, Iterator, List, Tuple, Union
 from uuid import UUID
 
 from discord import Embed
@@ -32,8 +32,8 @@ from petal.types import PetalClientABC
 log = Peacock()
 
 
-type_entry_db: Type = Dict[str, Union[bool, int, List[int], List[str], str]]
-type_db: Type = List[type_entry_db]
+type_entry_db = Dict[str, Union[bool, int, List[int], List[str], str]]
+type_db = List[type_entry_db]
 
 
 # The default profile for a new player being added to the database.
@@ -370,6 +370,8 @@ class Interface(object):
 
 
 class Minecraft(object):
+    suspensions = minecraft_suspension
+
     def __init__(self, client: PetalClientABC):
         self.client: PetalClientABC = client
         self.interface = Interface(self.client)
