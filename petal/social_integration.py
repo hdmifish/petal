@@ -5,6 +5,7 @@ It exists solely to be subclassed by CommandRouter to keep the code clean.
 """
 
 from datetime import datetime as dt
+from typing import Optional
 
 import discord
 import facebook
@@ -102,15 +103,18 @@ class Integrated:
             self.log.warn("No Tumblr keys found.")
 
     @staticmethod
-    def get_member_name(guild, member):
+    def get_member_name(guild: discord.Guild, uid: int) -> str:
         try:
-            m = guild.get_member(member).name
-            if m is None:
-                m = member
-        except AttributeError:
-            m = member
+            member: Optional[discord.Member] = guild.get_member(uid)
 
-        return m
+        except AttributeError:
+            return str(uid)
+
+        else:
+            if member is None:
+                return str(uid)
+            else:
+                return member.display_name
 
     async def check_pa_updates(self, force=False):
         if force:
@@ -128,7 +132,7 @@ class Integrated:
                 difference = (
                     dt.utcnow() - dt.strptime(str(last_run), "%Y-%m-%d %H:%M:%S.%f")
                 ).total_seconds()
-                self.log.f("pa", "Difference: " + str(difference))
+                self.log.f("pa", f"Difference: {difference}")
                 if difference < 86400:
                     return
                 else:
@@ -146,31 +150,25 @@ class Integrated:
 
         else:
             try:
+                chan: Optional[discord.TextChannel] = self.client.get_channel(
+                    self.config.get("motdChannel")
+                )
+
                 em = discord.Embed(
                     title="Patch Asks",
-                    description="Today Patch asks: \n " + response["content"],
+                    description=f"Today Patch asks: \n{response['content']}",
                     colour=0x0ACDFF,
                 )
 
-                msg = await self.client.embed(
-                    self.client.get_channel(self.config.get("motdChannel")), em
+                author_name = self.get_member_name(chan.guild, response["author"])
+                if not author_name.isdigit():
+                    em.set_footer(text=f"Submitted by {author_name}")
+
+                self.log.f(
+                    "pa", f"Going with entry: {response['num']} by {author_name}",
                 )
 
-                await self.client.send_message(
-                    msg.author,
-                    msg.channel,
-                    "*today's question was "
-                    + "written by "
-                    + self.get_member_name(msg.guild, response["author"])
-                    + "*",
-                )
-                self.log.f(
-                    "pa",
-                    "Going with entry: "
-                    + str(response["num"])
-                    + " by "
-                    + self.get_member_name(msg.guild, response["author"]),
-                )
+                await chan.send(embed=em)
 
             except KeyError:
-                self.log.f("pa", "Malformed entry, dumping: " + str(response))
+                self.log.f("pa", f"Malformed entry, dumping: {response}")
