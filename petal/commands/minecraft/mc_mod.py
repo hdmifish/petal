@@ -126,17 +126,24 @@ class CommandsMCMod(auth.CommandsMCAuth):
             else:
                 raise CommandOperationError("No Users found.")
 
-    async def cmd_wlrefresh(self, **_):
+    async def cmd_wlrefresh(self, _full: bool = False, **_):
         """Force an immediate rebuild of both the PlayerDB and the whitelist itself.
 
-        Syntax: `{p}wlrefresh`
+        Syntax: `{p}wlrefresh [OPTIONS]`
+
+        Options:
+            `--full` :: Do a complete rebuild, instead of simply checking for auto-suspensions.
         """
         yield "Rebuilding Database...", True
 
         with self.minecraft.db() as db:
-            await self.minecraft.rebuild()
+            if _full:
+                await self.minecraft.rebuild()
+
             for entry in db:
-                if self.client.main_guild.get_member(int(entry["discord"])):
+                id_discord: int = int(entry["discord"])
+
+                if self.client.main_guild.get_member(id_discord):
                     if entry["suspended"] == 104:
                         # User is in the Guild, but is Suspended for not being
                         #   in the Guild. Unset Suspension.
@@ -147,6 +154,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                     # User is not Suspended, but is also not in the Guild. Set
                     #   Suspension.
                     entry["suspended"] = 104
+                    yield f"Suspending {entry['name']!r}."
 
             self.minecraft.export()
 
