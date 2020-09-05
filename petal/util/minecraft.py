@@ -183,7 +183,7 @@ def make_lists(data: type_db, refresh: bool = False) -> Tuple[type_db, type_db]:
 
 
 def new_entry(
-    uuid_discord: str, *, uuid_mc: str = None, name_mc: str = None
+    uuid_discord: int, *, uuid_mc: str = None, name_mc: str = None
 ) -> type_entry_db:
     if uuid_mc is None and name_mc is None:
         raise TypeError("Entry requires either Username or UUID.")
@@ -203,17 +203,24 @@ def new_entry(
         hist.raise_for_status()
 
     new["uuid"] = uuid_mc
-    new["discord"] = str(uuid_discord)
+    new["discord"] = uuid_discord
     new["submitted"] = dt.utcnow().strftime("%Y-%m-%d_%0H:%M")
 
     return new
 
 
+def try_int(inp: str) -> Union[int, str]:
+    try:
+        return int(inp)
+    except:
+        return inp
+
+
 async def refresh_entry(old: type_entry_db) -> type_entry_db:
     await sleep(1)
     try:
-        new = new_entry(old["discord"], uuid_mc=old["uuid"])
-        new["approved"] = old["approved"]
+        new = new_entry(try_int(old["discord"]), uuid_mc=old["uuid"])
+        new["approved"] = [try_int(a) for a in old["approved"]]
         new["submitted"] = old["submitted"]
         new["suspended"] = old["suspended"] or 0
         new["operator"] = old["operator"]
@@ -406,7 +413,7 @@ class Minecraft(object):
                 title=title,
                 description=f"Minecraft Username: {escape(repr(profile.get('name')))}"
                 f"\nMinecraft UUID: `{profile.get('uuid')}`"
-                f"\nDiscord Identity: `{escape(userline(user) if user else uuid_discord)}`"
+                f"\nDiscord Identity: `{escape(userline(user) if user else str(uuid_discord))}`"
                 f"\nDiscord Tag: <@{uuid_discord}>",
                 colour=col,
             )

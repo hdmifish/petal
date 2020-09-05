@@ -74,7 +74,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
                     else:
                         yield f"Notified user `{userline(member)}` via DM."
                 else:
-                    yield f"User `{uuid}` not found."
+                    yield f"Cannot send a notification: User `{uuid}` not found."
 
     def cmd_wlquery(self, args, _verbose: bool = False, _v: bool = False, **_):
         """Take a string and finds any database entry that references it.
@@ -168,7 +168,7 @@ class CommandsMCMod(auth.CommandsMCAuth):
 
         with self.minecraft.db() as db:
             gone_users = [
-                (entry["discord"], entry["name"])
+                (str(entry["discord"]), entry["name"])
                 for entry in db
                 if self.client.main_guild.get_member(int(entry.get("discord"))) is None
             ]
