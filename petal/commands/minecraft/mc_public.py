@@ -46,7 +46,15 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                 card.add_field(
                     name="Alternate Accounts",
                     value="\n".join(
-                        "{name!r} (`{suspended}`)".format(**alt) for alt in alts
+                        "~~{!r}~~ **(SUSPENDED: {})**".format(
+                            alt["name"],
+                            self.minecraft.suspensions.get(alt["suspended"]),
+                        )
+                        if alt["suspended"]
+                        else repr(alt["name"])
+                        if alt["approved"]
+                        else f"*{alt['name']!r}* (PENDING)"
+                        for alt in alts
                     ),
                     inline=False,
                 )
