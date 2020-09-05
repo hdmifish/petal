@@ -11,4 +11,5 @@ UPDATE_TITLE="Shove this Data into your Base"
 CHANGELOG=$(cat <<'EOF'
 * New MC submissions automatically check for alts.
 = Fixed various issues with AutoUnban and Minecraft DBs.
+EOF
 )
