@@ -176,3 +176,7 @@ Since the last documented update:
 
 [v1.1.0] (2020-07-29)
 + Added !souls command, for randomly generating Messages from the Dark Souls series.
+
+[v1.1.1] (2020-09-04)
+* New MC submissions automatically check for alts.
+= Fixed various issues with AutoUnban and Minecraft DBs.

@@ -3,12 +3,12 @@
 # Not necessarily the prettiest but easy to work with.
 
 # Petal reads this line.
-VERSION="1.1.0"
+VERSION="1.1.1"
 
 #(optional) what the webhook message should say.
-UPDATE_TITLE="Scholar of the First STDIN"
+UPDATE_TITLE="Shove this Data into your Base"
 
 CHANGELOG=$(cat <<'EOF'
-+ Added !souls command, for randomly generating Messages from the Dark Souls series.
-EOF
+* New MC submissions automatically check for alts.
+= Fixed various issues with AutoUnban and Minecraft DBs.
 )
