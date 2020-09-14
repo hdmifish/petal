@@ -9,7 +9,6 @@ VERSION="1.1.1"
 UPDATE_TITLE="Shove this Data into your Base"
 
 CHANGELOG=$(cat <<'EOF'
-* New MC submissions automatically check for alts.
-= Fixed various issues with AutoUnban and Minecraft DBs.
+* Whitelist suspensions now handled automatically on Discord Join/Part.
 EOF
 )

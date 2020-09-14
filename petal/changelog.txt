@@ -180,3 +180,6 @@ Since the last documented update:
 [v1.1.1] (2020-09-04)
 * New MC submissions automatically check for alts.
 = Fixed various issues with AutoUnban and Minecraft DBs.
+
+[v1.1.2] (2020-09-14)
+* Whitelist suspensions now handled automatically on Discord Join/Part.
