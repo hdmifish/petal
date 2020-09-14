@@ -710,6 +710,22 @@ class Petal(PetalClientABC):
                 name="Welcome", value="No Welcome Message is configured.", inline=False
             )
 
+        with self.minecraft.db(str(member.id)) as mc:
+            to_okay: list = [entry for entry in mc if entry["suspended"] == 104]
+
+            if to_okay:
+                names: List[str] = []
+
+                for entry in to_okay:
+                    names.append(entry["name"])
+                    entry["suspended"] = 0
+
+                card.add_field(
+                    name="Unsuspending from Minecraft",
+                    value="\n".join(names),
+                    inline=False,
+                )
+
         await self.log_membership(embed=card)
 
     async def on_member_remove(self, member):
@@ -718,6 +734,22 @@ class Petal(PetalClientABC):
         card.set_author(
             name="Member Left", icon_url="https://puu.sh/tB7bp/f0bcba5fc5.png"
         )
+
+        with self.minecraft.db(str(member.id)) as mc:
+            to_suspend: list = [entry for entry in mc if not entry["suspended"]]
+
+            if to_suspend:
+                names: List[str] = []
+
+                for entry in to_suspend:
+                    names.append(entry["name"])
+                    entry["suspended"] = 104
+
+                card.add_field(
+                    name="Suspending from Minecraft",
+                    value="\n".join(names),
+                    inline=False,
+                )
 
         await self.log_membership(embed=card)
 
