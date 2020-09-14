@@ -330,6 +330,11 @@ class Petal(PetalClientABC):
         print("Giving database a chance to sync...")
         await asyncio.sleep(1)
 
+        with self.minecraft.db(str(member.id)) as mc:
+            for entry in mc:
+                if not entry["suspended"]:
+                    entry["suspended"] = 403
+
         if not self.db.member_exists(member):
             return
         banstate = self.db.get_attribute(member, "tempBanned")
