@@ -853,12 +853,27 @@ class CommandsPublic(core.Commands):
             else:
                 yield membership_card(target)
 
-    async def cmd_souls(self, **_):
+    async def cmd_souls(
+        self,
+        _ds1: bool = False,
+        _ds2: bool = False,
+        _ds3: bool = False,
+        _des: bool = False,
+        _bb: bool = False,
+        **_,
+    ):
         """Randomly generate a message that you might find in the Dark Souls
             series.
 
         The message may be in the format used by any of the three games. Also
             requires that a path to an executable is set in the bot config.
+
+        Options:
+        `--bb` :: Generate messages from Bloodborne.
+        `--des` :: Generate messages from Demon's Souls.
+        `--ds1` :: Generate messages from Dark Souls I.
+        `--ds2` :: Generate messages from Dark Souls II.
+        `--ds3` :: Generate messages from Dark Souls III.
         """
         binary = self.config.get("dsmsg_executable")
         if not binary:
@@ -866,7 +881,22 @@ class CommandsPublic(core.Commands):
                 "Sorry, I have not been set up with a path to dsmsg."
             )
 
-        proc = run(binary, stdout=PIPE)
+        dsmsg = [binary]
+
+        if _ds1:
+            dsmsg.append("--ds1")
+        if _ds2:
+            dsmsg.append("--ds2")
+        if _ds3:
+            dsmsg.append("--ds3")
+        if _des:
+            dsmsg.append("--des")
+        if _bb:
+            dsmsg.append("--bb")
+
+        print(repr(dsmsg))
+
+        proc = run(dsmsg, stdout=PIPE)
         if proc.returncode != 0:
             raise CommandOperationError("Sorry, something went wrong with dsmsg.")
 
