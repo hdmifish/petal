@@ -853,7 +853,7 @@ class CommandsPublic(core.Commands):
             else:
                 yield membership_card(target)
 
-    async def cmd_souls(
+    async def cmd_dsmsg(
         self,
         _ds1: bool = False,
         _ds2: bool = False,
@@ -878,7 +878,7 @@ class CommandsPublic(core.Commands):
         binary = self.config.get("dsmsg_executable")
         if not binary:
             raise CommandOperationError(
-                "Sorry, I have not been set up with a path to dsmsg."
+                "Sorry, I have not been set up with a path to `dsmsg`."
             )
 
         dsmsg = [binary]
