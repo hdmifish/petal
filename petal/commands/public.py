@@ -131,8 +131,6 @@ class CommandsPublic(core.Commands):
             raise CommandOperationError("Osu Support is not configured.")
         name = _set or _s
         if name:
-            osu = args[0] if args else src.author.name
-
             if not self.db.useDB:
                 raise CommandOperationError(
                     "Database is not enabled, so you can't save an osu name.\n"
@@ -141,10 +139,10 @@ class CommandsPublic(core.Commands):
                     )
                 )
 
-            self.db.update_member(src.author, {"osu": osu})
+            self.db.update_member(src.author, {"osu": name})
 
             return (
-                "You have set `{}` as your preferred OSU account. You can now"
+                "You have set `{}` as your preferred Osu account. You can now"
                 " run `{}osu` and it will use this name automatically!".format(
                     name, self.config.prefix
                 )
@@ -169,24 +167,49 @@ class CommandsPublic(core.Commands):
         else:
             user = self.router.osu.get_user(args[0])
             if user is None:
-                raise CommandInputError("No user found with Osu! name: " + args[0])
+                raise CommandInputError(f"No user found with Osu name: {args[0]}")
 
         em = discord.Embed(
             title=user.name,
-            description="https://osu.ppy.sh/u/{}".format(user.id),
+            description=f"https://osu.ppy.sh/u/{user.id}",
             colour=Color.info,
         )
 
         em.set_author(name="Osu Data", icon_url=self.client.user.avatar_url)
-        em.set_thumbnail(url="http://a.ppy.sh/" + user.id)
-        em.add_field(name="Maps Played", value="{:,}".format(int(user.playcount)))
-        em.add_field(name="Total Score", value="{:,}".format(int(user.total_score)))
-        em.add_field(name="Level", value=str(round(float(user.level), 2)), inline=False)
-        em.add_field(name="Accuracy", value=str(round(float(user.accuracy), 2)))
-        em.add_field(name="PP Rank", value="{:,}".format(int(user.rank)), inline=False)
+        em.set_thumbnail(url=f"https://a.ppy.sh/{user.id}")
         em.add_field(
-            name="Local Rank ({})".format(user.country),
-            value="{:,}".format(int(user.country_rank)),
+            name="Maps Played",
+            value=f"{int(user.playcount):,}" if user.playcount is not None else "None",
+        )
+        em.add_field(
+            name="Total Score",
+            value=f"{int(user.total_score):,}"
+            if user.total_score is not None
+            else "None",
+        )
+        em.add_field(
+            name="Level",
+            value=str(round(float(user.level), 2))
+            if user.level is not None
+            else "None",
+            inline=False,
+        )
+        em.add_field(
+            name="Accuracy",
+            value=str(round(float(user.accuracy), 2))
+            if user.accuracy is not None
+            else "None",
+        )
+        em.add_field(
+            name="PP Rank",
+            value=f"{int(user.rank):,}" if user.rank is not None else "None",
+            inline=False,
+        )
+        em.add_field(
+            name="Local Rank ({!r})".format(user.country),
+            value=f"{int(user.country_rank):,}"
+            if user.country_rank is not None
+            else "None",
         )
         return em
 
