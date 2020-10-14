@@ -577,23 +577,35 @@ class Petal(PetalClientABC):
             # Without a message to send, dont even try; it would just error
             return None
 
+        afters = set(" ,.…:¿?¡!")
+
         if (
             author is not None
+            and not set(message) <= afters & {"`"}
             and self.db.get_member(author) is not None
             and self.db.get_attribute(author, "ac")
         ):
             try:
-                ac = list(self.db.ac.find())
-                ac = ac[random.randint(0, len(ac) - 1)]["ending"]
+                ac = random.choice(list(self.db.ac.find()))["ending"]
+                blocks = ""
+                msg = message
+
+                while msg.endswith("```"):
+                    segment = msg.rsplit("```", 2)
+                    if len(segment) == 3 and segment[0] and not segment[2]:
+                        msg = segment[0]
+                        blocks = f"```{segment[1]}```{blocks}"
+
                 i = 0
-                while message[-(i + 1)] in " ,.…¿?¡!":
+                while msg[-(i + 1)] in afters:
                     i += 1
 
-                msg, end = (message[:-i], message[-i:]) if i > 0 else (message, "")
+                msg, end = (msg[:-i], msg[-i:]) if i > 0 else (msg, "")
             except:
                 pass
             else:
-                message = f"{msg}, {ac}{end}"
+                if msg:
+                    message = f"{msg}, {ac}{end}{blocks}"
 
         if self.dev_mode:
             message = f"[DEV]  {message}  [DEV]"

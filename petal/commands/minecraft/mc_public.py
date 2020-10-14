@@ -3,8 +3,10 @@ Access: Server Operators"""
 
 from typing import List
 
+from requests import HTTPError
+
 from petal.commands.minecraft import auth
-from petal.exceptions import CommandInputError
+from petal.exceptions import CommandInputError, CommandOperationError
 from petal.util.minecraft import new_entry, type_entry_db
 
 
@@ -26,7 +28,7 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                 f" Dinnerbone` :D"
             )
 
-        submission: str = args[0]
+        submission: str = " ".join(args)
         alts: List[type_entry_db] = []
 
         with self.minecraft.db() as db:
@@ -36,8 +38,14 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                 elif int(entry["discord"]) == src.author.id:
                     alts.append(entry)
             else:
-                entry_new = new_entry(src.author.id, name_mc=submission)
-                db.append(entry_new)
+                try:
+                    entry_new = new_entry(src.author.id, name_mc=submission)
+                except (HTTPError, RuntimeError) as e:
+                    raise CommandOperationError(
+                        "This does not seem to be a valid Minecraft username."
+                    ) from e
+                else:
+                    db.append(entry_new)
 
         try:
             card = self.minecraft.card(entry_new, True, title="New Whitelist Request")
@@ -46,8 +54,9 @@ class CommandsMCPublic(auth.CommandsMCAuth):
                 card.add_field(
                     name="Alternate Accounts",
                     value="\n".join(
-                        "~~{!r}~~ **(SUSPENDED: {})**".format(
+                        "~~{!r}~~ **(SUSPENDED: {} - {})**".format(
                             alt["name"],
+                            alt["suspended"],
                             self.minecraft.suspensions.get(alt["suspended"]),
                         )
                         if alt["suspended"]

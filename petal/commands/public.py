@@ -131,8 +131,6 @@ class CommandsPublic(core.Commands):
             raise CommandOperationError("Osu Support is not configured.")
         name = _set or _s
         if name:
-            osu = args[0] if args else src.author.name
-
             if not self.db.useDB:
                 raise CommandOperationError(
                     "Database is not enabled, so you can't save an osu name.\n"
@@ -141,10 +139,10 @@ class CommandsPublic(core.Commands):
                     )
                 )
 
-            self.db.update_member(src.author, {"osu": osu})
+            self.db.update_member(src.author, {"osu": name})
 
             return (
-                "You have set `{}` as your preferred OSU account. You can now"
+                "You have set `{}` as your preferred Osu account. You can now"
                 " run `{}osu` and it will use this name automatically!".format(
                     name, self.config.prefix
                 )
@@ -169,24 +167,49 @@ class CommandsPublic(core.Commands):
         else:
             user = self.router.osu.get_user(args[0])
             if user is None:
-                raise CommandInputError("No user found with Osu! name: " + args[0])
+                raise CommandInputError(f"No user found with Osu name: {args[0]}")
 
         em = discord.Embed(
             title=user.name,
-            description="https://osu.ppy.sh/u/{}".format(user.id),
+            description=f"https://osu.ppy.sh/u/{user.id}",
             colour=Color.info,
         )
 
         em.set_author(name="Osu Data", icon_url=self.client.user.avatar_url)
-        em.set_thumbnail(url="http://a.ppy.sh/" + user.id)
-        em.add_field(name="Maps Played", value="{:,}".format(int(user.playcount)))
-        em.add_field(name="Total Score", value="{:,}".format(int(user.total_score)))
-        em.add_field(name="Level", value=str(round(float(user.level), 2)), inline=False)
-        em.add_field(name="Accuracy", value=str(round(float(user.accuracy), 2)))
-        em.add_field(name="PP Rank", value="{:,}".format(int(user.rank)), inline=False)
+        em.set_thumbnail(url=f"https://a.ppy.sh/{user.id}")
         em.add_field(
-            name="Local Rank ({})".format(user.country),
-            value="{:,}".format(int(user.country_rank)),
+            name="Maps Played",
+            value=f"{int(user.playcount):,}" if user.playcount is not None else "None",
+        )
+        em.add_field(
+            name="Total Score",
+            value=f"{int(user.total_score):,}"
+            if user.total_score is not None
+            else "None",
+        )
+        em.add_field(
+            name="Level",
+            value=str(round(float(user.level), 2))
+            if user.level is not None
+            else "None",
+            inline=False,
+        )
+        em.add_field(
+            name="Accuracy",
+            value=str(round(float(user.accuracy), 2))
+            if user.accuracy is not None
+            else "None",
+        )
+        em.add_field(
+            name="PP Rank",
+            value=f"{int(user.rank):,}" if user.rank is not None else "None",
+            inline=False,
+        )
+        em.add_field(
+            name="Local Rank ({!r})".format(user.country),
+            value=f"{int(user.country_rank):,}"
+            if user.country_rank is not None
+            else "None",
         )
         return em
 
@@ -465,7 +488,7 @@ class CommandsPublic(core.Commands):
                 raise CommandOperationError("No definition found.")
 
     async def cmd_xkcd(
-        self, args: Args, src: Src, _explain: int = None, _e: int = None, **_
+        self, args: Args, _explain: int = None, _e: int = None, **_
     ):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
 
@@ -853,20 +876,50 @@ class CommandsPublic(core.Commands):
             else:
                 yield membership_card(target)
 
-    async def cmd_souls(self, **_):
+    async def cmd_dsmsg(
+        self,
+        _ds1: bool = False,
+        _ds2: bool = False,
+        _ds3: bool = False,
+        _des: bool = False,
+        _bb: bool = False,
+        **_,
+    ):
         """Randomly generate a message that you might find in the Dark Souls
             series.
 
         The message may be in the format used by any of the three games. Also
             requires that a path to an executable is set in the bot config.
+
+        Options:
+        `--bb` :: Generate messages from Bloodborne.
+        `--des` :: Generate messages from Demon's Souls.
+        `--ds1` :: Generate messages from Dark Souls I.
+        `--ds2` :: Generate messages from Dark Souls II.
+        `--ds3` :: Generate messages from Dark Souls III.
         """
         binary = self.config.get("dsmsg_executable")
         if not binary:
             raise CommandOperationError(
-                "Sorry, I have not been set up with a path to dsmsg."
+                "Sorry, I have not been set up with a path to `dsmsg`."
             )
 
-        proc = run(binary, stdout=PIPE)
+        dsmsg = [binary]
+
+        if _ds1:
+            dsmsg.append("--ds1")
+        if _ds2:
+            dsmsg.append("--ds2")
+        if _ds3:
+            dsmsg.append("--ds3")
+        if _des:
+            dsmsg.append("--des")
+        if _bb:
+            dsmsg.append("--bb")
+
+        print(repr(dsmsg))
+
+        proc = run(dsmsg, stdout=PIPE)
         if proc.returncode != 0:
             raise CommandOperationError("Sorry, something went wrong with dsmsg.")
 

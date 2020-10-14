@@ -183,3 +183,9 @@ Since the last documented update:
 
 [v1.1.2] (2020-09-14)
 * Whitelist suspensions now handled automatically on Discord Join/Part.
+
+[v1.1.3] (2020-10-14)
+* DSMSG Command now supports Options.
+= Fixed problems with OSU Command.
+= Fixed some potential issues with Minecraft names.
+= Revised Animal Crossing Mode to better handle Codeblocks.
