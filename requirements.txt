@@ -14,3 +14,4 @@ ruamel.yaml
 tweepy
 twitter
 wiktionaryparser
+future
