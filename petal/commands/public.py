@@ -488,7 +488,7 @@ class CommandsPublic(core.Commands):
                 raise CommandOperationError("No definition found.")
 
     async def cmd_xkcd(
-        self, args: Args, src: Src, _explain: int = None, _e: int = None, **_
+        self, args: Args, _explain: int = None, _e: int = None, **_
     ):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
 
