@@ -264,7 +264,7 @@ class DBHandler(object):
             mem["commands_count"] += 1
 
         if count > 0:
-            log.f("DBHandler", "Added {count} fields to {mem['name']}")
+            log.f("DBHandler", f"Added {count} fields to {mem['name']}")
 
         self.members.replace_one({"uid": m2id(member)}, mem, upsert=False)
 
