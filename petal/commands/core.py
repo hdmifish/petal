@@ -13,8 +13,8 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
+from petal.grasslands import Peacock
 from petal.types import Src, PetalClientABC, Printer
-
 
 view_icon = b"\xf0\x9f\x91\x81\xe2\x80\x8d\xf0\x9f\x97\xa8".decode("utf-8")
 # Pencil on paper:  F0 9F 93 9D
@@ -27,8 +27,8 @@ view_icon = b"\xf0\x9f\x91\x81\xe2\x80\x8d\xf0\x9f\x97\xa8".decode("utf-8")
 
 class CommandPending:
     """Class for storing a Command while it is executed. If it cannot be
-        executed, it will be saved for a set time limit. During that timeout
-        period, if the message is edited, the Command will attempt to rerun.
+    executed, it will be saved for a set time limit. During that timeout
+    period, if the message is edited, the Command will attempt to rerun.
     """
 
     def __init__(self, dict_, output, router, src: Src):
@@ -45,7 +45,7 @@ class CommandPending:
 
     async def run(self):
         """Try to execute this command. Return True if execution is carried out
-            successfully, False otherwise. Potentially, remove self.
+        successfully, False otherwise. Potentially, remove self.
         """
         if not self.active:
             # Command is not valid for execution. Cease.
@@ -159,7 +159,7 @@ class CommandPending:
 
     def stop_waiting(self):
         """Stop waiting for a rerun. This should not be called from anything
-            inside the Waiting Task, because it cancels it.
+        inside the Waiting Task, because it cancels it.
         """
         self.active = False
         if self._waiting and not self._waiting.done():
@@ -199,7 +199,7 @@ class Commands:
         self.db = client.db
 
         self.router = router
-        self.log = self.router.log
+        self.log: Peacock = self.router.log
 
         self.args = a  # Save for later
         self.kwargs = kw  # Just in case
@@ -287,7 +287,7 @@ class Commands:
 
     def get_member(self, src: Union[discord.Guild, Src], uuid):
         """Get a Discord Member object from an ID. First argument MUST be either
-            a Guild or a Message.
+        a Guild or a Message.
         """
         if isinstance(src, discord.Guild):
             return src.get_member(m2id(uuid))

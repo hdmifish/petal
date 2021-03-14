@@ -24,7 +24,6 @@ from petal.util.bits import bytes_to_braille, chunk
 from petal.util.embeds import Color
 from petal.util.messages import member_message_history
 
-
 # Reference: strftime.org
 tstring = "**`%H:%M`** %Z on %A, %B %d, %Y"
 helptext = [
@@ -313,7 +312,9 @@ class CommandsUtil(core.Commands):
                 )
                 if params:
                     em.add_field(
-                        name="Typed Parameters", value=params, inline=False,
+                        name="Typed Parameters",
+                        value=params,
+                        inline=False,
                     )
 
             em.set_author(name="Petal Info", icon_url=self.client.user.avatar_url)

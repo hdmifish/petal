@@ -105,7 +105,8 @@ class CommandsEvent(core.Commands):
             await menu.post()
 
         msgstr = yield ChatReply(
-            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)", 120,
+            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
+            120,
         )
         if not msgstr:
             # No reply.

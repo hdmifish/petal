@@ -20,7 +20,7 @@ class Integrated:
     def __init__(self, client):
         self.client = client
         self.config = client.config
-        self.log = Peacock()
+        self.log: Peacock = Peacock()
 
         key_osu = self.config.get("osu")
         if key_osu:

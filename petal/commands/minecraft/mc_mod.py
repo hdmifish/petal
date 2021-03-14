@@ -11,7 +11,6 @@ from petal.types import Src
 from petal.util.fmt import escape, userline
 from petal.util.grammar import sequence_words
 
-
 wlpm = "You have been whitelisted on the Patch Minecraft server :D Remember that the Server Address is `minecraft.patchgaming.org`, and note that it may take up to 60 seconds to take effect."
 
 
@@ -48,7 +47,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
                                 send[entry["discord"]].append(entry["name"])
 
                             entry["approved"].append(str(src.author.id))
-                            yield self.minecraft.card(entry, title="Application Approved")
+                            yield self.minecraft.card(
+                                entry, title="Application Approved"
+                            )
                         else:
                             yield f"You have already approved {escape(entry['name'])!r}."
             self.minecraft.export()
@@ -228,7 +229,9 @@ class CommandsMCMod(auth.CommandsMCAuth):
         if len(args) > 2:
             raise CommandArgsError("Only one note can be added to a profile at a time.")
         elif len(args) < 2:
-            raise CommandArgsError("Provide one profile identifier and one (quoted) note.")
+            raise CommandArgsError(
+                "Provide one profile identifier and one (quoted) note."
+            )
 
         target, note = args
 

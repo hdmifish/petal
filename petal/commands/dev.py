@@ -2,8 +2,8 @@
 Access: Config Whitelist
 """
 
-from petal.commands import core
 from petal.checks import all_checks, Messages
+from petal.commands import core
 from petal.exceptions import CommandArgsError, CommandInputError
 from petal.menu import Menu
 from petal.util import fmt, questions
@@ -60,9 +60,7 @@ class CommandsMaintenance(core.Commands):
 
         # Ensure that enough arguments have been supplied.
         if (mode != "list" and not args) or (mode == "add" and len(args) < 2):
-            raise CommandInputError(
-                f"Subcommand `{mode}` requires more arguments."
-            )
+            raise CommandInputError(f"Subcommand `{mode}` requires more arguments.")
 
         aliases = self.config.get("aliases")
         p = self.config.prefix

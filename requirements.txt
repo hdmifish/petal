@@ -10,6 +10,7 @@ pytz
 pyNaCL
 python-twitter
 requests
+requests-cache
 ruamel.yaml
 tweepy
 twitter

@@ -60,6 +60,7 @@ Thanks to all 3 of y'all for your patience with me.
 [v0.5.0.6] (8/16/18)
 Petal has been doing very well. Except for the teensy weensy problem of some commands not sticking. So I have added better logging to grasslands.py in an attempt to figure out what's wrong.
 Asynchronous prints are a pain.
+
 [v0.5.0.8] (8/29/18)
 Pip 10.0 broke embedded pip so I converted the autoupdater to subprocess as suggested by the docs. This should be more thread-friendly anyway.
 As well, DAV made a critical commit of removing 8 spaces from grasslands.py which should make things significantly faster.
@@ -171,7 +172,7 @@ Since the last documented update:
 - Trimmed many imports.
 = Fixed "issue" with !time reversing offsets relative to GMT because of the PyTZ developer not understanding how standards are meant to work.
 
-[v1.0.1] (2020-05-02)
+[v1.0.1] (2020-05-02)cd
 = Minor stability/usability fixes.
 
 [v1.1.0] (2020-07-29)
@@ -189,3 +190,15 @@ Since the last documented update:
 = Fixed problems with OSU Command.
 = Fixed some potential issues with Minecraft names.
 = Revised Animal Crossing Mode to better handle Codeblocks.
+
+[v1.1.4] (2021-03-13)
+Good afternoon! It has been a while since I've written one of these. Hope you're doing well.
+Time dilation sure has been odd these past couple years. It's been a month since the pandemic turned into a lockdown in the US
+and while we have made progress, it still feels like we are in an endless maze of moving goalposts and deja-vu news bulletins.
+At least it's sunny again, which means the workdesk smells more like summer each day and less like Febreze and Takeout, and that's
+progress.
+
++ Added LazyMath (Unit Conversions)
++ Added LazyMoney (Exchange Rates + Crypto)
+* Spooky Clock and Santa Clock are now year-aware.
+= Fixed DBHandler not properly creating new users. Should reduce log spam.
