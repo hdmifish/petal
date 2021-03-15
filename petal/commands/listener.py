@@ -12,7 +12,7 @@ class CommandsListener(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "RoleListener"
 
-    async def cmd_lpromote(self, src, _user: str="", **_):
+    async def cmd_lpromote(self, src, _user: str = "", **_):
 
         if not _user:
             await self.client.send_message(
@@ -63,7 +63,7 @@ class CommandsListener(core.Commands):
                 + "lcancel (not to be confused with smash bros)"
             )
 
-    async def cmd_ldemote(self, src, _user: str="", **_):
+    async def cmd_ldemote(self, src, _user: str = "", **_):
         if not _user:
             await self.client.send_message(
                 src.author, src.channel, "Who would you like to demote?"
@@ -141,7 +141,7 @@ class CommandsListener(core.Commands):
         self.config.save()
         return "Deleted all lvotes if you had started any"
 
-    async def cmd_lvalidate(self, src, _user: str="", **_):
+    async def cmd_lvalidate(self, src, _user: str = "", **_):
         """
         Ends a vote and promotes/demotes user. Can be used prematurely
         !lvalidate <optional: tagged user>
@@ -227,7 +227,7 @@ class CommandsListener(core.Commands):
                         )
                     else:
                         return (
-                                _user.name + " has been made a member of Helping Hands."
+                            _user.name + " has been made a member of Helping Hands."
                             "\nThey must accept the invite by following the instruction I just sent them"
                         )
 
@@ -275,8 +275,8 @@ class CommandsListener(core.Commands):
                         )
                     else:
                         return (
-                                _user.name
-                                + " has been made a Helping Hands!\nThey must accept"
+                            _user.name
+                            + " has been made a Helping Hands!\nThey must accept"
                             " the invite by following the instruction I just sent them"
                         )
 
@@ -359,9 +359,9 @@ class CommandsListener(core.Commands):
 
     async def cmd_lshow(self, src, **_):
         """
-       If you were voted to be a Helping Hands, running this command will reject the offer.
-       !lreject
-       """
+        If you were voted to be a Helping Hands, running this command will reject the offer.
+        !lreject
+        """
         cb = self.config.get("choppingBlock")
 
         if "choppingBlock" not in self.config.doc:

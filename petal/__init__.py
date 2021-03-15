@@ -5,12 +5,12 @@ written by isometricramen
 """
 
 import asyncio
-from datetime import datetime, timedelta
-from difflib import unified_diff
-from itertools import dropwhile
 import random
 import re
 import time
+from datetime import datetime, timedelta
+from difflib import unified_diff
+from itertools import dropwhile
 from traceback import format_exc
 from typing import (
     AsyncGenerator,
@@ -43,7 +43,6 @@ from petal.util.fmt import escape, mask, mono, mono_block, userline
 from petal.util.grammar import pluralize
 from petal.util.minecraft import Minecraft
 from petal.util.numbers import word_number
-
 
 short_time: timedelta = timedelta(seconds=10)
 log = grasslands.Peacock()
@@ -236,7 +235,9 @@ class Petal(PetalClientABC):
             for entry in await mainguild.bans():
                 user = entry.user
                 # log.f("UNBANS", m.name + "({})".format(m.id))
-                ban_expiry: int = int(self.db.get_attribute(user, "banExpires", verbose=False) or 0)
+                ban_expiry: int = int(
+                    self.db.get_attribute(user, "banExpires", verbose=False) or 0
+                )
 
                 if not ban_expiry or not self.db.get_attribute(user, "tempBanned"):
                     continue
@@ -295,9 +296,9 @@ class Petal(PetalClientABC):
 
     async def dig_tunnel(self, origin, *channels: List[int], anon=False):
         """Create a new Tunnel.
-            The first Positional Argument is the Origin Channel, the Channel to
-            which to report back in case of problems. All subsequent Positional
-            Arguments are Integer IDs.
+        The first Positional Argument is the Origin Channel, the Channel to
+        which to report back in case of problems. All subsequent Positional
+        Arguments are Integer IDs.
         """
         new = Tunnel(self, origin, *channels, anon)
         try:
@@ -696,6 +697,8 @@ class Petal(PetalClientABC):
                         )
             else:
                 # We have no previous record of this User.
+                if not isinstance(member, discord.Member):
+                    member = self.main_guild.get_member(member.id)
                 self.db.add_member(member)
                 card.set_author(name="New Member")
 
@@ -929,7 +932,8 @@ class Petal(PetalClientABC):
             )
 
         em.add_field(
-            name="Channel", value=f"`#{before.channel.name}`\n{before.channel.mention}",
+            name="Channel",
+            value=f"`#{before.channel.name}`\n{before.channel.mention}",
         ).add_field(name="Guild", value=before.guild.name).add_field(
             name="────────────",
             value=mask(after.jump_url, "Jump to Message"),
@@ -1125,16 +1129,12 @@ class Petal(PetalClientABC):
                     },
                     type=1,
                 )
-
-                self.db.update_member(
-                    message.author,
-                    {
-                        "message_count": self.db.get_attribute(
-                            message.author, "message_count"
-                        )
-                        + 1
-                    },
-                )
+                m_count = self.db.get_attribute(message.author, "message_count")
+                if m_count is not None:
+                    self.db.update_member(
+                        message.author,
+                        {"message_count": m_count + 1},
+                    )
         except Exception as e:
             log.err("{} on Message: {}".format(type(e).__name__, str(e)))
 
