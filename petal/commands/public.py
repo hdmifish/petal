@@ -934,16 +934,16 @@ class CommandsPublic(core.Commands):
         Syntax: `{p}lazymath [number]`
         """
         if not args:
-            return "Give me numbers. Try again (or edit your message) to have a number"
+            raise CommandArgsError("Give me numbers. Try again (or edit your message) to have a number")
 
         i = args[0]
         if len(i) > 12:
-            return "Number must be an integer, or float, with less than 12 characters"
+            CommandArgsError("Number must be an integer, or float, with less than 12 characters")
 
         try:
             i = float(i)
         except ValueError:
-            return "Number must be a valid integer or float"
+            CommandArgsError("Number must be a valid integer or float")
 
         em = discord.Embed(
             title=f"Lazy Math for: {i}",
@@ -990,7 +990,7 @@ class CommandsPublic(core.Commands):
         """
 
         if not args:
-            return "Please provide a value to convert.\mOptionally, put a currency symbol (3 or 4 digits) first and then a value"
+            raise CommandArgsError("Please provide a value to convert.\nOptionally, put a currency symbol (3 or 4 digits) first and then a value")
 
         if len(args) > 0:
             isym = "USD"
@@ -1006,7 +1006,7 @@ class CommandsPublic(core.Commands):
             val = args[2]
 
         if len(val) > 12:
-            return "This number is a bit long, please choose a shorter one."
+            raise CommandArgsError("This number is a bit long, please choose a shorter one.")
 
         try:
             val = float(val)
@@ -1060,7 +1060,7 @@ class CommandsPublic(core.Commands):
                 f"https://api-pn.playerauctions.com/markettracker/api/WoW/CurrencyOrder"
             )
             if r.status_code != 200:
-                return "World of Warcraft conversion api did not return a valid result. Please try again later"
+                raise CommandOperationError("World of Warcraft conversion api did not return a valid result. Please try again later")
 
             rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 200.00
             em = discord.Embed(
@@ -1093,7 +1093,7 @@ class CommandsPublic(core.Commands):
             if r.from_cache:
                 self.log.f("Money", "Using cached response for playerauctions.com")
             if r.status_code != 200:
-                return "Old School Runescape conversion api did not return a valid result. Please try again later"
+                raise CommandOperationError("Old School Runescape conversion api did not return a valid result. Please try again later")
 
             rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 30.00
 
@@ -1128,7 +1128,7 @@ class CommandsPublic(core.Commands):
             if r.from_cache:
                 self.log.f("Money", "Using cached response for playerauctions.com")
             if r.status_code != 200:
-                return "Animal Crossing Bells conversion api did not return a valid result. Please try again later"
+                raise CommandOperationError("Animal Crossing Bells conversion api did not return a valid result. Please try again later")
 
             rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 5.00
 
@@ -1157,7 +1157,7 @@ class CommandsPublic(core.Commands):
             return em
 
         if not all([v for v in [isym, osym] if v in crypto_cur + normal_cur]):
-            return "One or both of the inputs are not valid. Use the `help lazymoney` command for a list of valid currency symbols"
+            raise CommandArgsError("One or both of the inputs are not valid. Use the `help lazymoney` command for a list of valid currency symbols")
 
         if any([v for v in [isym, osym] if v in crypto_cur]):
             if len(args) == 1:
@@ -1171,7 +1171,7 @@ class CommandsPublic(core.Commands):
                 if r.from_cache:
                     self.log.f("Money", "Using cached response for cryptocompare.com")
                 if r.status_code != 200:
-                    return "Crypto API did not return a valid result. Please try again later"
+                    raise CommandOperationError("Crypto API did not return a valid result. Please try again later")
                 rate = 1 / r.json()[isym]
 
             if osym in crypto_cur:
@@ -1181,7 +1181,7 @@ class CommandsPublic(core.Commands):
                 if r.from_cache:
                     self.log.f("Money", "Using cached response for cryptocompare.com")
                 if r.status_code != 200:
-                    return "Crypto API did not return a valid result. Please try again later"
+                    raise CommandOperationError("Crypto API did not return a valid result. Please try again later")
                 rate = r.json()[osym]
 
             em = discord.Embed(
@@ -1200,7 +1200,7 @@ class CommandsPublic(core.Commands):
         if r.from_cache:
             self.log.f("Money", "Using cached response for exchangeratesapi.io")
         if r.status_code != 200:
-            return "Exchange Rate API did not return a valid result. Please try again later"
+            raise CommandOperationError("Exchange Rate API did not return a valid result. Please try again later")
 
         rate = r.json()["rates"][osym]
         em = discord.Embed(
