@@ -883,13 +883,14 @@ class CommandsPublic(core.Commands):
         _ds3: bool = False,
         _des: bool = False,
         _bb: bool = False,
+        _sek: bool = False,
         **_,
     ):
-        """Randomly generate a message that you might find in the Dark Souls
-            series.
+        """Randomly generate a message that you might find in games by
+            FromSoftware.
 
-        The message may be in the format used by any of the three games. Also
-            requires that a path to an executable is set in the bot config.
+        The message may be in the format used by any of the games. Also requires
+            that a path to an executable is set in the bot config.
 
         Options:
         `--bb` :: Generate messages from Bloodborne.
@@ -897,6 +898,7 @@ class CommandsPublic(core.Commands):
         `--ds1` :: Generate messages from Dark Souls I.
         `--ds2` :: Generate messages from Dark Souls II.
         `--ds3` :: Generate messages from Dark Souls III.
+        `--sek` :: Generate messages from Sekiro.
         """
         binary = self.config.get("dsmsg_executable")
         if not binary:
@@ -916,6 +918,8 @@ class CommandsPublic(core.Commands):
             dsmsg.append("--des")
         if _bb:
             dsmsg.append("--bb")
+        if _sek:
+            dsmsg.append("--sek")
 
         print(repr(dsmsg))
 
