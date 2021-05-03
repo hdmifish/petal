@@ -67,7 +67,7 @@ class Petal(PetalClientABC):
 
     def __init__(self, devmode=False):
         try:
-            super().__init__()
+            super().__init__(intents=discord.Intents.all())
         except Exception as e:
             log.err(f"Could not initialize client object: {e}")
         else:
