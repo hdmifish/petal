@@ -106,6 +106,9 @@ mc_channel: '0000000000000'
 welcomeMessage: 'null'
 
 modChannel: '0'
+eventCategory: 0
+mainChatCategory: 0
+defaultEventChannelPosition: 7
 mainServer: '0'
 mainRole: Member
 mainRoleId: 12345
