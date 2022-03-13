@@ -915,14 +915,14 @@ class CommandsPublic(core.Commands):
 
         if _bb:
             dsmsg.append("--bb")
+        if _des:
+            dsmsg.append("--des")
         if _ds1:
             dsmsg.append("--ds1")
         if _ds2:
             dsmsg.append("--ds2")
         if _ds3:
             dsmsg.append("--ds3")
-        if _des:
-            dsmsg.append("--des")
         if _er:
             dsmsg.append("--er1")
         if _sek:
