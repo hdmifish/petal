@@ -879,11 +879,14 @@ class CommandsPublic(core.Commands):
 
     async def cmd_dsmsg(
         self,
+        # NOTE: Change to `_bb1` upon announcement of Bloodborne II.
+        _bb: bool = False,
         _ds1: bool = False,
         _ds2: bool = False,
         _ds3: bool = False,
         _des: bool = False,
-        _bb: bool = False,
+        # NOTE: Change to `_er1` upon announcement of Elden Ring II.
+        _er: bool = False,
         _sek: bool = False,
         **_,
     ):
@@ -894,11 +897,12 @@ class CommandsPublic(core.Commands):
             that a path to an executable is set in the bot config.
 
         Options:
-        `--bb` :: Generate messages from Bloodborne.
+        `--bb`  :: Generate messages from Bloodborne.
         `--des` :: Generate messages from Demon's Souls.
         `--ds1` :: Generate messages from Dark Souls I.
         `--ds2` :: Generate messages from Dark Souls II.
         `--ds3` :: Generate messages from Dark Souls III.
+        `--er`  :: Generate messages from Elden Ring.
         `--sek` :: Generate messages from Sekiro.
         """
         binary = self.config.get("dsmsg_executable")
@@ -909,6 +913,8 @@ class CommandsPublic(core.Commands):
 
         dsmsg = [binary]
 
+        if _bb:
+            dsmsg.append("--bb")
         if _ds1:
             dsmsg.append("--ds1")
         if _ds2:
@@ -917,8 +923,8 @@ class CommandsPublic(core.Commands):
             dsmsg.append("--ds3")
         if _des:
             dsmsg.append("--des")
-        if _bb:
-            dsmsg.append("--bb")
+        if _er:
+            dsmsg.append("--er1")
         if _sek:
             dsmsg.append("--sek")
 
