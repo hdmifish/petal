@@ -1,7 +1,8 @@
 # 2017 John Shell
-import discord
 from datetime import datetime, timezone
 from random import randint as rand
+
+import discord
 import pytz
 
 from .grasslands import Peacock
@@ -132,9 +133,12 @@ class DBHandler(object):
             }
 
             try:
-                data["guilds"] = [member.server.id]
+                data["guilds"] = [member.guild.id]
             except AttributeError:
-                log.f("dbhandler", "user type object, cannot add server attribute")
+                log.f(
+                    "dbhandler",
+                    f"{member.name} is a User type object, cannot add server attribute",
+                )
 
             if isinstance(member, discord.Member):
                 data["server_date"] = ts(member.joined_at)
@@ -143,8 +147,7 @@ class DBHandler(object):
                 data["aliases"].append(member.display_name)
 
             pid = self.members.insert_one(data).inserted_id
-            if verbose:
-                log.f("DBhandler", f"New member added to DB! (_id: {pid})")
+            log.f("DBhandler", f"New member added to DB! (_id: {pid})")
             return True
 
     def get_member(self, member):
@@ -199,8 +202,8 @@ class DBHandler(object):
         if data is None:
             log.f("DBhandler", "Please provide data first!")
             return False
-        if not self.member_exists(member):
-            self.add_member(member)
+
+        self.add_member(member)
 
         # mem: MONGO DOCUMENT (as python dict)
         mem = self.get_member(member)

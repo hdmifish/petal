@@ -1,15 +1,14 @@
-from datetime import datetime as dt
 import getopt
 import importlib
-from re import compile
 import sys
+from datetime import datetime as dt
+from re import compile
 from typing import Dict, get_type_hints, List, Optional, Tuple
 
 from petal.etc import check_types, split, unquote
 from petal.exceptions import CommandArgsError, CommandAuthError
 from petal.social_integration import Integrated
 from petal.types import Args, Src
-
 
 # List of modules to load; All Command-providing modules should be included (NOT "core").
 # Order of this list is the order in which commands will be searched. First occurrence
@@ -185,8 +184,8 @@ class CommandRouter(Integrated):
 
     async def route(self, command: str, src: Src):
         """Route a command (and the source message) to the correct method of the
-            correct module. By this point, the prefix should have been stripped
-            away already, leaving a plaintext command.
+        correct module. By this point, the prefix should have been stripped
+        away already, leaving a plaintext command.
         """
         command = _unquote(command)
         try:

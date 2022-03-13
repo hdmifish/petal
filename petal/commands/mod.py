@@ -2,9 +2,9 @@
 Access: Role-based"""
 
 import asyncio
+import time
 from datetime import datetime as dt, timedelta
 from operator import attrgetter
-import time
 from typing import Sequence
 
 import discord
@@ -278,7 +278,7 @@ class CommandsMod(core.Commands):
                     _reason,
                     response.content,
                     userToBan.name + userToBan.discriminator,
-                    str(userToBan.id)
+                    str(userToBan.id),
                 )
             except Exception as e:
                 self.log.err(
@@ -715,7 +715,7 @@ class CommandsMod(core.Commands):
                         "`[BOT]` " if member.bot else "",
                         member.nick or member.name,
                         len(message.clean_content),
-                    )
+                    ),
                 )
                 .set_author(icon_url=channel.guild.icon_url, name="#" + channel.name)
                 .set_footer(text=f"{member.name}#{member.discriminator} / {member.id}")

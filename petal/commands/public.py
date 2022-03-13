@@ -1,15 +1,16 @@
 """Commands module for PUBLIC COMMANDS.
 Access: Public"""
 
-from datetime import datetime as dt
 import json
-from random import choice, randint
 import re
+from datetime import datetime as dt
+from random import choice, randint
 from subprocess import PIPE, run
 
-from bs4 import BeautifulSoup
 import discord
 import requests
+import requests_cache
+from bs4 import BeautifulSoup
 
 from petal.commands import core
 from petal.exceptions import (
@@ -23,8 +24,8 @@ from petal.types import Args, Src
 from petal.util import dice
 from petal.util.embeds import Color, membership_card
 
-
 link = re.compile(r"\b\w{1,8}://\S+\.\w+\b")
+requests_cache.install_cache("lazy_money_cache", expire_after=1800)
 
 
 class CommandsPublic(core.Commands):
@@ -487,9 +488,7 @@ class CommandsPublic(core.Commands):
             else:
                 raise CommandOperationError("No definition found.")
 
-    async def cmd_xkcd(
-        self, args: Args, _explain: int = None, _e: int = None, **_
-    ):
+    async def cmd_xkcd(self, args: Args, _explain: int = None, _e: int = None, **_):
         """Display a comic from XKCD. If no number is specified, pick one randomly.
 
         Syntax: `{p}xkcd [<int>]`
@@ -803,7 +802,8 @@ class CommandsPublic(core.Commands):
 
     async def cmd_spookyclock(self, **_):
         """Be careful, Skeletons are closer than you think..."""
-        td = (dt(2020, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
+        today = dt.today()
+        td = (dt(today.year, 10, 31, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return ":ghost: Beware! The skeletons are already here! :ghost:"
         d = divmod(td, 86400)
@@ -818,7 +818,8 @@ class CommandsPublic(core.Commands):
 
     async def cmd_santaclock(self, **_):
         """How long is it till you have to buy people nerdy tshirts?"""
-        td = (dt(2019, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
+        today = dt.today()
+        td = (dt(today.year, 12, 25, 0, 0) - dt.utcnow()).total_seconds()
         if td < 0:
             return (
                 "Christmas already happened...Gotta wait a bit more for"
@@ -837,7 +838,7 @@ class CommandsPublic(core.Commands):
 
     async def cmd_trees(self, **_):
         """how many trees has the internet planted?"""
-        ua = {"User-Agent": "Petal-beta/python3.7 DiscordBot"}
+        ua = {"User-Agent": "Petal/python3.7 DiscordBot"}
         raw = requests.get("https://teamtrees.org", headers=ua).text
         bs = BeautifulSoup(raw, features="html.parser")
         tag = bs.find("div", {"id": "totalTrees"})
@@ -930,6 +931,291 @@ class CommandsPublic(core.Commands):
         return "You seek out guidance from another world...```\n{}```".format(
             proc.stdout.decode()
         )
+
+    async def cmd_lazymath(self, args, src: Src, **_):
+        """Converter for all your basic unit conversions
+
+        Syntax: `{p}lazymath [number]`
+        """
+        if not args:
+            raise CommandArgsError("Give me numbers. Try again (or edit your message) to have a number")
+
+        i = args[0]
+        if len(i) > 12:
+            CommandArgsError("Number must be an integer, or float, with less than 12 characters")
+
+        try:
+            i = float(i)
+        except ValueError:
+            CommandArgsError("Number must be a valid integer or float")
+
+        em = discord.Embed(
+            title=f"Lazy Math for: {i}",
+            colour=src.author.colour,
+            description="(Rounded to 3 places)",
+        )
+
+        ctof = i * 1.800 + 32.000
+        ftoc = (i - 32.000) / 1.800
+        mtok = i * 1.609
+        ktom = i / 1.609
+        ftom = i / 3.281
+        mtof = i * 3.281
+        ltok = i / 2.205
+        ktol = i * 2.205
+
+        em.add_field(name="C to F", value=str(round(ctof, 3)) + " F°", inline=True)
+        em.add_field(name="F to C", value=str(round(ftoc, 3)) + " C°", inline=True)
+        em.add_field(name="\u200B", value="\u200B")
+        em.add_field(
+            name="MPH to KPH", value=str(round(mtok, 3)) + " km/h", inline=True
+        )
+        em.add_field(name="KPH to MPH", value=str(round(ktom, 3)) + " MPH", inline=True)
+        em.add_field(name="\u200B", value="\u200B")
+        em.add_field(
+            name="Ft to M", value=str(round(ftom, 3)) + " Metre(s)", inline=True
+        )
+        em.add_field(name="M to Ft", value=str(round(mtof, 3)) + " Feet", inline=True)
+        em.add_field(name="\u200B", value="\u200B")
+        em.add_field(name="Lb to Kg", value=str(round(ltok, 3)) + " Kg", inline=True)
+        em.add_field(name="Kg to Lb", value=str(round(ktol, 3)) + " Lbs", inline=True)
+        em.add_field(name="\u200B", value="\u200B")
+
+        return em
+
+    async def cmd_lazymoney(self, args, src: Src, **_):
+        """Get up to date exchange information for a given monetary amount Valid Currency Codes: AUD, BGN, BRL, BTC,
+        CAD, CHF, CNY, CZK, DKK, DOGE, ETH, ETC, EUR, GBP, HKD, HRK, HUF, IDR, ILS, INR, IOTA, ISK, JPY, KRW, LITE,
+        MXN, MYR, NOK, NZD, OSRS, PHP, PLN,RON, RUB, RPL, SEK, SGD, THB, TRY, USD, WOW, XRP, ZAR
+
+        Currency values are cached for 30 minutes
+
+        Syntax: `{p}lazymoney [FROM KEY] [TO KEY] <value>`
+        """
+
+        if not args:
+            raise CommandArgsError("Please provide a value to convert.\nOptionally, put a currency symbol (3 or 4 digits) first and then a value")
+
+        if len(args) > 0:
+            isym = "USD"
+            osym = args[0].upper()
+            val = "1.00"
+
+        if len(args) > 1:
+            isym = args[0].upper()
+            osym = args[1].upper()
+            val = "1.00"
+
+        if len(args) > 2:
+            val = args[2]
+
+        if len(val) > 12:
+            raise CommandArgsError("This number is a bit long, please choose a shorter one.")
+
+        try:
+            val = float(val)
+        except ValueError:
+            return "If you are only supplying a value, you will need it to be a valid float"
+
+        if len(isym) not in [3, 4] or len(osym) not in [3, 4]:
+            return "Valid symbols are 3 or 4 characters long"
+
+        crypto_cur = ["BTC", "DOGE", "ETC", "ETH", "LTC", "NEO", "RPL", "XRP", "IOTA"]
+        normal_cur = [
+            "AUD",
+            "BELL",
+            "BGN",
+            "BRL",
+            "CAD",
+            "CHF",
+            "CNY",
+            "CZK",
+            "DKK",
+            "EUR",
+            "GBP",
+            "HKD",
+            "HRK",
+            "HUF",
+            "IDR",
+            "ILS",
+            "INR",
+            "ISK",
+            "JPY",
+            "KRW",
+            "MXN",
+            "MYR",
+            "NOK",
+            "NZD",
+            "PHP",
+            "PLN",
+            "RON",
+            "RUB",
+            "SEK",
+            "SGD",
+            "THB",
+            "TRY",
+            "USD",
+            "ZAR",
+        ]
+        gamer_cur = ["OSRS", "WOW", "BELL"]
+
+        if isym == "WOW" or osym == "WOW":
+            r = requests.get(
+                f"https://api-pn.playerauctions.com/markettracker/api/WoW/CurrencyOrder"
+            )
+            if r.status_code != 200:
+                raise CommandOperationError("World of Warcraft conversion api did not return a valid result. Please try again later")
+
+            rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 200.00
+            em = discord.Embed(
+                title="World of Warcraft (US)",
+                colour=src.author.colour,
+                description=f"200K Gold per {rate} USD",
+            )
+
+            if osym == "WOW":
+                rate = 1.00 / rate
+                em.add_field(
+                    name=f"{val} USD to WOW",
+                    value=str(round(val * rate * 200.00, 2)) + "K gold",
+                )
+            else:
+                em.add_field(
+                    name=f"{val} WOW to USD",
+                    value=str(round(val * rate / 200000.00, 2)) + " USD",
+                )
+
+            em.set_footer(
+                text="Note, OSRS and WOW symbols can only be converted to USD at the moment"
+            )
+            return em
+
+        if isym == "OSRS" or osym == "OSRS":
+            r = requests.get(
+                f"https://api-pn.playerauctions.com/markettracker/api/OSRS/CurrencyOrder"
+            )
+            if r.from_cache:
+                self.log.f("Money", "Using cached response for playerauctions.com")
+            if r.status_code != 200:
+                raise CommandOperationError("Old School Runescape conversion api did not return a valid result. Please try again later")
+
+            rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 30.00
+
+            em = discord.Embed(
+                title="Old School Runescape",
+                colour=src.author.colour,
+                description=f"Rate per 30M GP: {rate} USD",
+            )
+
+            if osym == "OSRS":
+                rate = 1.00 / rate
+                em.add_field(
+                    name=f"{val} USD to OSRS",
+                    value=str(round(val * rate * 30.00, 2)) + "M GP",
+                )
+            else:
+
+                em.add_field(
+                    name=f"{val} OSRS to USD",
+                    value=str(round(val * rate / 30000000.00, 2)) + " USD",
+                )
+
+            em.set_footer(
+                text="Note, OSRS and WOW symbols can only be converted to USD at the moment"
+            )
+            return em
+
+        if isym == "BELL" or osym == "BELL":
+            r = requests.get(
+                f"https://api-pn.playerauctions.com/markettracker/api/Animal-Crossing-NH/CurrencyOrder"
+            )
+            if r.from_cache:
+                self.log.f("Money", "Using cached response for playerauctions.com")
+            if r.status_code != 200:
+                raise CommandOperationError("Animal Crossing Bells conversion api did not return a valid result. Please try again later")
+
+            rate = r.json()["Result"]["AvgOrderPrice"]["USD"] * 5.00
+
+            em = discord.Embed(
+                title="Animal Crossing New Horizons",
+                colour=src.author.colour,
+                description=f"Rate per 5M Bells: {rate} USD",
+            )
+
+            if osym == "BELL":
+                rate = 1.00 / rate
+                em.add_field(
+                    name=f"{val} USD to BELL",
+                    value=str(round(val * rate * 5.00, 2)) + "M Bells",
+                )
+            else:
+
+                em.add_field(
+                    name=f"{val} BELL to USD",
+                    value=str(round(val * rate / 5000000.00, 2)) + " USD",
+                )
+
+            em.set_footer(
+                text="Note, Animal Crossing symbols can only be converted to USD at the moment"
+            )
+            return em
+
+        if not all([v for v in [isym, osym] if v in crypto_cur + normal_cur]):
+            raise CommandArgsError("One or both of the inputs are not valid. Use the `help lazymoney` command for a list of valid currency symbols")
+
+        if any([v for v in [isym, osym] if v in crypto_cur]):
+            if len(args) == 1:
+                isym = osym
+                osym = "USD"
+
+            if isym in crypto_cur:
+                r = requests.get(
+                    f"https://min-api.cryptocompare.com/data/price?fsym={osym}&tsyms=BTC,DOGE,ETH,ETC,RPL,IOTA,XRP,NEO,LTC,IOTA"
+                )
+                if r.from_cache:
+                    self.log.f("Money", "Using cached response for cryptocompare.com")
+                if r.status_code != 200:
+                    raise CommandOperationError("Crypto API did not return a valid result. Please try again later")
+                rate = 1 / r.json()[isym]
+
+            if osym in crypto_cur:
+                r = requests.get(
+                    f"https://min-api.cryptocompare.com/data/price?fsym={isym} \&tsyms=BTC,DOGE,ETH,ETC,RPL,IOTA,XRP,NEO,LTC,IOTA"
+                )
+                if r.from_cache:
+                    self.log.f("Money", "Using cached response for cryptocompare.com")
+                if r.status_code != 200:
+                    raise CommandOperationError("Crypto API did not return a valid result. Please try again later")
+                rate = r.json()[osym]
+
+            em = discord.Embed(
+                title=f"Crypto Conversion",
+                colour=src.author.colour,
+                description=f"Rate: 1 {isym} = {rate} {osym}",
+            )
+            em.add_field(
+                name=f"{val} {isym} to {osym}",
+                value=f"{str(round(val * rate, 2))} {osym}",
+            )
+            return em
+
+        r = requests.get(f"https://api.exchangeratesapi.io/latest?base={isym}")
+
+        if r.from_cache:
+            self.log.f("Money", "Using cached response for exchangeratesapi.io")
+        if r.status_code != 200:
+            raise CommandOperationError("Exchange Rate API did not return a valid result. Please try again later")
+
+        rate = r.json()["rates"][osym]
+        em = discord.Embed(
+            title="Currency Conversion",
+            colour=src.author.colour,
+            description=f"Rate: 1 {isym} = {rate} {osym}",
+        )
+        em.add_field(
+            name=f"{val} {isym} to {osym}", value=f"{str(round(val * rate, 2))} {osym}"
+        )
+        return em
 
 
 # Keep the actual classname unique from this common identifier

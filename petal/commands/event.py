@@ -10,6 +10,7 @@ from petal.checks import all_checks, Messages
 from petal.commands import core, shared
 from petal.exceptions import CommandOperationError
 from petal.menu import Menu
+from petal.types import Src
 from petal.util.embeds import Color
 from petal.util.questions import ChatReply
 
@@ -17,6 +18,24 @@ from petal.util.questions import ChatReply
 class CommandsEvent(core.Commands):
     auth_fail = "This command requires the `{role}` role."
     role = "xPostRole"
+
+    async def cmd_shiftcategory(
+            self, args, src: Src, **_):
+        return_channel: discord.TextChannel = src.channel
+        event_group_id = self.config.get("eventCategory")
+        main_chat_id = self.config.get("mainChatCategory")
+        default_position = self.config.get("defaultEventChannelPosition")
+        event_group: discord.CategoryChannel = self.client.main_guild.get_channel(event_group_id)
+        main_chat: discord.CategoryChannel = self.client.main_guild.get_channel(main_chat_id)
+        self.log.info(f"Main Chat position is: {main_chat.position}")
+        self.log.info(f"Current event chat position is: {event_group.position}")
+
+        if event_group.position > main_chat.position:
+            await event_group.move(before=main_chat)
+            await return_channel.send(content=f"{event_group.name} was moved right above {main_chat.name}")
+        else:
+            await event_group.edit(position=default_position)
+            await return_channel.send(content=f"{event_group.name} was moved back to its default position ({default_position})")
 
     async def cmd_event(
         self, src, _image: str = None, _message: str = None, _nomenu: bool = False, **_
@@ -105,7 +124,8 @@ class CommandsEvent(core.Commands):
             await menu.post()
 
         msgstr = yield ChatReply(
-            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)", 120,
+            "What do you want to send? (remember: {e} = `@ev` and {h} = `@here`)",
+            120,
         )
         if not msgstr:
             # No reply.
