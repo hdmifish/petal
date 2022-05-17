@@ -220,7 +220,7 @@ class DBHandler(object):
                 mem[subdict] = data
                 count += 1
             else:
-                mem[subdict].update(data)
+                mem[subdict].update_one(data)
         else:
             for key in data:
                 # data:      DICT
@@ -313,11 +313,10 @@ class DBHandler(object):
             return None
         if not update:
             return response
-        self.motd.update(
+        self.motd.update_one(
             {"_id": response["_id"]},
             {"$set": {"used": True}},
-            upsert=False,
-            multi=False,
+            upsert=False
         )
         return response
 
