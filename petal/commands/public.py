@@ -10,6 +10,8 @@ from subprocess import PIPE, run
 import discord
 import requests
 import requests_cache
+from requests.utils import requote_uri
+
 from bs4 import BeautifulSoup
 
 from petal.commands import core
@@ -427,7 +429,7 @@ class CommandsPublic(core.Commands):
                 em = discord.Embed(color=Color.wiki, description=response[1]["content"])
                 em.set_author(
                     name="'{}' on Wikipedia".format(title),
-                    url=url,
+                    url=requote_uri(url),
                     icon_url="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1122px-Wikipedia-logo-v2.svg.png",
                 )
 
@@ -841,7 +843,7 @@ class CommandsPublic(core.Commands):
         ua = {"User-Agent": "Petal/python3.7 DiscordBot"}
         raw = requests.get("https://teamtrees.org", headers=ua).text
         bs = BeautifulSoup(raw, features="html.parser")
-        tag = bs.find("div", {"id": "totalTrees"})
+        tag = bs.find("h2", {"id": "totalTrees"})
         return (
             "According to https://teamtrees.org, money has been raised to plant"
             " **{:,}** trees so far!\n\nThis is {}% of the initial goal of **20"
