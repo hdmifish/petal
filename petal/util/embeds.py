@@ -24,6 +24,7 @@ class Color(IntEnum):
     wiki = 0x_F8_F9_FA  # Wiki
     wiki_vague = 0x_FF_CC_33  # Wiki (Disambiguation)
     xkcd = 0x_96_A8_C8  # XKCD
+    urban = 0x_E4_F7_14 # Urban
 
     message_delete = 0x_FC_00_A2
     message_edit = 0x_AE_00_FE

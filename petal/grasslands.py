@@ -5,6 +5,7 @@ Grasslands is a semi-public module for colored logging and misc APIs
 from datetime import datetime as dt
 from random import randint
 import requests
+from requests.utils import requote_uri
 import sys
 from colorama import init, Fore
 from wiktionaryparser import WiktionaryParser as WP
@@ -309,3 +310,23 @@ class Define:
             self.etymology = ""
             self.definitions = []
             self.valid = False
+
+
+class UrbanPidgeon:
+    def __init__(self, query: str):
+        api_url = "https://api.urbandictionary.com/v0/define?term={q}"
+        query = query[0:20]
+        url = api_url.format(q=requote_uri(query))
+        headers = {
+            "User-Agent": "Petalbot/"
+                      + version
+                      + " (http://leaf.drunkencode.net;) Python 3.9"
+        }
+        req = requests.get(url, headers=headers)
+        self.response = req.json()
+
+    def get_definition(self):
+        if "list" in self.response and len(self.response['list']) > 0:
+            definition = self.response['list'][0]
+            return 1, definition
+        return 0, None

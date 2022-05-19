@@ -21,7 +21,7 @@ from petal.exceptions import (
     CommandInputError,
     CommandOperationError,
 )
-from petal.grasslands import Pidgeon, Define
+from petal.grasslands import Pidgeon, Define, UrbanPidgeon
 from petal.types import Args, Src
 from petal.util import dice
 from petal.util.embeds import Color, membership_card
@@ -434,6 +434,39 @@ class CommandsPublic(core.Commands):
                 )
 
             await self.client.embed(src.channel, em)
+
+    async def cmd_urband(self, args: Args, src: Src):
+        """Find the definition of a word from Urban Dictionary
+
+        Syntax: `{p}urband <word>`
+
+        """
+        if not args:
+            return "Urban Dictionary, https://www.urbandictionary.com/"
+
+        word = args[0]
+        self.log.f("dict", "Query string: " + word)
+        if src.channel.id not in self.config.get(
+            "nsfwChannels"
+        ):
+            return "This command is only allowed in NSFW channels"
+
+        async with src.channel.typing():
+            code, result = UrbanPidgeon(word)
+            if code:
+                em = discord.Embed(color=Color.urban, description=f"{result['definition']}\n\nExample:\n{result['example']}")
+                em.set_author(
+                    name=f"'{result['word']}' defined by {result['author']}",
+                    url=result['permalink']
+                )
+
+                em.add_field(name="Thumbs Up 👍", value=f"{result['thumbs_up']}", inline=True)
+                em.add_field(name="Thumbs Down 👎", value=f"{result['thumbs_down']}", inline=True)
+                em.set_footer(text=f"This definition was written on {result['written_on'][:-5]}")
+                await self.client.embed(src.channel, em)
+            else:
+                return "*Unable to get a definition of that word from UrbanDictionary.com*"
+
 
     async def cmd_define(
         self,
