@@ -444,8 +444,7 @@ class CommandsPublic(core.Commands):
         if not args:
             return "Urban Dictionary, https://www.urbandictionary.com/"
 
-        word = args[0]
-        self.log.f("dict", "Query string: " + word)
+        word = " ".join(args)
         if src.channel.id not in self.config.get(
             "nsfwChannels"
         ):
