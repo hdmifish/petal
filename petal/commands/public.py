@@ -439,10 +439,9 @@ class CommandsPublic(core.Commands):
         """Find the definition of a word from Urban Dictionary
 
         Syntax: `{p}urband <word>`
-
         """
         if not args:
-            return "Urban Dictionary, https://www.urbandictionary.com/"
+            return "Urban Dictionary, <https://www.urbandictionary.com/>"
 
         word = " ".join(args)
         if src.channel.id not in self.config.get(
