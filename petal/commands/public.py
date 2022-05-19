@@ -452,7 +452,9 @@ class CommandsPublic(core.Commands):
             return "This command is only allowed in NSFW channels"
 
         async with src.channel.typing():
-            code, result = UrbanPidgeon(word)
+            urb = UrbanPidgeon(word)
+            code, result = urb.get_definition()
+
             if code:
                 em = discord.Embed(color=Color.urban, description=f"{result['definition']}\n\nExample:\n{result['example']}")
                 em.set_author(
