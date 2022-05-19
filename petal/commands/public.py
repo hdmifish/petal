@@ -435,7 +435,7 @@ class CommandsPublic(core.Commands):
 
             await self.client.embed(src.channel, em)
 
-    async def cmd_urband(self, args: Args, src: Src):
+    async def cmd_urband(self, args: Args, src: Src, **_):
         """Find the definition of a word from Urban Dictionary
 
         Syntax: `{p}urband <word>`
